@@ -1,0 +1,73 @@
+/* 原生表格基础样式：保留两种类名，统一维护共同视觉规则。 */
+.f-table,
+.data-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  background-color: var(--color-surface);
+  color: var(--table-text);
+  font-family: inherit;
+  font-size: var(--table-font-size);
+}
+
+.f-table th,
+.f-table td,
+.data-table th,
+.data-table td {
+  padding: var(--table-cell-padding-y) var(--table-cell-padding-x);
+}
+
+.f-table th,
+.data-table thead th {
+  height: var(--table-header-height);
+  background-color: var(--table-header-bg);
+  color: var(--table-header-text);
+  font-size: var(--table-header-font-size);
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.f-table tbody tr,
+.data-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.f-table tbody tr:nth-child(even),
+.data-table tbody tr:nth-child(even) {
+  background-color: var(--table-striped-bg);
+}
+
+.f-table tbody tr:hover,
+.data-table tbody tr:hover {
+  background-color: var(--table-row-hover);
+}
+
+/* f-table 保留原有边框和显式对齐辅助类。 */
+.f-table th,
+.f-table td {
+  border-bottom: 1px solid var(--table-row-border);
+}
+
+.f-table .center,
+.data-table .center {
+  text-align: center;
+}
+
+.f-table .left,
+.data-table .left {
+  text-align: left;
+}
+
+/* data-table 保留默认居中和独立的表头边框。 */
+.data-table thead th {
+  border-bottom: 1px solid var(--table-border);
+}
+
+.data-table tbody td {
+  border-bottom: 1px solid var(--table-row-border);
+  text-align: center;
+}
+
+.data-table .right {
+  text-align: right;
+}

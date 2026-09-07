@@ -1,0 +1,58 @@
+server:
+  port: ":9090"
+  base_url: "http://localhost:9090"
+
+cors:
+  allowed_origins:
+    - "http://localhost:1002"
+    - "http://localhost:5173"
+    - "http://localhost:3000"
+
+db:
+  user: "root"
+  password: "123456"
+  host: "127.0.0.1"
+  port: "3306"
+  name: "oj_db"
+  # 应用数据库连接池。多实例部署时，所有实例的 max_open_conns 总和
+  # 应明显低于 MySQL 服务端 max_connections，并预留管理连接。
+  pool:
+    max_open_conns: 50
+    max_idle_conns: 10
+    conn_max_lifetime_seconds: 3600
+    conn_max_idle_time_seconds: 600
+
+redis:
+  addr: "127.0.0.1:6379"
+  password: ""
+  db: 0
+
+# ZeorCode Agent。未启用或未配置密钥时，确定性的作业创建向导仍可使用，
+# 普通 AI 对话会提示尚未配置。生产环境优先通过 ZEORCODE_AI_API_KEY 注入密钥。
+ai:
+  enabled: false
+  base_url: "https://api.openai.com/v1"
+  model: ""
+  api_key: ""
+  request_timeout_seconds: 60
+  max_output_tokens: 2048
+
+jwt:
+  secret: "MySecretKey"
+  expire: 24 # 小时
+
+security:
+  # 远程账号密码/cookie 的 AES 加密密钥，上线务必改成足够长的随机串
+  aes_key: "zoj-change-me-to-a-long-random-secret-key"
+
+judge:
+  # 多个 worker 实例共享远程账号池时设为 true，避免启动时清理其他实例的占用状态
+  multi_instance: false
+  # 评测机地址：可配多台，负载均衡（按提交轮询 + 后台探活自动跳过挂掉的实例）。
+  # 一次提交的 编译/运行/删除 固定落在同一台。
+  urls:
+    - "http://172.27.49.67:5050"
+    # - "http://172.27.49.68:5050"
+  # url: "http://172.27.49.67:5050"   # 单机回退：urls 为空时才用这个
+  concurrency: 4
+  data_dir: "ojdata/problems"

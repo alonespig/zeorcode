@@ -1,0 +1,36 @@
+/* Element Plus 表格主题：与项目内原生表格保持相同的密度和配色。 */
+:root {
+  --el-color-primary: var(--color-primary);
+  --el-border-radius-base: var(--radius-base);
+  --el-border-radius-small: var(--radius-small);
+}
+
+.el-table.el-table {
+  --el-table-header-bg-color: var(--table-header-bg);
+  --el-table-header-text-color: var(--table-header-text);
+  --el-table-text-color: var(--table-text);
+  --el-table-border-color: var(--table-row-border);
+  --el-table-row-hover-bg-color: var(--table-row-hover);
+  font-family: inherit;
+  font-size: var(--table-font-size);
+}
+
+.el-table th.el-table__cell {
+  height: var(--table-header-height);
+  padding-block: 0;
+  font-size: var(--table-header-font-size);
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.el-table th.el-table__cell > .cell {
+  line-height: 1.5;
+}
+
+.el-table td.el-table__cell {
+  padding-block: var(--table-cell-padding-y);
+}
+
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: var(--table-striped-bg);
+}

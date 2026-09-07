@@ -1,0 +1,329 @@
+:root {
+  --color-primary: #409EFF;
+  --color-page-bg: #edf0f2;
+  --color-surface: #fff;
+  --color-border-soft: oklch(92.8% 0.006 264.531);
+  --color-text: #333;
+  --color-success: #19BE6B;
+  --color-warning: #FF9900;
+  --color-danger: #ED3F14;
+
+  /* 评测状态颜色：统一状态文本、标签和进度指示的颜色来源。 */
+  --judge-accepted: var(--color-success);
+  --judge-pending: #3490de;
+  --judge-judging: #2d8cf0;
+  --judge-compile-error: var(--color-warning);
+  --judge-wrong-answer: var(--color-danger);
+  --judge-time-limit: #9b59b6;
+  --judge-memory-limit: #8e44ad;
+  --judge-runtime-error: #e74c3c;
+  --judge-presentation-error: #f1c40f;
+  --judge-system-error: #c0392b;
+  --judge-unknown: #645e5e;
+
+  --radius-small: 3px;
+  --radius-base: 4px;
+  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --space-page: 16px;
+  --space-card: 20px;
+
+  /* 表格：原生 table 与 Element Plus 共用同一套基础视觉 */
+  --table-header-bg: #f7f8fa;
+  --table-header-text: #374151;
+  --table-text: #1f2937;
+  --table-border: #e5e7eb;
+  --table-row-border: #f3f4f6;
+  --table-striped-bg: #fafbfc;
+  --table-row-hover: #eff6ff;
+  --table-header-height: 46px;
+  --table-cell-padding-x: 16px;
+  --table-cell-padding-y: 12px;
+  --table-font-size: 14px;
+  --table-header-font-size: 13px;
+
+}
+
+@layer base {
+
+  html,
+  body {
+    /* font-family: Arial, sans-serif; */
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background-color: var(--color-page-bg);
+    font-family:
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      /* Segoe UI:  Windows英文字体，配合微软雅黑用 */
+
+      "PingFang SC",
+      /*PingFang SC:  macOS / iOS 苹果系统中文字体，观感比较现代 */
+
+      "Microsoft YaHei",
+      /* Microsoft YaHei: 微软雅黑，Windows 中文网页最常见 */
+
+      "Helvetica Neue",
+      /* Helvetica Neue: macOS英文字体  */
+
+      Arial,
+      /* Arial: 通用兜底英文字体 */
+
+      sans-serif;
+    /* sans-serif: 通用最终兜底无衬线字体 */
+  }
+
+  /* 始终显示竖直滚动条，避免不同页面滚动条有无导致内容左右抖动 */
+  html {
+    overflow-y: scroll;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  ul,
+  ol {
+    list-style: none;
+  }
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  button {
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+
+  input {
+    outline: none;
+    border: none;
+  }
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-page);
+}
+
+.small-page-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 var(--space-page);
+}
+
+@media (max-width: 767px) {
+  :root {
+    --space-page: 12px;
+  }
+}
+
+
+.f-font-bold {
+  font-weight: bold;
+}
+
+
+.f-link {
+  color: #3490de;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+
+.f-link:active {
+  color: #096dd9;
+}
+
+
+.f-ac {
+  color: var(--judge-accepted);
+}
+
+.f-pending {
+  color: var(--judge-pending);
+}
+
+.f-ce {
+  color: var(--judge-compile-error);
+}
+
+.f-wa {
+  color: var(--judge-wrong-answer);
+}
+
+.f-uk {
+  color: var(--judge-unknown);
+}
+
+
+.f-shadow {
+  box-shadow: var(--shadow-card);
+}
+
+.f-card {
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-base);
+  background-color: var(--color-surface);
+  padding: var(--space-card);
+}
+
+.f-panel {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-base);
+  box-shadow: var(--shadow-soft);
+}
+
+
+.f-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--color-surface);
+  min-height: 46px;
+  border-top: 1px solid var(--table-row-border);
+}
+
+.accepted {
+  color: var(--judge-accepted);
+}
+
+.pending {
+  color: var(--judge-pending);
+}
+
+.judging {
+  color: var(--judge-judging);
+}
+
+.compile-error {
+  color: var(--judge-compile-error);
+}
+
+.wrong-answer {
+  color: var(--judge-wrong-answer);
+}
+
+.time-limit {
+  color: var(--judge-time-limit);
+}
+
+.memory-limit {
+  color: var(--judge-memory-limit);
+}
+
+.runtime-error {
+  color: var(--judge-runtime-error);
+}
+
+.presentation-error {
+  color: var(--judge-presentation-error);
+}
+
+.system-error {
+  color: var(--judge-system-error);
+}
+
+.unknown {
+  color: var(--judge-unknown);
+}
+
+
+/* ============ Markdown 渲染区域 ============ */
+/* 全局 reset（* { padding:0 } 和 ul,ol { list-style:none }）会把列表的序号和缩进清掉，
+   markdown 里的列表也是 ul/ol，因此连带受影响。这里在 markdown 容器内统一恢复正常列表样式，
+   不影响页面里用作布局的其它列表（导航等仍保持无序号）。
+   school 中渲染 markdown 的容器只有两类：
+     .markdown-body     —— 题目描述等 v-html 内容（无 scoped，故规则放全局）
+     .md-editor-preview —— 博客详情/编辑的 md-editor-v3 预览
+   新增 markdown 容器时，把它的 class 加进下面的选择器即可。 */
+.markdown-body ul,
+.markdown-body ol,
+.md-editor-preview ul,
+.md-editor-preview ol {
+  list-style: revert;
+  padding-left: 2em;
+  margin: 0.5em 0;
+}
+
+.markdown-body ul,
+.md-editor-preview ul {
+  list-style-type: disc;
+}
+
+.markdown-body ol,
+.md-editor-preview ol {
+  list-style-type: decimal;
+}
+
+.markdown-body li,
+.md-editor-preview li {
+  margin: 0.2em 0;
+}
+
+.markdown-body li>ul,
+.markdown-body li>ol,
+.md-editor-preview li>ul,
+.md-editor-preview li>ol {
+  margin: 0.2em 0;
+}
+
+/* 窄屏溢出兜底：题面里的长代码块、宽表格、行间公式默认不换行也不滚动，
+   会把整页撑出横向滚动条。让它们各自内部横向滚动，容器宽度不被撑破。 */
+.markdown-body pre,
+.markdown-body table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-body .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* md-editor 代码块头部默认 position:sticky; top:0; z-index:10000，会吸到视口顶盖住导航栏。
+   博客里不需要复制按钮吸顶，取消吸附，让它随代码正常滚动。 */
+.md-editor-preview .md-editor-code .md-editor-code-head {
+  position: static !important;
+}
+
+/* md-editor-v3 v6 默认预览主题的代码块是深色(#282c34)——统一改成浅色(GitHub 风)。
+   只覆盖块底色 + 基础文字色两个变量：块底/头部一起变浅，头部文字随之变深可读；
+   语法着色仍由 codeTheme(github) 提供，缺失时退化为深色单色，浅底上均清晰。 */
+.md-editor-preview {
+  --md-theme-code-block-bg-color: #f6f8fa !important;
+  --md-theme-code-block-color: #24292f !important;
+}
+
+
+
+
+.f-blue {
+  color: var(--color-primary);
+}
+
+/* 路由进度条（NProgress）配色，跟随主题蓝 */
+#nprogress .bar {
+  background: var(--color-primary);
+  height: 2px;
+}
+
+#nprogress .peg {
+  box-shadow: 0 0 10px var(--color-primary), 0 0 5px var(--color-primary);
+}

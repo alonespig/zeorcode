@@ -1,0 +1,32 @@
+import { defineConfig, globalIgnores } from "eslint/config";
+import globals from "globals";
+import js from "@eslint/js";
+import pluginVue from "eslint-plugin-vue";
+
+export default defineConfig([
+  {
+    name: "app/files-to-lint",
+    files: ["**/*.{vue,js,mjs,jsx}"],
+  },
+
+  globalIgnores(["**/dist/**", "**/dist-ssr/**", "**/coverage/**"]),
+
+  {
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
+    },
+  },
+
+  js.configs.recommended,
+  ...pluginVue.configs["flat/essential"],
+]);
+
+module.exports = {
+  // ...其他配置
+  rules: {
+    // ...其他规则
+    "vue/multi-word-component-names": "off", // 完全关闭该规则
+  },
+};

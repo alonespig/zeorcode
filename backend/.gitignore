@@ -1,0 +1,9 @@
+ojdata/*
+.idea/
+runtime/*
+*.log
+.claude
+*.yaml
+uploads/
+main
+*.exe

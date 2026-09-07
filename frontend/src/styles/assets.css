@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@layer components {
+  /* Tailwind 负责色板相关辅助类，表格结构统一由 table.css 管理。 */
+  .data-table {
+    @apply tabular-nums;
+  }
+
+  .data-table .muted {
+    @apply text-gray-400;
+  }
+
+  .data-table .link {
+    @apply cursor-pointer hover:text-blue-500;
+  }
+}
+
+@layer components {
+  .tw-title {
+    @apply text-xl text-gray-700 font-normal;
+  }
+}
+
+@layer components {
+  .tw-link {
+    @apply font-normal text-blue-500 cursor-pointer;
+  }
+}
