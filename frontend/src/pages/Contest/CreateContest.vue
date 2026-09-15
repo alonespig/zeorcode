@@ -165,52 +165,11 @@
       </aside>
     </div>
 
-    <!-- 从题库选择 -->
-    <el-dialog v-model="pickerVisible" title="从题库选择" width="720px" top="8vh">
-      <div class="picker-search">
-        <el-input v-model="pickerQ" placeholder="搜索题目名称" clearable style="width: 260px"
-          @keyup.enter="loadPicker(1)" />
-        <el-button type="primary" :icon="Search" @click="loadPicker(1)">搜索</el-button>
-      </div>
-      <table class="f-table picker-table">
-        <colgroup>
-          <col style="width: 52px">
-          <col style="width: 64px">
-          <col>
-          <col style="width: 240px">
-        </colgroup>
-        <thead>
-          <tr>
-            <th></th>
-            <th class="center">#</th>
-            <th class="left">题目名称</th>
-            <th class="left">标签</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in pickerList" :key="item.id" class="pick-row" @click="togglePick(item.id)">
-            <td class="center">
-              <el-checkbox :model-value="isPicked(item.id)" :disabled="inList(item.id)" @click.stop="togglePick(item.id)" />
-            </td>
-            <td class="center">{{ item.id }}</td>
-            <td class="left">{{ item.name }}</td>
-            <td class="left">
-              <el-tag v-for="t in item.tags || []" :key="t.id" size="small" type="primary" style="margin-right: 4px">{{
-                t.name }}</el-tag>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="picker-foot">
-        <el-pagination size="small" layout="prev, pager, next" :page-size="pickerPageSize" :total="pickerTotal"
-          :current-page="pickerPage" @current-change="loadPicker" />
-      </div>
-      <template #footer>
-        <span class="picked-count">已选 {{ picked.length }} 道</span>
-        <el-button @click="pickerVisible = false">取消</el-button>
-        <el-button type="primary" :loading="picking" @click="confirmPick">确定添加</el-button>
-      </template>
-    </el-dialog>
+    <ProblemPickerDialog
+      v-model="pickerVisible"
+      :existing-problem-ids="existingProblemIds"
+      @add="addPickedProblems"
+    />
   </div>
 </template>
 
@@ -218,7 +177,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ArrowLeft, CloseBold, Search, Plus, Delete, Rank } from '@element-plus/icons-vue'
-import { getProblem, getProblemList } from '@/api/problems'
+import { getProblem } from '@/api/problems'
 import { createContest } from '@/api/contest'
 import { ElMessage } from 'element-plus'
 import { MdEditor } from 'md-editor-v3'
@@ -226,6 +185,7 @@ import 'md-editor-v3/lib/style.css'
 import { CONTEST_DRAFT_KEY, ruleLabelOf, BALLOON_COLORS, CONTEST_TYPE, RULE_OPTIONS } from '@/constants/index'
 import { contestProblemLabel } from '@/utils/contest'
 import SquareImageCropper from '@/components/upload/SquareImageCropper.vue'
+import ProblemPickerDialog from '@/components/problem/ProblemPickerDialog.vue'
 
 const pickColor = () => BALLOON_COLORS[problemList.value.length % BALLOON_COLORS.length]
 
@@ -316,65 +276,14 @@ const onDrop = (i) => {
 
 // ---------- 从题库选择 ----------
 const pickerVisible = ref(false)
-const picking = ref(false)
-const pickerQ = ref('')
-const pickerList = ref([])
-const pickerPage = ref(1)
-const pickerPageSize = 8
-const pickerTotal = ref(0)
-const picked = ref([])
-
-const inList = (id) => problemList.value.some((p) => p.id === id)
-const isPicked = (id) => picked.value.includes(id)
-const togglePick = (id) => {
-  if (inList(id)) return // 已在列表中的题目不可取消
-  const idx = picked.value.indexOf(id)
-  if (idx === -1) picked.value.push(id)
-  else picked.value.splice(idx, 1)
-}
-
-const loadPicker = async (page = 1) => {
-  pickerPage.value = page
-  try {
-    const res = await getProblemList({
-      page,
-      pageSize: pickerPageSize,
-      q: pickerQ.value || undefined,
-    })
-    pickerList.value = res.data.list || []
-    pickerTotal.value = res.data.total || 0
-  } catch (err) {
-    console.error(err)
-  }
-}
-
-const openPicker = () => {
-  picked.value = problemList.value.map((p) => p.id) // 已添加的预先勾选
-  pickerQ.value = ''
-  pickerVisible.value = true
-  loadPicker(1)
-}
-
-const confirmPick = async () => {
-  const toAdd = picked.value.filter((id) => !inList(id))
-  if (toAdd.length === 0) {
-    pickerVisible.value = false
-    return
-  }
-  picking.value = true
-  try {
-    const results = await Promise.all(toAdd.map((id) => getProblem(id)))
-    results.forEach((res) => {
-      const p = toProblem(res.data)
-      p.balloonColor = pickColor()
-      problemList.value.push(p)
-    })
-    pickerVisible.value = false
-  } catch (err) {
-    console.error(err)
-  } finally {
-    picking.value = false
-  }
+const existingProblemIds = computed(() => problemList.value.map((problem) => problem.id))
+const openPicker = () => { pickerVisible.value = true }
+const addPickedProblems = (problems) => {
+  problems.forEach((data) => {
+    const problem = toProblem(data)
+    problem.balloonColor = pickColor()
+    problemList.value.push(problem)
+  })
 }
 
 // ---------- 校验规则 ----------
@@ -629,33 +538,6 @@ onBeforeRouteLeave(() => {
       cursor: grabbing;
     }
   }
-}
-
-// ---- 题库选择弹窗 ----
-.picker-search {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.picker-table {
-  font-size: 14px;
-
-  .pick-row {
-    cursor: pointer;
-  }
-}
-
-.picker-foot {
-  display: flex;
-  justify-content: center;
-  margin-top: 12px;
-}
-
-.picked-count {
-  margin-right: auto;
-  color: var(--el-text-color-regular);
-  font-size: 13px;
 }
 
 @media (max-width: 1100px) {

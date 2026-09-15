@@ -140,49 +140,18 @@
       </template>
     </el-dialog>
 
-    <!-- 从题库选择（移植自 Contest/CreateContest.vue，去掉分值与气球颜色） -->
-    <el-dialog v-model="pickerVisible" title="从题库选择" width="720px" top="8vh">
-      <el-input v-model="pickerQ" placeholder="搜索题号或标题" clearable :prefix-icon="Search" class="mb-3"
-        @keyup.enter="loadPicker(1)" @clear="loadPicker(1)" />
-      <el-table :data="pickerList" @row-click="(row) => togglePick(row.id)">
-        <el-table-column width="50">
-          <template #default="{ row }">
-            <el-checkbox :model-value="isPicked(row.id)" :disabled="inList(row.id)"
-              @click.stop="togglePick(row.id)" />
-          </template>
-        </el-table-column>
-        <el-table-column label="题号" width="120" prop="id" />
-        <el-table-column label="标题" min-width="180">
-          <template #default="{ row }">
-            {{ row.name }}
-            <span v-if="inList(row.id)" class="text-empty">（已在题单中）</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="标签" width="180">
-          <template #default="{ row }">
-            <el-tag v-for="tag in row.tags" :key="tag.id" size="small" effect="plain" class="tag-item">
-              {{ tag.name }}
-            </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
-      <div class="picker-foot">
-        <span class="hint">已选 <b>{{ picked.length }}</b> 道</span>
-        <el-pagination background layout="prev, pager, next" :current-page="pickerPage" :page-size="pickerPageSize"
-          :total="pickerTotal" @current-change="loadPicker" />
-      </div>
-      <template #footer>
-        <el-button @click="pickerVisible = false">取消</el-button>
-        <el-button type="primary" :loading="picking" @click="confirmPick">确定添加</el-button>
-      </template>
-    </el-dialog>
+    <ProblemPickerDialog
+      v-model="pickerVisible"
+      :existing-problem-ids="existingProblemIds"
+      @add="addPickedProblems"
+    />
   </el-card>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Plus, Search } from "@element-plus/icons-vue";
+import { Plus } from "@element-plus/icons-vue";
 import {
   getAdminProblemSetList,
   createProblemSet,
@@ -190,7 +159,8 @@ import {
   deleteProblemSet,
   getProblemSetDetail,
 } from "@/api/problemset";
-import { getProblem, getProblemList, getTags } from "@/api/problems";
+import { getProblem, getTags } from "@/api/problems";
+import ProblemPickerDialog from "@/components/problem/ProblemPickerDialog.vue";
 
 const list = ref([]);
 const total = ref(0);
@@ -372,57 +342,12 @@ const onDrop = (i) => {
 
 // ---------- 从题库选择 ----------
 const pickerVisible = ref(false);
-const picking = ref(false);
-const pickerQ = ref("");
-const pickerList = ref([]);
-const pickerPage = ref(1);
-const pickerPageSize = 8;
-const pickerTotal = ref(0);
-const picked = ref([]);
-
-const inList = (id) => problemList.value.some((p) => p.id === id);
-const isPicked = (id) => picked.value.includes(id);
-const togglePick = (id) => {
-  if (inList(id)) return; // 已在题单中的不可取消
-  const idx = picked.value.indexOf(id);
-  if (idx === -1) picked.value.push(id);
-  else picked.value.splice(idx, 1);
-};
-
-const loadPicker = async (p = 1) => {
-  pickerPage.value = p;
-  try {
-    const res = await getProblemList({ page: p, pageSize: pickerPageSize, q: pickerQ.value || undefined });
-    pickerList.value = res.data?.list || [];
-    pickerTotal.value = res.data?.total || 0;
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const openPicker = () => {
-  picked.value = problemList.value.map((p) => p.id); // 已添加的预先勾选
-  pickerQ.value = "";
-  pickerVisible.value = true;
-  loadPicker(1);
-};
-
-const confirmPick = async () => {
-  const toAdd = picked.value.filter((id) => !inList(id));
-  if (toAdd.length === 0) {
-    pickerVisible.value = false;
-    return;
-  }
-  picking.value = true;
-  try {
-    const results = await Promise.all(toAdd.map((id) => getProblem(id)));
-    results.forEach((res) => problemList.value.push({ id: res.data.id, name: res.data.name }));
-    pickerVisible.value = false;
-  } catch (err) {
-    console.error(err);
-  } finally {
-    picking.value = false;
-  }
+const existingProblemIds = computed(() => problemList.value.map((problem) => problem.id));
+const openPicker = () => { pickerVisible.value = true; };
+const addPickedProblems = (problems) => {
+  problems.forEach((problem) => {
+    problemList.value.push({ id: problem.id, name: problem.name });
+  });
 };
 
 onMounted(() => {
@@ -544,10 +469,4 @@ onMounted(() => {
   letter-spacing: 1px;
 }
 
-.picker-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 12px;
-}
 </style>

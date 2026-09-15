@@ -64,7 +64,8 @@
     </div>
 
     <!-- 布置 / 编辑作业 -->
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑作业' : '布置作业'" width="780px" top="6vh"
+    <el-dialog v-model="dialogVisible" class="homework-editor-dialog"
+      :title="editingId ? '编辑作业' : '布置作业'" width="min(1100px, calc(100vw - 32px))" top="3vh"
       :close-on-click-modal="false">
       <el-form :model="form" label-width="80px">
         <el-form-item label="作业名称" required>
@@ -111,48 +112,23 @@
       </template>
     </el-dialog>
 
-    <!-- 从题库选择 -->
-    <el-dialog v-model="pickerVisible" title="从题库选择" width="680px" top="8vh">
-      <el-input v-model="pickerQ" placeholder="搜索题号或标题" clearable :prefix-icon="Search" class="mb-3"
-        @keyup.enter="loadPicker(1)" @clear="loadPicker(1)" />
-      <el-table :data="pickerList" size="small" @row-click="(row) => togglePick(row.id)">
-        <el-table-column width="50">
-          <template #default="{ row }">
-            <el-checkbox :model-value="isPicked(row.id)" :disabled="inList(row.id)" @click.stop="togglePick(row.id)" />
-          </template>
-        </el-table-column>
-        <el-table-column prop="id" label="题号" width="120" />
-        <el-table-column label="标题" min-width="180">
-          <template #default="{ row }">
-            {{ row.name }}
-            <span v-if="inList(row.id)" class="text-gray-400">（已添加）</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="难度" width="90" align="center">
-          <template #default="{ row }">{{ diffText(row.difficulty) }}</template>
-        </el-table-column>
-      </el-table>
-      <div class="mt-3 flex items-center justify-between">
-        <span class="text-sm text-gray-500">已选 <b class="text-blue-500">{{ picked.length }}</b> 道</span>
-        <el-pagination background layout="prev, pager, next" :current-page="pickerPage" :page-size="pickerPageSize"
-          :total="pickerTotal" @current-change="loadPicker" />
-      </div>
-      <template #footer>
-        <el-button @click="pickerVisible = false">取消</el-button>
-        <el-button type="primary" :loading="picking" @click="confirmPick">确定添加</el-button>
-      </template>
-    </el-dialog>
+    <ProblemPickerDialog
+      v-model="pickerVisible"
+      :existing-problem-ids="existingProblemIds"
+      @add="addPickedProblems"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, inject, onMounted, watch } from "vue";
+import { ref, computed, inject, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Plus, Search } from "@element-plus/icons-vue";
+import { Plus } from "@element-plus/icons-vue";
 import { getHomeworkList, createHomework, updateHomework, deleteHomework, getHomeworkDetail } from "@/api/team";
-import { getProblem, getProblemList } from "@/api/problems";
+import { getProblem } from "@/api/problems";
 import CapsuleProgress from "@/components/homework/CapsuleProgress.vue";
+import ProblemPickerDialog from "@/components/problem/ProblemPickerDialog.vue";
 
 const team = inject("team");
 const route = useRoute();
@@ -174,8 +150,6 @@ const fmtTime = (s) => {
   if (!s) return "-";
   return s.slice(0, 4) === String(new Date().getFullYear()) ? s.slice(5, 16) : s.slice(0, 16);
 };
-
-const diffText = (d) => ({ 1: "简单", 2: "中等", 3: "困难" }[d] || "-");
 
 const loadList = async () => {
   try {
@@ -301,57 +275,12 @@ const remove = async (row) => {
 
 // ===== 从题库选择 =====
 const pickerVisible = ref(false);
-const picking = ref(false);
-const pickerQ = ref("");
-const pickerList = ref([]);
-const pickerPage = ref(1);
-const pickerPageSize = 8;
-const pickerTotal = ref(0);
-const picked = ref([]);
-
-const inList = (id) => problemList.value.some((p) => p.id === id);
-const isPicked = (id) => picked.value.includes(id);
-const togglePick = (id) => {
-  if (inList(id)) return;
-  const i = picked.value.indexOf(id);
-  if (i === -1) picked.value.push(id);
-  else picked.value.splice(i, 1);
-};
-
-const loadPicker = async (p = 1) => {
-  pickerPage.value = p;
-  try {
-    const res = await getProblemList({ page: p, pageSize: pickerPageSize, q: pickerQ.value || undefined });
-    pickerList.value = res.data?.list || [];
-    pickerTotal.value = res.data?.total || 0;
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const openPicker = () => {
-  picked.value = problemList.value.map((p) => p.id);
-  pickerQ.value = "";
-  pickerVisible.value = true;
-  loadPicker(1);
-};
-
-const confirmPick = async () => {
-  const toAdd = picked.value.filter((id) => !inList(id));
-  if (!toAdd.length) {
-    pickerVisible.value = false;
-    return;
-  }
-  picking.value = true;
-  try {
-    const results = await Promise.all(toAdd.map((id) => getProblem(id)));
-    results.forEach((r) => problemList.value.push({ id: r.data.id, name: r.data.name }));
-    pickerVisible.value = false;
-  } catch (err) {
-    console.error(err);
-  } finally {
-    picking.value = false;
-  }
+const existingProblemIds = computed(() => problemList.value.map((problem) => problem.id));
+const openPicker = () => { pickerVisible.value = true; };
+const addPickedProblems = (problems) => {
+  problems.forEach((problem) => {
+    problemList.value.push({ id: problem.id, name: problem.name });
+  });
 };
 
 onMounted(loadList);
@@ -382,6 +311,23 @@ watch(
 
 :deep(.homework-table td.el-table__cell) {
   padding-block: 16px;
+}
+
+:global(.homework-editor-dialog) {
+  display: flex;
+  max-height: 94vh;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+:global(.homework-editor-dialog .el-dialog__body) {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+:global(.homework-editor-dialog .el-dialog__header),
+:global(.homework-editor-dialog .el-dialog__footer) {
+  flex: 0 0 auto;
 }
 
 </style>
