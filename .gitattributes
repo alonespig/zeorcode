@@ -1,0 +1,2 @@
+/ops/zeorcode-deploy text eol=lf
+/.github/workflows/*.yml text eol=lf

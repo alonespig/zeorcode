@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+archive_path="${1:-}"
+release_id="${2:-}"
+
+if [[ ! "${release_id}" =~ ^[0-9a-f]{40}-[0-9]+$ ]]; then
+  echo "Invalid release id: ${release_id}" >&2
+  exit 2
+fi
+
+expected_archive="/tmp/zeorcode-${release_id}.tar.gz"
+if [[ "${archive_path}" != "${expected_archive}" || ! -f "${archive_path}" || -L "${archive_path}" ]]; then
+  echo "Invalid release archive: ${archive_path}" >&2
+  exit 2
+fi
+
+release_dir="/opt/zoj/releases/${release_id}"
+backend_bin="/opt/zoj/backend/zoj"
+frontend_dir="/var/www/zoj"
+current_link="/opt/zoj/current"
+rollback_dir="${release_dir}/.rollback"
+activated=0
+previous_release=""
+
+if [[ -e "${release_dir}" ]]; then
+  echo "Release already exists: ${release_dir}" >&2
+  exit 2
+fi
+
+if [[ ! -x "${backend_bin}" || ! -f "${frontend_dir}/index.html" ]]; then
+  echo "Complete the initial manual deployment before enabling automatic updates." >&2
+  exit 2
+fi
+
+rollback() {
+  local exit_code=$?
+  trap - ERR
+
+  if [[ "${activated}" -eq 1 ]]; then
+    echo "Deployment failed; restoring the previous application version." >&2
+    systemctl stop zoj-http zoj-judge || true
+    install -o root -g zoj -m 0750 "${rollback_dir}/zoj" "${backend_bin}" || true
+    rsync -a --delete "${rollback_dir}/frontend/" "${frontend_dir}/" || true
+
+    if [[ -n "${previous_release}" ]]; then
+      ln -sfn "${previous_release}" "${current_link}" || true
+    else
+      rm -f "${current_link}" || true
+    fi
+
+    systemctl start zoj-http zoj-judge || true
+    systemctl reload nginx || true
+  fi
+
+  exit "${exit_code}"
+}
+
+trap rollback ERR
+
+mkdir -p "${release_dir}" "${rollback_dir}/frontend"
+chown root:root "${archive_path}"
+tar -xzf "${archive_path}" -C "${release_dir}" --strip-components=1
+
+test -x "${release_dir}/backend/zoj"
+test -f "${release_dir}/frontend/index.html"
+test -d "${release_dir}/database"
+
+nginx -t
+cp -a "${backend_bin}" "${rollback_dir}/zoj"
+rsync -a --delete "${frontend_dir}/" "${rollback_dir}/frontend/"
+previous_release="$(readlink -f "${current_link}" 2>/dev/null || true)"
+
+activated=1
+systemctl stop zoj-http zoj-judge
+install -o root -g zoj -m 0750 "${release_dir}/backend/zoj" "${backend_bin}"
+rsync -a --delete "${release_dir}/frontend/" "${frontend_dir}/"
+chown -R root:root "${frontend_dir}"
+ln -sfn "${release_dir}" "${current_link}"
+systemctl start zoj-http zoj-judge
+systemctl reload nginx
+
+systemctl is-active --quiet zoj-http
+systemctl is-active --quiet zoj-judge
+curl --fail --silent --show-error \
+  --retry 12 \
+  --retry-delay 2 \
+  --retry-connrefused \
+  http://127.0.0.1:9090/api/languages >/dev/null
+
+activated=0
+trap - ERR
+rm -f "${archive_path}"
+
+echo "Deployment completed: ${release_id}"

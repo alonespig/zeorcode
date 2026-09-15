@@ -1,0 +1,122 @@
+name: Build and deploy production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Stop automatic deployment when database files changed
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if git diff --quiet "${BEFORE_SHA}" "${GITHUB_SHA}" -- backend/database; then
+            exit 0
+          fi
+
+          echo "::error::Database files changed. Apply and verify the migration manually, then run this workflow from Actions."
+          exit 1
+
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Test backend
+        working-directory: backend
+        run: go test ./...
+
+      - name: Build Linux backend
+        working-directory: backend
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: ${{ vars.DEPLOY_GOARCH || 'amd64' }}
+        run: |
+          mkdir -p ../release/zoj/backend
+          go build -trimpath -ldflags="-s -w" -o ../release/zoj/backend/zoj .
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Package release
+        run: |
+          mkdir -p release/zoj/frontend release/zoj/database
+          cp -a frontend/dist/. release/zoj/frontend/
+          cp -a backend/database/. release/zoj/database/
+          tar -czf "release/zeorcode-${GITHUB_SHA}-${GITHUB_RUN_ATTEMPT}.tar.gz" -C release zoj
+
+      - name: Upload and activate release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          : "${DEPLOY_HOST:?Missing DEPLOY_HOST secret}"
+          : "${DEPLOY_USER:?Missing DEPLOY_USER secret}"
+          : "${DEPLOY_SSH_KEY:?Missing DEPLOY_SSH_KEY secret}"
+          : "${DEPLOY_KNOWN_HOSTS:?Missing DEPLOY_KNOWN_HOSTS secret}"
+
+          deploy_port="${DEPLOY_PORT:-22}"
+          release_id="${GITHUB_SHA}-${GITHUB_RUN_ATTEMPT}"
+          archive_name="zeorcode-${release_id}.tar.gz"
+          local_archive="release/${archive_name}"
+          remote_archive="/tmp/${archive_name}"
+          ssh_dir="${RUNNER_TEMP}/zeorcode-ssh"
+
+          install -d -m 0700 "${ssh_dir}"
+          printf '%s\n' "${DEPLOY_SSH_KEY}" > "${ssh_dir}/deploy_key"
+          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > "${ssh_dir}/known_hosts"
+          chmod 0600 "${ssh_dir}/deploy_key" "${ssh_dir}/known_hosts"
+
+          scp \
+            -P "${deploy_port}" \
+            -i "${ssh_dir}/deploy_key" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o "UserKnownHostsFile=${ssh_dir}/known_hosts" \
+            "${local_archive}" \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_archive}"
+
+          ssh \
+            -p "${deploy_port}" \
+            -i "${ssh_dir}/deploy_key" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o "UserKnownHostsFile=${ssh_dir}/known_hosts" \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "sudo -n /usr/local/sbin/zeorcode-deploy '${remote_archive}' '${release_id}'"
