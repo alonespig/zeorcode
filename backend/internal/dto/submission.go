@@ -83,6 +83,7 @@ type SubmissionInfo struct {
 	ID            int64  `json:"id"` // 对外提交编号
 	Language      string `json:"language"`
 	Code          string `json:"code"`
+	CanViewCode   bool   `json:"canViewCode"`
 	Status        int    `json:"status"`
 	TimeUsed      int64  `json:"time"`
 	MemoryUsed    int64  `json:"memory"`

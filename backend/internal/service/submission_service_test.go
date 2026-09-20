@@ -291,11 +291,12 @@ func TestGetSubmissionByPublicIDOnlyOwnerOrAdminSeesCodeAndCompileOutput(t *test
 		name              string
 		requesterID       int64
 		isAdmin           bool
+		wantCanViewCode   bool
 		wantCode          string
 		wantCompileOutput string
 	}{
-		{name: "提交者可查看源码和编译输出", requesterID: 11, wantCode: "secret code", wantCompileOutput: "compiler output"},
-		{name: "管理员可查看源码和编译输出", requesterID: 22, isAdmin: true, wantCode: "secret code", wantCompileOutput: "compiler output"},
+		{name: "提交者可查看源码和编译输出", requesterID: 11, wantCanViewCode: true, wantCode: "secret code", wantCompileOutput: "compiler output"},
+		{name: "管理员可查看源码和编译输出", requesterID: 22, isAdmin: true, wantCanViewCode: true, wantCode: "secret code", wantCompileOutput: "compiler output"},
 		{name: "其他用户看不到源码", requesterID: 22},
 		{name: "匿名用户看不到源码"},
 	}
@@ -322,6 +323,9 @@ func TestGetSubmissionByPublicIDOnlyOwnerOrAdminSeesCodeAndCompileOutput(t *test
 			}
 			if resp.Submission.Code != tt.wantCode {
 				t.Fatalf("submission code = %q, want %q", resp.Submission.Code, tt.wantCode)
+			}
+			if resp.Submission.CanViewCode != tt.wantCanViewCode {
+				t.Fatalf("canViewCode = %v, want %v", resp.Submission.CanViewCode, tt.wantCanViewCode)
 			}
 			if resp.Submission.CompileOutput != tt.wantCompileOutput {
 				t.Fatalf("compile output = %q, want %q", resp.Submission.CompileOutput, tt.wantCompileOutput)

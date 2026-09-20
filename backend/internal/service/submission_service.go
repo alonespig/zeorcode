@@ -316,6 +316,7 @@ func (s *SubmissionService) GetSubmissionByPublicID(ctx context.Context, publicI
 		}
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
+	canViewCode := submission.UserID == requesterID || isAdmin
 	respDto := dto.SubmissionResp{
 		User: dto.UserDetail{
 			ID:     author.UID, // 对外用户号
@@ -332,6 +333,7 @@ func (s *SubmissionService) GetSubmissionByPublicID(ctx context.Context, publicI
 			ID:            submission.PublicID,
 			Language:      submission.Language,
 			Code:          submission.Code,
+			CanViewCode:   canViewCode,
 			Status:        submission.Status,
 			TimeUsed:      submission.TimeUsed,
 			MemoryUsed:    submission.MemoryUsed,
@@ -352,7 +354,7 @@ func (s *SubmissionService) GetSubmissionByPublicID(ctx context.Context, publicI
 		})
 	}
 	// 越权控制：仅本人或管理员可见源代码，其他人一律隐藏
-	if submission.UserID != requesterID && !isAdmin {
+	if !canViewCode {
 		respDto.Submission.Code = ""
 		respDto.Submission.CompileOutput = ""
 	}

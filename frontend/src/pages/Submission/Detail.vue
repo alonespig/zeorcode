@@ -17,7 +17,8 @@ const passedCases = computed(() =>
   detail.value.caseResults.filter(({ status }) => status === AcceptedCode).length,
 );
 const isCompilationError = computed(() => detail.value.submission.status === CompileErrorCode);
-const sourceRestricted = computed(() => !detail.value.submission.code);
+const canViewCode = computed(() => detail.value.submission.canViewCode === true);
+const sourceRestricted = computed(() => !canViewCode.value);
 
 function openProblem(problemId) {
   if (problemId) router.push(`/problem/${problemId}`);
@@ -57,7 +58,7 @@ function openUser(userId) {
       />
 
       <CodeViewer
-        v-if="detail.submission.code"
+        v-if="canViewCode"
         embedded
         title="本次提交"
         show-line-count
