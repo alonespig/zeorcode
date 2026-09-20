@@ -58,6 +58,15 @@ export const importTeamStudents = (teamId, file) => {
   })
 }
 
+export const importTeamStudentsManual = (teamId, text) => {
+  return request({
+    url: `/team/${teamId}/member/import/manual`,
+    method: 'post',
+    data: { text },
+    timeout: 120000,
+  })
+}
+
 // ===== 作业 =====
 
 export const getHomeworkList = (teamId, params) => {

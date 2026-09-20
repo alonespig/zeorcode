@@ -26,10 +26,10 @@ const (
 )
 
 var studentImportHeaders = []string{
-	"邮箱",
 	"学号",
 	"姓名",
-	"用户名",
+	"性别",
+	"邮箱（可选）",
 }
 
 type studentImportRow struct {
@@ -38,6 +38,7 @@ type studentImportRow struct {
 	StudentNo    string
 	RealName     string
 	Username     string
+	Gender       int
 	PasswordHash string
 }
 
@@ -53,7 +54,7 @@ func (s *TeamService) StudentImportTemplate(ctx context.Context, teamID, actorID
 	return data, nil
 }
 
-// ImportStudents 按邮箱识别用户：邮箱存在则直接入队，不存在则按名单创建普通用户后入队。
+// ImportStudents 按学号识别用户：学号作为用户名，账号存在则直接入队，不存在则按名单创建普通用户后入队。
 // 整批创建账号和添加成员使用同一事务，任何一行失败都会全部回滚。
 func (s *TeamService) ImportStudents(
 	ctx context.Context,
@@ -68,16 +69,41 @@ func (s *TeamService) ImportStudents(
 	if err != nil {
 		return nil, err
 	}
+	return s.importStudentRows(ctx, teamID, actorID, isSiteAdmin, rows)
+}
 
+// ImportStudentsManual 导入手动粘贴的学生名单，每行格式：学号 姓名 性别 邮箱（可选）。
+func (s *TeamService) ImportStudentsManual(
+	ctx context.Context,
+	teamID, actorID int64,
+	isSiteAdmin bool,
+	text string,
+) (*dto.TeamStudentImportResp, error) {
+	if err := s.requireManageAccess(ctx, teamID, actorID, isSiteAdmin); err != nil {
+		return nil, err
+	}
+	rows, err := parseManualStudentImport(text)
+	if err != nil {
+		return nil, err
+	}
+	return s.importStudentRows(ctx, teamID, actorID, isSiteAdmin, rows)
+}
+
+func (s *TeamService) importStudentRows(
+	ctx context.Context,
+	teamID, actorID int64,
+	isSiteAdmin bool,
+	rows []studentImportRow,
+) (*dto.TeamStudentImportResp, error) {
 	// 密码哈希较耗时，先在事务外完成，避免长时间占用数据库连接和锁。
-	emails := importEmails(rows)
-	knownUsers, err := s.userRepo.FindByEmails(ctx, emails)
+	usernames := importUsernames(rows)
+	knownUsers, err := s.userRepo.FindByUsernames(ctx, usernames)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	knownByEmail := usersByEmail(knownUsers)
+	knownByUsername := usersByUsername(knownUsers)
 	for i := range rows {
-		if _, exists := knownByEmail[rows[i].Email]; exists {
+		if _, exists := knownByUsername[usernameKey(rows[i].Username)]; exists {
 			continue
 		}
 		if err := prepareNewStudentAccount(&rows[i]); err != nil {
@@ -90,17 +116,17 @@ func (s *TeamService) ImportStudents(
 		teamRepo := repository.NewTeamRepo(tx)
 		userRepo := repository.NewUserRepo(tx)
 
-		// 在事务内再次按邮箱读取，处理预检后恰好被其他请求创建的账号。
-		existingUsers, err := userRepo.FindByEmails(ctx, emails)
+		// 在事务内再次按用户名读取，处理预检后恰好被其他请求创建的账号。
+		existingUsers, err := userRepo.FindByUsernames(ctx, usernames)
 		if err != nil {
 			return err
 		}
-		userByEmail := usersByEmail(existingUsers)
+		userByUsername := usersByUsername(existingUsers)
 
 		newRows := make([]*studentImportRow, 0, len(rows))
 		for i := range rows {
 			row := &rows[i]
-			if _, exists := userByEmail[row.Email]; exists {
+			if _, exists := userByUsername[usernameKey(row.Username)]; exists {
 				continue
 			}
 			if row.PasswordHash == "" {
@@ -128,13 +154,14 @@ func (s *TeamService) ImportStudents(
 				RealName:  row.RealName,
 				Password:  row.PasswordHash,
 				Email:     emailPtr(row.Email),
+				Gender:    row.Gender,
 			})
 		}
 		if err := userRepo.CreateUsersBatch(ctx, newUsers); err != nil {
 			return err
 		}
 		for i, row := range newRows {
-			userByEmail[row.Email] = newUsers[i]
+			userByUsername[usernameKey(row.Username)] = newUsers[i]
 		}
 
 		members, err := teamRepo.ListMembers(ctx, teamID)
@@ -149,7 +176,7 @@ func (s *TeamService) ImportStudents(
 		added := 0
 		skipped := 0
 		for _, row := range rows {
-			user := userByEmail[row.Email]
+			user := userByUsername[usernameKey(row.Username)]
 			if _, exists := memberIDs[user.ID]; exists {
 				skipped++
 				continue
@@ -214,54 +241,140 @@ func parseStudentImport(reader io.Reader) ([]studentImportRow, error) {
 	}
 
 	result := make([]studentImportRow, 0, len(rows)-1)
-	seenEmails := make(map[string]int, len(rows)-1)
 	for i := 1; i < len(rows); i++ {
 		row := studentImportRow{
 			Line:      i + 1,
-			Email:     normalizeEmail(cellValue(rows[i], 0)),
-			StudentNo: strings.TrimSpace(cellValue(rows[i], 1)),
-			RealName:  strings.TrimSpace(cellValue(rows[i], 2)),
-			Username:  strings.TrimSpace(cellValue(rows[i], 3)),
+			StudentNo: strings.TrimSpace(cellValue(rows[i], 0)),
+			RealName:  strings.TrimSpace(cellValue(rows[i], 1)),
+			Email:     normalizeEmail(cellValue(rows[i], 3)),
 		}
-		if row.Email == "" && row.StudentNo == "" && row.RealName == "" && row.Username == "" {
+		if row.Email == "" && row.StudentNo == "" && row.RealName == "" && strings.TrimSpace(cellValue(rows[i], 2)) == "" {
 			continue
 		}
-		if row.Email == "" {
-			return nil, importRowError(row.Line, "邮箱不能为空")
+		gender, err := parseStudentImportGender(cellValue(rows[i], 2))
+		if err != nil {
+			return nil, importRowError(row.Line, err.Error())
 		}
-		parsed, err := mail.ParseAddress(row.Email)
-		if err != nil || parsed.Address != row.Email || utf8.RuneCountInString(row.Email) > 191 {
-			return nil, importRowError(row.Line, "邮箱格式不正确")
-		}
-		if firstLine, exists := seenEmails[row.Email]; exists {
-			return nil, importRowError(row.Line, fmt.Sprintf("邮箱与第 %d 行重复", firstLine))
-		}
-		seenEmails[row.Email] = row.Line
+		row.Gender = gender
 		result = append(result, row)
 		if len(result) > studentImportMaxRows {
 			return nil, errcode.ErrInvalidParams.WithMsg(fmt.Sprintf("一次最多导入 %d 名学生", studentImportMaxRows))
 		}
 	}
-	if len(result) == 0 {
+	return normalizeStudentImportRows(result)
+}
+
+func parseManualStudentImport(text string) ([]studentImportRow, error) {
+	lines := strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
+	result := make([]studentImportRow, 0, len(lines))
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if len(result) == 0 && strings.Contains(line, "学号") && strings.Contains(line, "姓名") {
+			continue
+		}
+		fields := strings.FieldsFunc(line, func(r rune) bool {
+			return r == ',' || r == '，' || r == '\t' || r == ' '
+		})
+		if len(fields) < 3 || len(fields) > 4 {
+			return nil, importRowError(i+1, "每行格式应为：学号 姓名 性别 邮箱（可选）")
+		}
+		gender, err := parseStudentImportGender(fields[2])
+		if err != nil {
+			return nil, importRowError(i+1, err.Error())
+		}
+		row := studentImportRow{
+			Line:      i + 1,
+			StudentNo: strings.TrimSpace(fields[0]),
+			RealName:  strings.TrimSpace(fields[1]),
+			Gender:    gender,
+		}
+		if len(fields) == 4 {
+			row.Email = normalizeEmail(fields[3])
+		}
+		result = append(result, row)
+		if len(result) > studentImportMaxRows {
+			return nil, errcode.ErrInvalidParams.WithMsg(fmt.Sprintf("一次最多导入 %d 名学生", studentImportMaxRows))
+		}
+	}
+	return normalizeStudentImportRows(result)
+}
+
+func normalizeStudentImportRows(rows []studentImportRow) ([]studentImportRow, error) {
+	if len(rows) == 0 {
 		return nil, errcode.ErrInvalidParams.WithMsg("学生名单中没有可导入的数据")
 	}
-	return result, nil
+	seenUsernames := make(map[string]int, len(rows))
+	seenEmails := make(map[string]int, len(rows))
+	for i := range rows {
+		row := &rows[i]
+		row.StudentNo = strings.TrimSpace(row.StudentNo)
+		row.RealName = strings.TrimSpace(row.RealName)
+		row.Email = normalizeEmail(row.Email)
+		row.Username = row.StudentNo
+		if row.StudentNo == "" {
+			return nil, importRowError(row.Line, "学号不能为空")
+		}
+		if !usernamePattern.MatchString(row.Username) {
+			return nil, importRowError(row.Line, "学号作为用户名时只能包含字母、数字和下划线，长度为 2-20 位")
+		}
+		if row.RealName == "" {
+			return nil, importRowError(row.Line, "姓名不能为空")
+		}
+		if utf8.RuneCountInString(row.RealName) > 64 {
+			return nil, importRowError(row.Line, "姓名不能超过 64 个字符")
+		}
+		if row.Gender != 1 && row.Gender != 2 {
+			return nil, importRowError(row.Line, "性别只能填写男或女")
+		}
+		userKey := usernameKey(row.Username)
+		if firstLine, exists := seenUsernames[userKey]; exists {
+			return nil, importRowError(row.Line, fmt.Sprintf("学号与第 %d 行重复", firstLine))
+		}
+		seenUsernames[userKey] = row.Line
+		if row.Email != "" {
+			parsed, err := mail.ParseAddress(row.Email)
+			if err != nil || parsed.Address != row.Email || utf8.RuneCountInString(row.Email) > 191 {
+				return nil, importRowError(row.Line, "邮箱格式不正确")
+			}
+			if firstLine, exists := seenEmails[row.Email]; exists {
+				return nil, importRowError(row.Line, fmt.Sprintf("邮箱与第 %d 行重复", firstLine))
+			}
+			seenEmails[row.Email] = row.Line
+		}
+	}
+	return rows, nil
+}
+
+func parseStudentImportGender(raw string) (int, error) {
+	switch strings.TrimSpace(raw) {
+	case "男", "1":
+		return 1, nil
+	case "女", "2":
+		return 2, nil
+	case "":
+		return 0, fmt.Errorf("性别不能为空")
+	default:
+		return 0, fmt.Errorf("性别只能填写男或女")
+	}
 }
 
 func prepareNewStudentAccount(row *studentImportRow) error {
 	switch {
 	case row.StudentNo == "":
-		return importRowError(row.Line, "邮箱未注册，创建账号时学号不能为空")
+		return importRowError(row.Line, "学号不能为空")
 	case utf8.RuneCountInString(row.StudentNo) > 32:
 		return importRowError(row.Line, "学号不能超过 32 个字符")
 	case len(row.StudentNo) > 72:
 		return importRowError(row.Line, "学号作为初始密码时不能超过 72 个字节")
 	case row.RealName == "":
-		return importRowError(row.Line, "邮箱未注册，创建账号时姓名不能为空")
+		return importRowError(row.Line, "姓名不能为空")
 	case utf8.RuneCountInString(row.RealName) > 64:
 		return importRowError(row.Line, "姓名不能超过 64 个字符")
 	case !usernamePattern.MatchString(row.Username):
-		return importRowError(row.Line, "用户名只能包含字母、数字和下划线，长度为 2-20 位")
+		return importRowError(row.Line, "学号作为用户名时只能包含字母、数字和下划线，长度为 2-20 位")
 	}
 	hash, err := util.HashPassword(row.StudentNo)
 	if err != nil {
@@ -291,10 +404,11 @@ func validateNewAccountUniqueness(ctx context.Context, repo *repository.UserRepo
 	}
 	names := make([]string, 0, len(rows))
 	studentNos := make([]string, 0, len(rows))
+	emails := make([]string, 0, len(rows))
 	nameLine := make(map[string]int, len(rows))
 	studentNoLine := make(map[string]int, len(rows))
 	for _, row := range rows {
-		nameKey := strings.ToLower(row.Username)
+		nameKey := usernameKey(row.Username)
 		if firstLine, exists := nameLine[nameKey]; exists {
 			return importRowError(row.Line, fmt.Sprintf("用户名与第 %d 行重复", firstLine))
 		}
@@ -305,20 +419,30 @@ func validateNewAccountUniqueness(ctx context.Context, repo *repository.UserRepo
 		studentNoLine[row.StudentNo] = row.Line
 		names = append(names, row.Username)
 		studentNos = append(studentNos, row.StudentNo)
+		if row.Email != "" {
+			emails = append(emails, row.Email)
+		}
 	}
 	existing, err := repo.CountByUsernames(ctx, names)
 	if err != nil {
 		return err
 	}
 	if len(existing) > 0 {
-		return errcode.ErrUserExists.WithMsg("用户名已存在，且属于其他邮箱: " + existing[0])
+		return errcode.ErrUserExists.WithMsg("用户名已存在: " + existing[0])
 	}
 	existing, err = repo.CountByStudentNos(ctx, studentNos)
 	if err != nil {
 		return err
 	}
 	if len(existing) > 0 {
-		return errcode.ErrUserExists.WithMsg("学号已存在，且属于其他邮箱: " + existing[0])
+		return errcode.ErrUserExists.WithMsg("学号已存在: " + existing[0])
+	}
+	existing, err = repo.CountByEmails(ctx, emails)
+	if err != nil {
+		return err
+	}
+	if len(existing) > 0 {
+		return errcode.ErrEmailExists.WithMsg("邮箱已被其他账号占用: " + existing[0])
 	}
 	return nil
 }
@@ -346,7 +470,7 @@ func buildStudentImportTemplate() ([]byte, error) {
 	for _, col := range []struct {
 		name  string
 		width float64
-	}{{"A", 30}, {"B", 24}, {"C", 22}, {"D", 25}} {
+	}{{"A", 24}, {"B", 20}, {"C", 12}, {"D", 32}} {
 		if err := f.SetColWidth(studentImportSheet, col.name, col.name, col.width); err != nil {
 			return nil, err
 		}
@@ -359,14 +483,14 @@ func buildStudentImportTemplate() ([]byte, error) {
 	guideRows := [][]any{
 		{"学生名单导入说明"},
 		{"规则", "说明"},
-		{"账号判断", "系统只按邮箱判断账号是否存在。"},
-		{"已有账号", "只需填写邮箱；其他列不会覆盖该账号的已有资料。"},
-		{"新账号", "填写邮箱、学号、姓名和用户名后，系统会创建普通账号。"},
-		{"用户名", "仅支持 2-20 位字母、数字和下划线。"},
+		{"账号判断", "系统按学号判断账号是否存在；学号也会作为用户名。"},
+		{"已有账号", "学号对应的用户名已存在时，直接将该账号加入团队，不覆盖原有资料。"},
+		{"新账号", "学号、姓名、性别必填；邮箱可留空。系统会创建普通账号。"},
+		{"性别", "填写“男”或“女”。"},
 		{"账号密码", "新账号的初始密码与学号相同，导入后请通知学生尽快修改。"},
 		{"导入限制", fmt.Sprintf("每次最多 %d 人，仅支持 .xlsx 文件。", studentImportMaxRows)},
 		{"事务规则", "任意一行校验失败时，本批次不会创建账号，也不会添加成员。"},
-		{"新账号示例", "student01@example.edu.cn | 20260001 | 张三 | student01"},
+		{"填写示例", "20260001 | 张三 | 男 | student01@example.edu.cn（邮箱可留空）"},
 	}
 	for i, row := range guideRows {
 		cell, _ := excelize.CoordinatesToCellName(1, i+1)
@@ -415,20 +539,24 @@ func buildStudentImportTemplate() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func importEmails(rows []studentImportRow) []string {
-	emails := make([]string, 0, len(rows))
+func importUsernames(rows []studentImportRow) []string {
+	usernames := make([]string, 0, len(rows))
 	for _, row := range rows {
-		emails = append(emails, row.Email)
+		usernames = append(usernames, row.Username)
 	}
-	return emails
+	return usernames
 }
 
-func usersByEmail(users []model.User) map[string]*model.User {
+func usersByUsername(users []model.User) map[string]*model.User {
 	result := make(map[string]*model.User, len(users))
 	for i := range users {
-		result[normalizeEmail(emailValue(users[i].Email))] = &users[i]
+		result[usernameKey(users[i].Username)] = &users[i]
 	}
 	return result
+}
+
+func usernameKey(username string) string {
+	return strings.ToLower(strings.TrimSpace(username))
 }
 
 func cellValue(row []string, index int) string {

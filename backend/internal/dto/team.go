@@ -90,6 +90,10 @@ type TeamStudentImportResp struct {
 	SkippedMembers int `json:"skippedMembers"`
 }
 
+type TeamStudentManualImportReq struct {
+	Text string `json:"text" binding:"required"`
+}
+
 // SetMemberRoleReq 设置/取消团队管理员（仅所有者可用）
 type SetMemberRoleReq struct {
 	Role int `json:"role" binding:"oneof=0 1"`

@@ -193,6 +193,9 @@ func (h *HttpServer) initTeamRouter(r *gin.Engine) {
 		auth.POST("/team/:id/member/import",
 			middleware.RateLimit(h.cache, "team-student-import", 10, time.Hour),
 			response.Wrap(h.teamController.ImportStudents))
+		auth.POST("/team/:id/member/import/manual",
+			middleware.RateLimit(h.cache, "team-student-import-manual", 10, time.Hour),
+			response.Wrap(h.teamController.ImportStudentsManual))
 		auth.PUT("/team/:id/member/:uid/role", response.Wrap(h.teamController.SetMemberRole))
 		auth.DELETE("/team/:id/member/:uid", response.Wrap(h.teamController.RemoveMember))
 	}

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -157,7 +158,8 @@ func (t *TeamController) DownloadStudentImportTemplate(c *gin.Context) {
 		response.Fail(c, err)
 		return
 	}
-	c.Header("Content-Disposition", "attachment; filename=student-import-template.xlsx")
+	filename := url.PathEscape("学生名单导入模板.xlsx")
+	c.Header("Content-Disposition", "attachment; filename=student-import-template.xlsx; filename*=UTF-8''"+filename)
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", data)
 }
 
@@ -191,6 +193,23 @@ func (t *TeamController) ImportStudents(c *gin.Context) (any, error) {
 	defer file.Close()
 
 	return t.teamSrv.ImportStudents(c.Request.Context(), id, actorID, role == 1, file)
+}
+
+// ImportStudentsManual POST /api/team/:id/member/import/manual，手动粘贴学生名单。
+func (t *TeamController) ImportStudentsManual(c *gin.Context) (any, error) {
+	id, err := t.resolveTeamID(c)
+	if err != nil {
+		return nil, err
+	}
+	actorID, role, err := requireCurrentUser(c)
+	if err != nil {
+		return nil, err
+	}
+	var req dto.TeamStudentManualImportReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		return nil, errcode.ErrInvalidParams.Wrap(err)
+	}
+	return t.teamSrv.ImportStudentsManual(c.Request.Context(), id, actorID, role == 1, req.Text)
 }
 
 // SetMemberRole PUT /api/team/:id/member/:uid/role 设置/取消团队管理员（:uid 为对外用户号）

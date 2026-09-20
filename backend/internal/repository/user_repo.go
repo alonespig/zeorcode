@@ -227,6 +227,16 @@ func (r *UserRepo) FindByEmails(ctx context.Context, emails []string) ([]model.U
 	return users, err
 }
 
+// FindByUsernames 按用户名批量查找用户。
+func (r *UserRepo) FindByUsernames(ctx context.Context, usernames []string) ([]model.User, error) {
+	if len(usernames) == 0 {
+		return nil, nil
+	}
+	var users []model.User
+	err := r.db.WithContext(ctx).Where("username IN ?", usernames).Find(&users).Error
+	return users, err
+}
+
 // ListUsers 分页列出所有用户（管理员后台用）
 func (r *UserRepo) ListUsers(ctx context.Context, page, pageSize int) ([]model.User, int64, error) {
 	var users []model.User

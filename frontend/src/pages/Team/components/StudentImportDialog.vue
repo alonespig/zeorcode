@@ -11,38 +11,54 @@
   >
     <template v-if="!result">
       <div class="mb-5 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-6 text-gray-600">
-        <div class="font-medium text-gray-800">系统只按邮箱判断账号是否存在</div>
-        <div>已有邮箱：直接将账号加入团队，不覆盖原有姓名、学号等资料。</div>
-        <div>新邮箱：填写学号、姓名和用户名，系统会创建普通账号，初始密码为学号。</div>
+        <div class="font-medium text-gray-800">系统按学号识别账号，学号也会作为用户名</div>
+        <div>已有学号：直接将账号加入团队，不覆盖原有资料。</div>
+        <div>新学号：填写学号、姓名、性别即可创建账号，邮箱可留空，初始密码为学号。</div>
       </div>
 
-      <div class="mb-4 flex items-center justify-between rounded border border-gray-200 px-4 py-3">
-        <div>
-          <div class="text-sm font-medium text-gray-700">先下载标准模板</div>
-          <div class="mt-0.5 text-xs text-gray-400">请保留工作表名称和第一行表头，每次最多导入 500 人</div>
-        </div>
-        <el-link :href="templateUrl" type="primary" download="学生名单导入模板.xlsx" :underline="false">
-          <el-icon class="mr-1"><Download /></el-icon>
-          下载模板
-        </el-link>
-      </div>
+      <el-tabs v-model="importMode" class="student-import-tabs">
+        <el-tab-pane label="Excel 导入" name="excel">
+          <div class="mb-4 flex items-center justify-between rounded border border-gray-200 px-4 py-3">
+            <div>
+              <div class="text-sm font-medium text-gray-700">先下载标准模板</div>
+              <div class="mt-0.5 text-xs text-gray-400">字段顺序：学号、姓名、性别、邮箱（可选），每次最多导入 500 人</div>
+            </div>
+            <el-link :href="templateUrl" type="primary" download="学生名单导入模板.xlsx" :underline="false">
+              <el-icon class="mr-1"><Download /></el-icon>
+              下载模板
+            </el-link>
+          </div>
 
-      <el-upload
-        v-model:file-list="fileList"
-        drag
-        accept=".xlsx"
-        :auto-upload="false"
-        :limit="1"
-        :on-change="handleFileChange"
-        :on-remove="handleFileRemove"
-        :on-exceed="handleExceed"
-      >
-        <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-        <div class="el-upload__text">将填写好的 Excel 拖到这里，或<em>点击选择</em></div>
-        <template #tip>
-          <div class="el-upload__tip">仅支持 .xlsx 文件，大小不超过 5MB。任一行失败时整批数据都会回滚。</div>
-        </template>
-      </el-upload>
+          <el-upload
+            v-model:file-list="fileList"
+            drag
+            accept=".xlsx"
+            :auto-upload="false"
+            :limit="1"
+            :on-change="handleFileChange"
+            :on-remove="handleFileRemove"
+            :on-exceed="handleExceed"
+          >
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div class="el-upload__text">将填写好的 Excel 拖到这里，或<em>点击选择</em></div>
+            <template #tip>
+              <div class="el-upload__tip">仅支持 .xlsx 文件，大小不超过 5MB。任一行失败时整批数据都会回滚。</div>
+            </template>
+          </el-upload>
+        </el-tab-pane>
+        <el-tab-pane label="手动输入" name="manual">
+          <el-input
+            v-model="manualText"
+            type="textarea"
+            :rows="8"
+            resize="vertical"
+            placeholder="每行一名学生：学号 姓名 性别 邮箱（可选）&#10;例如：&#10;20260001 张三 男 zhangsan@example.com&#10;20260002 李四 女"
+          />
+          <div class="mt-2 text-xs leading-5 text-gray-400">
+            支持空格、Tab、英文逗号或中文逗号分隔；第一行写“学号 姓名 性别 邮箱（可选）”会自动跳过。
+          </div>
+        </el-tab-pane>
+      </el-tabs>
     </template>
 
     <el-result v-else icon="success" title="学生名单导入完成" sub-title="成员列表已经刷新">
@@ -66,7 +82,7 @@
 
     <template #footer>
       <el-button v-if="!result" :disabled="importing" @click="visible = false">取消</el-button>
-      <el-button v-if="!result" type="primary" :loading="importing" :disabled="!selectedFile" @click="submitImport">
+      <el-button v-if="!result" type="primary" :loading="importing" :disabled="!canSubmit" @click="submitImport">
         开始导入
       </el-button>
       <el-button v-else type="primary" @click="visible = false">完成</el-button>
@@ -78,7 +94,7 @@
 import { computed, ref, shallowRef } from "vue";
 import { ElMessage } from "element-plus";
 import { Download, UploadFilled } from "@element-plus/icons-vue";
-import { importTeamStudents } from "@/api/team";
+import { importTeamStudents, importTeamStudentsManual } from "@/api/team";
 
 const props = defineProps({
   teamId: {
@@ -90,12 +106,17 @@ const emit = defineEmits(["imported"]);
 const visible = defineModel({ type: Boolean, default: false });
 
 const fileList = ref([]);
+const importMode = ref("excel");
+const manualText = ref("");
 const selectedFile = shallowRef(null);
 const importing = shallowRef(false);
 const result = shallowRef(null);
 
 const templateUrl = computed(
   () => `${import.meta.env.VITE_API_BASE_URL}/team/${props.teamId}/member/import/template`,
+);
+const canSubmit = computed(() =>
+  importMode.value === "excel" ? !!selectedFile.value : manualText.value.trim().length > 0,
 );
 
 const handleFileChange = (uploadFile) => {
@@ -125,10 +146,12 @@ const handleExceed = () => {
 };
 
 const submitImport = async () => {
-  if (!selectedFile.value || importing.value) return;
+  if (!canSubmit.value || importing.value) return;
   importing.value = true;
   try {
-    const res = await importTeamStudents(props.teamId, selectedFile.value);
+    const res = importMode.value === "excel"
+      ? await importTeamStudents(props.teamId, selectedFile.value)
+      : await importTeamStudentsManual(props.teamId, manualText.value);
     result.value = res.data;
     emit("imported", res.data);
   } catch (err) {
@@ -140,6 +163,8 @@ const submitImport = async () => {
 
 const resetDialog = () => {
   fileList.value = [];
+  importMode.value = "excel";
+  manualText.value = "";
   selectedFile.value = null;
   result.value = null;
 };
