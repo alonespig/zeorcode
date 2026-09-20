@@ -15,19 +15,19 @@
       <div class="f-panel">
         <div class="divide-y divide-gray-100 text-sm">
           <div class="flex justify-between px-5 py-2.5">
-            <span class="text-gray-500">所有者</span>
-            <span class="text-gray-700">{{ team.owner }}</span>
+            <span class="text-gray-600 text-[13px] font-semibold">所有者</span>
+            <span class="text-gray-700 text-[14px]">{{ team.owner }}</span>
           </div>
           <div class="flex justify-between px-5 py-2.5">
-            <span class="text-gray-500">公开度</span>
-            <span class="text-gray-700">{{ team.visibility === 1 ? "非公开" : "公开" }}</span>
+            <span class="text-gray-600 text-[13px] font-semibold">公开度</span>
+            <span class="text-gray-700 text-[14px]">{{ team.visibility === 1 ? "非公开" : "公开" }}</span>
           </div>
           <div class="flex justify-between px-5 py-2.5">
-            <span class="text-gray-500">团队编号</span>
-            <span class="font-mono text-gray-700">{{ team.id }}</span>
+            <span class="text-gray-600 text-[13px] font-semibold">团队编号</span>
+            <span class="font-mono text-gray-700 text-[14px]">{{ team.id }}</span>
           </div>
           <div v-if="isTeamMember" class="flex justify-between px-5 py-2.5">
-            <span class="text-gray-500">我的角色</span>
+            <span class="text-gray-600 text-[13px] font-semibold">我的角色</span>
             <el-tag size="small" :type="roleTagType">{{ roleText }}</el-tag>
           </div>
         </div>

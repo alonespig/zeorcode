@@ -68,23 +68,25 @@ onBeforeUnmount(() => {
       <div class="team-heading">
         <div class="team-heading__cover" aria-label="团队封面">
           <img v-if="team.coverUrl" :src="team.coverUrl" :alt="`${team.name || '团队'}封面`" />
-          <el-icon v-else :size="34"><UserFilled /></el-icon>
+          <el-icon v-else :size="34">
+            <UserFilled />
+          </el-icon>
         </div>
 
         <div class="team-heading__identity">
           <div class="team-heading__title-row">
             <h1 class="text-2xl font-semibold text-gray-700">{{ team.name }}</h1>
-            <span
-              v-if="team.visibility === 1"
-              class="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs text-amber-600"
-            >
-              <el-icon><Lock /></el-icon>非公开
+            <span v-if="team.visibility === 1"
+              class="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs text-amber-600">
+              <el-icon>
+                <Lock />
+              </el-icon>非公开
             </span>
-            <span
-              v-else
-              class="inline-flex items-center gap-1 rounded border border-green-200 bg-green-50 px-2.5 py-1 text-xs text-green-600"
-            >
-              <el-icon><View /></el-icon>公开
+            <span v-else
+              class="inline-flex items-center gap-1 rounded border border-green-200 bg-green-50 px-2.5 py-1 text-xs text-green-600">
+              <el-icon>
+                <View />
+              </el-icon>公开
             </span>
           </div>
         </div>
@@ -102,23 +104,14 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="flex items-center gap-6 border-t border-gray-100 px-6">
-        <router-link
-          v-for="tab in tabs"
-          :key="tab.name"
-          :to="tab.to"
+        <router-link v-for="tab in tabs" :key="tab.name" :to="tab.to"
           class="flex items-center gap-1.5 border-b-2 border-transparent py-3 text-[15px] font-medium text-gray-700 hover:text-blue-500"
-          exact-active-class="border-blue-500! text-blue-500! font-medium"
-        >
+          exact-active-class="border-blue-500! text-blue-500! font-medium">
           {{ tab.label }}
         </router-link>
-        <button
-          v-if="userStore.isAdmin"
-          type="button"
-          class="team-agent-trigger"
-          :class="{ 'team-agent-trigger--active': agentVisible }"
-          :aria-expanded="agentVisible"
-          @click="setAgentVisible(true)"
-        >
+        <button v-if="userStore.isAdmin" type="button" class="team-agent-trigger"
+          :class="{ 'team-agent-trigger--active': agentVisible }" :aria-expanded="agentVisible"
+          @click="setAgentVisible(true)">
           AI 助手
         </button>
       </div>
@@ -129,19 +122,16 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="agentVisible" class="team-agent-overlay" role="presentation">
-      <section
-        class="team-agent-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="team-agent-dialog-title"
-      >
+      <section class="team-agent-dialog" role="dialog" aria-modal="true" aria-labelledby="team-agent-dialog-title">
         <header class="team-agent-dialog__header">
           <div class="team-agent-dialog__title">
             <strong id="team-agent-dialog-title">AI 助手</strong>
             <span>{{ team.name || "当前团队" }}</span>
           </div>
           <button type="button" class="team-agent-dialog__close" aria-label="关闭 AI 助手" @click="setAgentVisible(false)">
-            <el-icon><Close /></el-icon>
+            <el-icon>
+              <Close />
+            </el-icon>
           </button>
         </header>
         <div class="team-agent-dialog__body">
