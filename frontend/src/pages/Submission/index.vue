@@ -2,7 +2,7 @@
   <div class="submission-page page-container">
     <div class="f-panel">
       <!-- header -->
-      <div class="flex items-center justify-between px-10 py-5 border-b border-gray-100 max-lg:flex-col max-lg:items-stretch max-lg:gap-4 max-md:px-3 max-md:py-4">
+      <div class="flex items-center justify-between px-10 pl-6 py-5 border-b border-gray-100 max-lg:flex-col max-lg:items-stretch max-lg:gap-4 max-md:px-3 max-md:py-4">
         <h1 class="text-xl text-gray-600">评测结果</h1>
         <ul class="flex gap-8 max-lg:flex-wrap max-lg:gap-3 max-md:grid max-md:grid-cols-2 max-md:gap-2">
           <li class="max-md:col-span-2">
@@ -44,7 +44,10 @@
       <el-table class="submission-table" :data="tableData" stripe style="width: 100%">
         <el-table-column label="#" width="104" align="center">
           <template #default="{ row }">
-            <span @click="handleClickId(row.id)" class="cursor-pointer hover:text-blue-400!">{{ row.id }}</span>
+            <span @click="handleClickId(row.id)"
+              class="cursor-pointer text-[15px] font-normal text-blue-500 hover:text-blue-400!">
+              {{ row.id }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column prop="problemName" label="题目" min-width="180">
