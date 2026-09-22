@@ -9,7 +9,7 @@
             <el-radio-button value="rating">Rating</el-radio-button>
           </el-radio-group>
         </div>
-        <div v-if="mode === 'ac'" class="flex items-center gap-6">
+        <div class="flex items-center gap-6">
           <el-input v-model="q" class="rounded h-8.5" placeholder="用户名" :prefix-icon="Search" style="width: 200px;" />
           <el-button @click="handleSearch" :icon="Search" class="rounded-xs!" type="primary">搜索</el-button>
         </div>
@@ -52,16 +52,15 @@ const total = ref(0)
 const loading = shallowRef(true)
 
 const emptyDescription = computed(() => {
-  if (mode.value === 'rating') return '暂无 Rating 排名'
   if (route.query.q) return '没有找到相关用户'
+  if (mode.value === 'rating') return '暂无 Rating 排名'
   return '暂无排名数据'
 })
 
 const goUser = (id) => router.push({ name: 'User', params: { id } })
 
-// 切换榜单：回到第 1 页，清掉搜索
 const onModeChange = (val) => {
-  router.push({ query: { tab: val === 'rating' ? 'rating' : undefined, page: 1, pageSize: pageSize.value } })
+  router.push({ query: { ...route.query, tab: val === 'rating' ? 'rating' : undefined, page: 1, pageSize: pageSize.value } })
 }
 
 const handleSearch = () => {
@@ -76,7 +75,7 @@ const fetchList = async () => {
   loading.value = true
   try {
     if (mode.value === 'rating') {
-      const res = await ratingRank({ page: page.value, pageSize: pageSize.value })
+      const res = await ratingRank({ q: route.query.q || undefined, page: page.value, pageSize: pageSize.value })
       list.value = res.data?.list || []
       total.value = res.data?.total || 0
     } else {

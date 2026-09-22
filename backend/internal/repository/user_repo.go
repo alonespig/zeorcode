@@ -152,13 +152,17 @@ func (r *UserRepo) AllUserIDs(ctx context.Context) ([]int64, error) {
 }
 
 // RatingRankList 按 rating 降序分页取用户（rating 榜）。
-func (r *UserRepo) RatingRankList(ctx context.Context, page, pageSize int) ([]model.User, int64, error) {
+func (r *UserRepo) RatingRankList(ctx context.Context, page, pageSize int, username *string) ([]model.User, int64, error) {
 	var users []model.User
 	var total int64
-	if err := r.db.WithContext(ctx).Model(&model.User{}).Count(&total).Error; err != nil {
+	db := r.db.WithContext(ctx).Model(&model.User{})
+	if username != nil && *username != "" {
+		db = db.Where("username LIKE ?", "%"+*username+"%")
+	}
+	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	err := r.db.WithContext(ctx).Order("rating DESC, id ASC").
+	err := db.Order("rating DESC, id ASC").
 		Offset((page - 1) * pageSize).Limit(pageSize).Find(&users).Error
 	return users, total, err
 }

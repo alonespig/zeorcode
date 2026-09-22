@@ -321,8 +321,8 @@ func (u *UserService) UserRankList(ctx context.Context, page, pageSize int, user
 }
 
 // RatingRankList 按 rating 降序的全站排名。
-func (u *UserService) RatingRankList(ctx context.Context, page, pageSize int) (*dto.UserRank, error) {
-	users, total, err := u.repo.RatingRankList(ctx, page, pageSize)
+func (u *UserService) RatingRankList(ctx context.Context, page, pageSize int, username *string) (*dto.UserRank, error) {
+	users, total, err := u.repo.RatingRankList(ctx, page, pageSize, username)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}

@@ -69,7 +69,7 @@ func (u *UserController) ContestHistory(c *gin.Context) (any, error) {
 
 // RatingRank GET /api/user/rating-rank 按 rating 排名（公开）
 func (u *UserController) RatingRank(c *gin.Context) (any, error) {
-	var req dto.PageForm
+	var req dto.UserRankReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
@@ -79,7 +79,7 @@ func (u *UserController) RatingRank(c *gin.Context) (any, error) {
 	if req.PageSize <= 0 {
 		req.PageSize = 15
 	}
-	return u.userSrv.RatingRankList(c.Request.Context(), req.Page, req.PageSize)
+	return u.userSrv.RatingRankList(c.Request.Context(), req.Page, req.PageSize, req.UserName)
 }
 
 func (u *UserController) CreateUser(c *gin.Context) (any, error) {
