@@ -65,10 +65,6 @@ function openUser(userId) {
         :code="detail.submission.code"
         :language="detail.submission.language"
       />
-      <section v-else class="restricted-panel" aria-label="本次提交">
-        <h2>本次提交</h2>
-        <p>仅提交者和管理员可以查看源代码。</p>
-      </section>
     </section>
   </main>
 </template>
@@ -76,9 +72,6 @@ function openUser(userId) {
 <style scoped>
 .submission-page { width: min(1320px, calc(100% - 48px)); min-height: 420px; margin: 0 auto; padding: 0 0 56px; }
 .detail-card { display: grid; gap: 12px; }
-.restricted-panel { overflow: hidden; border: 0; border-radius: 0; background: #fff; box-shadow: none; }
-.restricted-panel h2 { min-height: 58px; margin: 0; padding: 0 22px; border-bottom: 1px solid #e5e9f0; display: flex; align-items: center; color: #182230; font-size: 16px; font-weight: 640; }
-.restricted-panel p { margin: 0; padding: 48px 22px; color: #7b8697; font-size: 13px; text-align: center; }
 @media (max-width: 720px) {
   .submission-page { width: min(100% - 28px, 1320px); }
   .detail-card { gap: 8px; }
