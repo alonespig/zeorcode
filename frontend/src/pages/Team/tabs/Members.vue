@@ -9,7 +9,6 @@
       <div class="ml-auto flex items-center gap-2.5">
         <el-input v-model="keyword" :prefix-icon="Search" clearable placeholder="搜索成员…" class="w-56!" />
         <el-button v-if="canManage" type="primary" plain @click="importVisible = true">导入学生</el-button>
-        <el-button v-if="canManage" @click="inviteVisible = true">邀请成员</el-button>
       </div>
     </div>
 
@@ -37,40 +36,6 @@
 
     <el-empty v-else :description="members.length ? '未找到匹配的成员' : '暂无成员'" :image-size="80" />
 
-    <el-dialog v-model="inviteVisible" title="邀请成员" width="480px">
-      <p class="mb-4 text-sm leading-6 text-gray-500">
-        将下面的邀请信息发送给成员，对方打开链接后即可加入团队。
-      </p>
-      <div class="space-y-4">
-        <div>
-          <div class="mb-1.5 text-sm text-gray-600">团队链接</div>
-          <el-input :model-value="inviteLink" readonly>
-            <template #append>
-              <el-button @click="copyText(inviteLink, '团队链接')">复制</el-button>
-            </template>
-          </el-input>
-        </div>
-        <div v-if="team.visibility === 1">
-          <div class="mb-1.5 text-sm text-gray-600">邀请码</div>
-          <el-input :model-value="team.inviteCode || '暂未设置'" readonly>
-            <template v-if="team.inviteCode" #append>
-              <el-button @click="copyText(team.inviteCode, '邀请码')">复制</el-button>
-            </template>
-          </el-input>
-          <p v-if="!team.inviteCode" class="mt-1.5 text-xs text-amber-600">
-            请先在“概览 → 管理团队”中设置邀请码。
-          </p>
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="inviteVisible = false">关闭</el-button>
-        <el-button type="primary" :disabled="team.visibility === 1 && !team.inviteCode"
-          @click="copyText(inviteText, '邀请信息')">
-          复制邀请信息
-        </el-button>
-      </template>
-    </el-dialog>
-
     <StudentImportDialog v-if="canManage" v-model="importVisible" :team-id="route.params.id" @imported="loadMembers" />
   </div>
 </template>
@@ -87,7 +52,6 @@ const team = inject("team");
 const route = useRoute();
 const members = ref([]);
 const keyword = ref("");
-const inviteVisible = ref(false);
 const importVisible = shallowRef(false);
 
 const canManage = computed(() => team.value.canManage);
@@ -100,14 +64,6 @@ const filteredMembers = computed(() => {
       String(value || "").toLocaleLowerCase().includes(q)
     )
   );
-});
-const inviteLink = computed(() => `${window.location.origin}/team/${route.params.id}`);
-const inviteText = computed(() => {
-  const lines = [`邀请你加入团队「${team.value.name}」`, `团队链接：${inviteLink.value}`];
-  if (team.value.visibility === 1 && team.value.inviteCode) {
-    lines.push(`邀请码：${team.value.inviteCode}`);
-  }
-  return lines.join("\n");
 });
 
 const roleMeta = (r) => ({
@@ -151,27 +107,6 @@ const remove = async (m) => {
     loadMembers();
   } catch (err) {
     console.error(err);
-  }
-};
-
-const copyText = async (value, label) => {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(value);
-    } else {
-      const textarea = document.createElement("textarea");
-      textarea.value = value;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      textarea.remove();
-    }
-    ElMessage.success(`${label}已复制`);
-  } catch (err) {
-    console.error(err);
-    ElMessage.error("复制失败，请手动复制");
   }
 };
 
