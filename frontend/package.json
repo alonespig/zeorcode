@@ -31,11 +31,9 @@
     "markdown-it-katex": "^2.0.3",
     "markdown-it-texmath": "^1.0.0",
     "md-editor-v3": "^6.5.0",
-    "monaco-editor": "^0.55.1",
     "nprogress": "^0.2.0",
     "pinia": "^3.0.4",
     "tailwindcss": "^4.3.0",
-    "vite-plugin-monaco-editor": "^1.1.0",
     "vue": "^3.5.26",
     "vue-codemirror": "^6.1.1",
     "vue-router": "^4.6.4"

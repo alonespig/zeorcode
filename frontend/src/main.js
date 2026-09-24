@@ -6,8 +6,8 @@ import router from "./router";
 import "@/styles/common.css";
 import "@/styles/assets.css"
 import "@/styles/table.css"
-import ElementPlus from 'element-plus'
-import zhCn from 'element-plus/es/locale/lang/zh-cn'
+// Element Plus 组件由 vite.config.js 的 ElementPlusResolver 按需引入，这里只引全量样式；
+// 中文语言包在 App.vue 的 el-config-provider 上设置。
 import 'element-plus/dist/index.css'
 import '@/styles/element-theme.css'
 import '@/font/iconfont.css'
@@ -19,10 +19,6 @@ const app = createApp(App);
 
 // 全局注册指令
 app.directive('permission', permission)
-
-app.use(ElementPlus, {
-  locale: zhCn,
-})
 
 app.use(createPinia());
 

@@ -1,7 +1,7 @@
 import MarkdownIt from "markdown-it";
 import texmath from "markdown-it-texmath";
 import katex from "katex";
-import hljs from "highlight.js";
+import hljs from "@/utils/highlight";
 import DOMPurify from "dompurify";
 import "katex/dist/katex.min.css";
 import "highlight.js/styles/github.css";

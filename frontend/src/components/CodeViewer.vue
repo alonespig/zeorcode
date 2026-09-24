@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onScopeDispose, shallowRef } from "vue";
-import hljs from "highlight.js";
+import hljs from "@/utils/highlight";
 import "highlight.js/styles/github.css";
 
 const props = defineProps({
