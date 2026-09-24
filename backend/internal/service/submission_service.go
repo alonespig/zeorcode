@@ -153,6 +153,9 @@ func (s *SubmissionService) Rejudge(ctx context.Context, scope repository.Rejudg
 	}
 	dispatches, err := s.subRepo.ResetForRejudge(ctx, ids)
 	if err != nil {
+		if errors.Is(err, repository.ErrContestRatingSettled) {
+			return 0, errcode.ErrBadRequest.WithMsg("比赛 rating 已结算，无法重判该比赛的提交")
+		}
 		return 0, errcode.ErrDatabase.Wrap(err)
 	}
 	s.invalidateRejudgeCaches(ctx, targets)

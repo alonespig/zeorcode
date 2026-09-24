@@ -17,6 +17,11 @@ type SubmissionRepo struct {
 	db *gorm.DB
 }
 
+var (
+	ErrContestSubmissionClosed = errors.New("contest is not accepting submissions")
+	ErrContestRatingSettled    = errors.New("contest rating is already settled")
+)
+
 func NewSubmissionRepo(db *gorm.DB) *SubmissionRepo {
 	return &SubmissionRepo{db: db}
 }
@@ -59,6 +64,22 @@ type SubmissionDispatch struct {
 func (s *SubmissionRepo) CreatePending(ctx context.Context, submission *model.Submission) (SubmissionDispatch, error) {
 	dispatch := SubmissionDispatch{}
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if submission.ContestID != 0 {
+			// 与结算、重判使用同一把锁；拿到锁后重新检查截止时间。
+			var contest model.Contest
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&contest, submission.ContestID).Error; err != nil {
+				return err
+			}
+			now := time.Now()
+			end := contest.EndTime
+			if end.IsZero() {
+				end = contest.StartTime.Add(time.Duration(contest.Duration) * time.Minute)
+			}
+			if contest.Settled || now.Before(contest.StartTime) || !now.Before(end) {
+				return ErrContestSubmissionClosed
+			}
+			submission.CreatedAt = now
+		}
 		if err := tx.Create(submission).Error; err != nil {
 			return err
 		}
@@ -328,6 +349,14 @@ func (s *SubmissionRepo) ListContestSubmissionsForRecompute(ctx context.Context,
 	return rows, err
 }
 
+// HasPendingContestSubmission 比赛内是否还有未出结果（Pending，含远程判题轮询中）的提交。
+func (s *SubmissionRepo) HasPendingContestSubmission(ctx context.Context, contestID int64) (bool, error) {
+	var rows []int64
+	err := s.db.WithContext(ctx).Model(&model.Submission{}).
+		Where("contest_id = ? AND status = ?", contestID, judge.Pending).Limit(1).Pluck("id", &rows).Error
+	return len(rows) != 0, err
+}
+
 // ListUserProblemSubmissionsForRecompute 取某用户某题的非比赛(contest_id=0)、已判非CE提交，时间升序，供重算 UserProblem。
 func (s *SubmissionRepo) ListUserProblemSubmissionsForRecompute(ctx context.Context, userID, problemID int64) ([]RecomputeSubmissionRow, error) {
 	var rows []RecomputeSubmissionRow
@@ -387,6 +416,21 @@ func (s *SubmissionRepo) ResetForRejudge(ctx context.Context, ids []int64) ([]Su
 	}
 	dispatches := make([]SubmissionDispatch, 0, len(ids))
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 按固定顺序先锁比赛，再更新提交，避免与结算交叉执行。
+		var contestIDs []int64
+		if err := tx.Model(&model.Submission{}).Where("id IN ? AND contest_id <> 0", ids).
+			Distinct().Order("contest_id ASC").Pluck("contest_id", &contestIDs).Error; err != nil {
+			return err
+		}
+		for _, contestID := range contestIDs {
+			var contest model.Contest
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&contest, contestID).Error; err != nil {
+				return err
+			}
+			if contest.Settled {
+				return ErrContestRatingSettled
+			}
+		}
 		if err := tx.Model(&model.Submission{}).Where("id IN ?", ids).
 			Updates(map[string]any{
 				"version":        gorm.Expr("version + 1"),

@@ -120,3 +120,24 @@ func TestContestEndTimeFallsBackToDurationMinutes(t *testing.T) {
 		t.Fatalf("contestEndTime() = %v, want %v", got, want)
 	}
 }
+
+func TestRatingSettleDue(t *testing.T) {
+	end := time.Date(2026, time.August, 22, 12, 0, 0, 0, time.UTC)
+	contest := model.Contest{StartTime: end.Add(-2 * time.Hour), EndTime: end}
+	tests := []struct {
+		name string
+		now  time.Time
+		want bool
+	}{
+		{name: "比赛进行中不结算", now: end.Add(-time.Minute), want: false},
+		{name: "刚结束仍在宽限期内不结算", now: end.Add(ratingSettleGrace - time.Second), want: false},
+		{name: "宽限期满可结算", now: end.Add(ratingSettleGrace), want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ratingSettleDue(contest, tt.now); got != tt.want {
+				t.Fatalf("ratingSettleDue() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
