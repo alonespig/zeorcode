@@ -190,7 +190,7 @@ func (s *HomeworkService) Detail(ctx context.Context, id, userID int64, isSiteAd
 		statsByProblem[st.ProblemID] = st
 	}
 
-	// 我在时间窗内每题的最高分与整体通过状态
+	// 时间窗内的最高分，以及仅限本作业的提交状态（包含补交）。
 	myBest := map[int64]int{}
 	statusMap := map[int64]int{}
 	if userID != 0 {
@@ -201,7 +201,7 @@ func (s *HomeworkService) Detail(ctx context.Context, id, userID int64, isSiteAd
 		for _, b := range best {
 			myBest[b.ProblemID] = b.Best
 		}
-		statusMap, err = s.problemRepo.GetUserProblemStatusByIDs(ctx, userID, problemIDs)
+		statusMap, err = s.submitRepo.GetHomeworkUserProblemStatuses(ctx, id, userID, problemIDs)
 		if err != nil {
 			return nil, errcode.ErrDatabase.Wrap(err)
 		}

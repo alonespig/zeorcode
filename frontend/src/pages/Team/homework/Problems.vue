@@ -12,7 +12,7 @@
     <el-table v-else :data="hw.problems" style="width: 100%">
       <el-table-column label="状态" width="70" align="center">
         <template #default="{ row }">
-          <!-- 1=已通过；其他非空=交过没过；null=没做（与题库/题单一致） -->
+          <!-- 仅本作业内：1=已通过；其他非空=已提交未通过；空=未提交 -->
           <el-icon v-if="row.status === 1" color="#2f9e44" :size="17">
             <Select />
           </el-icon>

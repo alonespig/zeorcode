@@ -638,6 +638,40 @@ func (s *SubmissionRepo) GetHomeworkProblemStats(ctx context.Context, homeworkID
 	return stats, err
 }
 
+// GetHomeworkUserProblemStatuses 只反映当前用户在当前作业内的提交。
+// 有 AC 则显示通过，否则使用最新提交状态；未提交的题不出现在结果中。
+// 与作业通过率一致，包含补交；计分时间窗仍由 BestScoresByUser 单独控制。
+func (s *SubmissionRepo) GetHomeworkUserProblemStatuses(ctx context.Context, homeworkID, userID int64, problemIDs []int64) (map[int64]int, error) {
+	statuses := make(map[int64]int)
+	if homeworkID == 0 || userID == 0 || len(problemIDs) == 0 {
+		return statuses, nil
+	}
+	var rows []struct {
+		ProblemID int64
+		Status    int
+		LatestID  int64
+	}
+	// 按题目和状态聚合，避免拉取全部历史提交；每题最多返回状态种类数条记录。
+	err := s.db.WithContext(ctx).Model(&model.Submission{}).
+		Select("problem_id, status, MAX(id) AS latest_id").
+		Where("homework_id = ? AND user_id = ? AND problem_id IN ?", homeworkID, userID, problemIDs).
+		Group("problem_id, status").Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	latest := make(map[int64]int64)
+	for _, row := range rows {
+		if statuses[row.ProblemID] == judge.Accepted {
+			continue
+		}
+		if row.Status == judge.Accepted || row.LatestID > latest[row.ProblemID] {
+			statuses[row.ProblemID] = row.Status
+			latest[row.ProblemID] = row.LatestID
+		}
+	}
+	return statuses, nil
+}
+
 func (s *SubmissionRepo) GetSubmissionByID(ctx context.Context, submissionID int64) (*model.Submission, error) {
 	var submission model.Submission
 	err := s.db.WithContext(ctx).First(&submission, submissionID).Error

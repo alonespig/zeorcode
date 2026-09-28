@@ -22,7 +22,8 @@ type HomeworkListResp struct {
 	List  []HomeworkItemResp `json:"list"`
 }
 
-// HomeworkProblemResp 作业内的单题。Status 语义同题库列表；
+// HomeworkProblemResp 作业内的单题。Status 仅来自当前用户在本作业内的提交（含补交）；
+// 无提交时为空，有 AC 时为通过，否则为最新提交状态。
 // MyScore 是 IOI 计分下该题在时间窗内的最高得分。
 type HomeworkProblemResp struct {
 	ID            string    `json:"id"` // 对外题号
