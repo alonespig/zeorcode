@@ -1,7 +1,8 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { Search } from '@element-plus/icons-vue'
+import { computed, ref, shallowRef } from 'vue'
+import { Search, View } from '@element-plus/icons-vue'
 import { getProblem, getProblemList, getTags } from '@/api/problems'
+import ProblemPreviewDialog from './ProblemPreviewDialog.vue'
 
 const props = defineProps({
   modelValue: {
@@ -32,6 +33,11 @@ const total = ref(0)
 const picked = ref([])
 const loading = ref(false)
 const adding = ref(false)
+const previewId = shallowRef('')
+const previewVisible = computed({
+  get: () => Boolean(previewId.value),
+  set: (value) => { if (!value) previewId.value = '' },
+})
 
 const difficultyText = { 1: '简单', 2: '中等', 3: '困难' }
 const difficultyClass = (difficulty) => `difficulty-${difficulty || 'unknown'}`
@@ -109,6 +115,7 @@ const confirm = async () => {
     width="min(960px, calc(100vw - 32px))"
     top="8vh"
     @open="handleOpen"
+    @close="previewVisible = false"
   >
     <div class="picker-search">
       <el-input
@@ -143,6 +150,7 @@ const confirm = async () => {
           <col style="width: 240px">
           <col style="width: 90px">
           <col>
+          <col style="width: 64px">
         </colgroup>
         <thead>
           <tr>
@@ -151,6 +159,7 @@ const confirm = async () => {
             <th class="left">题目名称</th>
             <th class="center">难度</th>
             <th class="left">标签</th>
+            <th class="center">预览</th>
           </tr>
         </thead>
         <tbody>
@@ -173,6 +182,17 @@ const confirm = async () => {
               <el-tag v-for="tag in item.tags || []" :key="tag.id" size="small" type="primary">
                 {{ tag.name }}
               </el-tag>
+            </td>
+            <td class="center">
+              <el-tooltip content="查看题目内容" placement="top">
+                <el-button
+                  text
+                  type="primary"
+                  :icon="View"
+                  :aria-label="`查看题目：${item.name}`"
+                  @click.stop="previewId = String(item.id)"
+                />
+              </el-tooltip>
             </td>
           </tr>
         </tbody>
@@ -198,6 +218,7 @@ const confirm = async () => {
       </div>
     </template>
   </el-dialog>
+  <ProblemPreviewDialog v-model="previewVisible" :problem-id="previewId" />
 </template>
 
 <style scoped lang="scss">
