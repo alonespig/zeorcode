@@ -12,7 +12,6 @@ const props = defineProps({
     default: "light",
     validator: (value) => ["light", "dark"].includes(value),
   },
-  showLineCount: { type: Boolean, default: false },
   embedded: { type: Boolean, default: false },
 });
 
@@ -47,20 +46,7 @@ onScopeDispose(() => window.clearTimeout(copiedTimer));
 <template>
   <div class="code-card" :class="[`code-card--${variant}`, { 'code-card--embedded': embedded }]">
     <div class="code-head">
-      <div class="code-heading">
-        <span class="code-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5M14 4l-4 16" />
-          </svg>
-        </span>
-        <div class="code-heading-copy">
-          <strong class="code-title">{{ title || "源代码" }}</strong>
-          <span v-if="showLineCount" class="code-count">
-            <span class="code-count-dot" aria-hidden="true"></span>
-            {{ lineCount }} 行
-          </span>
-        </div>
-      </div>
+      <strong class="code-title">{{ title || "源代码" }}</strong>
       <div class="code-tools">
         <span class="lang">{{ language }}</span>
         <button class="copy" type="button" @click="copy">
@@ -92,7 +78,6 @@ onScopeDispose(() => window.clearTimeout(copiedTimer));
 .code-card--embedded { border: 0; border-radius: 0; box-shadow: none; }
 
 .code-head {
-  position: relative;
   min-height: 60px;
   padding: 0 22px;
   border-bottom: 1px solid #e7ebf0;
@@ -102,30 +87,8 @@ onScopeDispose(() => window.clearTimeout(copiedTimer));
   gap: 18px;
   background: #fff;
 }
-.code-head::before {
-  position: absolute;
-  top: 18px;
-  bottom: 18px;
-  left: 0;
-  width: 3px;
-  background: #2f7fe0;
-  content: "";
-}
 
-.code-heading { min-width: 0; display: flex; align-items: center; gap: 10px; }
-.code-mark {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  color: #2f7fe0;
-}
-.code-mark svg { width: 22px; height: 22px; }
-.code-mark path { stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.code-heading-copy { min-width: 0; display: flex; align-items: center; gap: 10px; }
 .code-title { overflow: hidden; color: #182230; font-size: 16px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.code-count { display: inline-flex; align-items: center; gap: 10px; color: #7b8797; font-size: 13px; white-space: nowrap; }
-.code-count-dot { width: 3px; height: 3px; border-radius: 50%; background: #b8c1cd; }
 .code-tools { margin-left: auto; display: flex; align-items: center; gap: 9px; }
 .lang {
   min-height: 30px;
@@ -196,10 +159,6 @@ onScopeDispose(() => window.clearTimeout(copiedTimer));
 
 @media (max-width: 640px) {
   .code-head { min-height: 54px; padding-inline: 16px; }
-  .code-head::before { top: 16px; bottom: 16px; }
-  .code-mark { display: none; }
-  .code-heading-copy { gap: 8px; }
-  .code-count { gap: 8px; font-size: 12px; }
   .code-tools { gap: 6px; }
   .lang { min-height: 28px; padding-inline: 8px; }
   .copy { min-height: 30px; padding-inline: 9px; }

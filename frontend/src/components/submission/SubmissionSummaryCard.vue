@@ -31,14 +31,6 @@ const userInitial = computed(() => (props.user.name || "?").slice(0, 1).toUpperC
   <section class="summary-card" :class="[`summary-card--${statusTone}`, { 'summary-card--embedded': embedded }]"
     aria-labelledby="submission-status">
     <div class="status-block">
-      <span class="status-icon" aria-hidden="true">
-        <svg v-if="isAccepted" viewBox="0 0 24 24" fill="none">
-          <path d="m5 12.5 4.2 4.2L19 7" />
-        </svg>
-        <svg v-else viewBox="0 0 24 24" fill="none">
-          <path d="m7 7 10 10M17 7 7 17" />
-        </svg>
-      </span>
       <div class="status-copy">
         <h1 id="submission-status" class="status-title">{{ statusText }}</h1>
         <span>评测编号 <span class="mono">#{{ submission.id || "—" }}</span></span>
@@ -87,7 +79,6 @@ const userInitial = computed(() => (props.user.name || "?").slice(0, 1).toUpperC
 <style scoped>
 .summary-card {
   --status-color: #d63c3c;
-  --status-soft: #fff0ef;
   position: relative;
   overflow: hidden;
   display: grid;
@@ -109,12 +100,10 @@ const userInitial = computed(() => (props.user.name || "?").slice(0, 1).toUpperC
 
 .summary-card--success {
   --status-color: #208b4e;
-  --status-soft: #eaf7ef;
 }
 
 .summary-card--processing {
   --status-color: #1769e0;
-  --status-soft: #edf5ff;
 }
 
 .summary-card--embedded {
@@ -126,32 +115,8 @@ const userInitial = computed(() => (props.user.name || "?").slice(0, 1).toUpperC
 .status-block {
   display: flex;
   align-items: center;
-  gap: 17px;
   padding: 28px 30px;
   border-right: 1px solid #e5e9f0;
-}
-
-.status-icon {
-  flex: 0 0 auto;
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: var(--status-color);
-  background: var(--status-soft);
-}
-
-.status-icon svg {
-  width: 27px;
-  height: 27px;
-}
-
-.status-icon path {
-  stroke: currentColor;
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .status-copy {
@@ -284,11 +249,6 @@ const userInitial = computed(() => (props.user.name || "?").slice(0, 1).toUpperC
 
   .status-block {
     padding: 24px 20px;
-  }
-
-  .status-icon {
-    width: 48px;
-    height: 48px;
   }
 
   .fact {

@@ -60,8 +60,7 @@ function openUser(userId) {
       <CodeViewer
         v-if="canViewCode"
         embedded
-        title="本次提交"
-        show-line-count
+        title="源代码"
         :code="detail.submission.code"
         :language="detail.submission.language"
       />
