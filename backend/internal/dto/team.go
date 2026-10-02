@@ -71,6 +71,7 @@ type TeamMemberItem struct {
 	Username  string `json:"username"`
 	StudentNo string `json:"studentNo"`
 	RealName  string `json:"realName"`
+	Gender    int    `json:"gender"` // 1 男 / 2 女
 	Avatar    string `json:"avatar"`
 	Role      int    `json:"role"` // 0 成员 / 1 管理员 / 2 所有者
 	JoinedAt  string `json:"joinedAt"`

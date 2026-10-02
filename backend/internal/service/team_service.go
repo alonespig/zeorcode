@@ -328,6 +328,7 @@ func (s *TeamService) ListMembers(ctx context.Context, id, userID int64, isSiteA
 			Username:  u.Username,
 			StudentNo: studentNoValue(u.StudentNo),
 			RealName:  u.RealName,
+			Gender:    u.Gender,
 			Avatar:    u.Avatar,
 			Role:      m.Role,
 			JoinedAt:  m.JoinedAt.Format(teamTimeLayout),
