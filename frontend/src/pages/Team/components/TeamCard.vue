@@ -30,9 +30,9 @@ const visualTone = computed(() => `team-entry__visual--tone-${(Number(props.team
 
       <div class="team-entry__content">
         <div class="team-entry__title-row">
-          <button class="team-entry__name" type="button" @click="emit('enter', team)">
+          <span class="team-entry__name" :title="team.name">
             {{ team.name }}
-          </button>
+          </span>
           <span
             class="team-entry__access"
             :class="{ 'team-entry__access--private': team.visibility === 1 }"
@@ -73,24 +73,21 @@ const visualTone = computed(() => `team-entry__visual--tone-${(Number(props.team
           >
             进入团队
           </button>
+          <button
+            v-else-if="isLogin && team.visibility === 1"
+            class="team-entry__action team-entry__action--outline"
+            type="button"
+            @click="emit('requestJoin', team)"
+          >
+            输入邀请码
+          </button>
+          <button v-else-if="isLogin" class="team-entry__action" type="button" @click="emit('join', team)">
+            加入团队
+          </button>
         </div>
       </div>
     </div>
 
-    <footer v-if="isLogin && team.myRole == null" class="team-entry__footer">
-      <span class="team-entry__membership">未加入</span>
-      <button
-        v-if="team.visibility === 1"
-        class="team-entry__action team-entry__action--outline"
-        type="button"
-        @click="emit('requestJoin', team)"
-      >
-        输入邀请码
-      </button>
-      <button v-else class="team-entry__action" type="button" @click="emit('join', team)">
-        加入团队
-      </button>
-    </footer>
   </article>
 </template>
 
@@ -117,14 +114,13 @@ const visualTone = computed(() => `team-entry__visual--tone-${(Number(props.team
 .team-entry__visual--tone-1 { background: #1987a7; }
 .team-entry__visual--tone-2 { background: #5271c4; }
 .team-entry--private .team-entry__visual { background: #c88224; }
-.team-entry__content { min-width: 0; padding: 20px 16px 9px; display: flex; flex-direction: column; }
+.team-entry__content { min-width: 0; padding: 20px 16px 12px; display: flex; flex-direction: column; }
 .team-entry__title-row { min-width: 0; display: flex; align-items: flex-start; gap: 8px; }
-.team-entry__name { min-width: 0; overflow: hidden; padding: 0; border: 0; color: #1b2636; background: transparent; font-size: 18px; font-weight: 650; line-height: 1.45; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-.team-entry__name:hover { color: #1769e0; }
-.team-entry__name:focus-visible, .team-entry__action:focus-visible { outline: 3px solid rgba(23, 105, 224, 0.18); outline-offset: 2px; }
+.team-entry__name { min-width: 0; overflow: hidden; color: #1b2636; font-size: 18px; font-weight: 650; line-height: 1.45; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.team-entry__action:focus-visible { outline: 3px solid rgba(23, 105, 224, 0.18); outline-offset: 2px; }
 .team-entry__access { flex: 0 0 auto; min-height: 24px; margin-left: auto; display: inline-flex; align-items: center; gap: 4px; color: #249150; font-size: 13px; white-space: nowrap; }
 .team-entry__access--private { color: #bd7610; }
-.team-entry__owner-actions { margin-top: 12px; display: flex; align-items: center; gap: 10px; }
+.team-entry__owner-actions { margin-top: auto; padding-top: 12px; display: flex; align-items: center; gap: 10px; }
 .team-entry__owner { min-width: 0; display: flex; align-items: center; gap: 7px; color: #667386; font-size: 14px; }
 .team-entry__owner-avatar { flex: 0 0 auto; border: 1px solid #dce6f2; color: #1769e0; background: #edf4fd; }
 .team-entry__owner strong { min-width: 0; overflow: hidden; color: #4b5769; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
@@ -133,13 +129,11 @@ const visualTone = computed(() => `team-entry__visual--tone-${(Number(props.team
 .team-entry__members { padding-top: 2px; }
 .team-entry__divider { width: 1px; height: 16px; margin-top: 2px; background: #dfe4eb; }
 .team-entry__date-block { min-width: 0; margin-left: auto; display: flex; align-items: flex-end; flex-direction: column; gap: 7px; }
-.team-entry__footer { min-height: 46px; padding: 6px 10px 6px 14px; border-top: 1px solid #e8edf3; display: flex; align-items: center; gap: 10px; background: #fbfcfe; }
-.team-entry__membership { color: #2d3747; font-size: 14px; font-weight: 520; }
-.team-entry__action { min-height: 32px; margin-left: auto; padding: 0 12px; border: 1px solid #1769e0; border-radius: 4px; color: #fff; background: #1769e0; font-size: 14px; font-weight: 520; cursor: pointer; transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease; }
+.team-entry__action { flex: 0 0 auto; min-height: 32px; margin-left: auto; padding: 0 12px; border: 1px solid #1769e0; border-radius: 4px; color: #fff; background: #1769e0; font-size: 14px; font-weight: 520; white-space: nowrap; cursor: pointer; transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease; }
 .team-entry__action:hover { border-color: #0f58c4; background: #0f58c4; }
 .team-entry__action--outline { border-color: #9dbce7; color: #1769e0; background: #fff; }
 .team-entry__action--outline:hover { border-color: #75a1dd; color: #0f58c4; background: #f4f8fe; }
-.team-entry__action--quiet { min-height: 30px; padding-inline: 10px; border-color: #c9d9ef; color: #1769e0; background: #fff; }
+.team-entry__action--quiet { border-color: #c9d9ef; color: #1769e0; background: #fff; }
 .team-entry__action--quiet:hover { border-color: #9fbce4; color: #0f58c4; background: #f2f7fd; }
 
 @media (max-width: 560px) {

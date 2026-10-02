@@ -47,7 +47,7 @@
           <span class="tabular-nums text-gray-600">{{ fmtTime(row.endTime) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="130" align="center" fixed="right">
+      <el-table-column v-if="hasActions" label="操作" width="130" align="center" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.canEdit" link type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button v-if="row.canDelete" link type="danger" @click="remove(row)">删除</el-button>
@@ -135,6 +135,7 @@ const route = useRoute();
 const router = useRouter();
 
 const list = ref([]);
+const hasActions = computed(() => list.value.some((homework) => homework.canEdit || homework.canDelete));
 const total = ref(0);
 const page = ref(1);
 const pageSize = 10;
