@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
 	"zoj/internal/infra/logger"
 	"zoj/internal/infra/mq"
@@ -839,7 +838,7 @@ func (s *ContestService) GetContestSubmissions(ctx context.Context, contestID, u
 
 // markSelf 按当前查看者标记自己那一行（isSelf 不进缓存，按查看者 uid 临时标；
 // 榜单里 User.ID 已是对外 uid，故这里也用 uid 比较）
-func markSelf(resp *dto.ContestRankResp, viewerUID int64) {
+func markSelf(resp *ContestRank, viewerUID int64) {
 	if viewerUID == 0 {
 		return
 	}
@@ -860,14 +859,14 @@ func (s *ContestService) uidOf(ctx context.Context, userPK int64) int64 {
 }
 
 // GetMyContestRank 当前用户在某场比赛的名次（没参与返回 Found=false）
-func (s *ContestService) GetMyContestRank(ctx context.Context, contestID, userID int64) (*dto.MyContestRankResp, error) {
+func (s *ContestService) GetMyContestRank(ctx context.Context, contestID, userID int64) (*MyContestRank, error) {
 	rank, err := s.GetContestRank(ctx, contestID, userID)
 	if err != nil {
 		return nil, err
 	}
 	for _, item := range rank.RankList {
 		if item.IsSelf { // GetContestRank 已按查看者标好 isSelf
-			return &dto.MyContestRankResp{
+			return &MyContestRank{
 				Found:      true,
 				Rank:       item.Rank,
 				PassCount:  item.PassCount,
@@ -877,7 +876,7 @@ func (s *ContestService) GetMyContestRank(ctx context.Context, contestID, userID
 			}, nil
 		}
 	}
-	return &dto.MyContestRankResp{Found: false, Rule: rank.Contest.Rule}, nil
+	return &MyContestRank{Found: false, Rule: rank.Contest.Rule}, nil
 }
 
 type standingEntry struct {
@@ -1264,12 +1263,12 @@ func (s *ContestService) contestStandings(ctx context.Context, contest *model.Co
 	return out, nil
 }
 
-func (s *ContestService) GetContestRank(ctx context.Context, contestID, userID int64) (*dto.ContestRankResp, error) {
+func (s *ContestService) GetContestRank(ctx context.Context, contestID, userID int64) (*ContestRank, error) {
 	s.settleRatingIfNeeded(ctx, contestID)
 	viewerUID := s.uidOf(ctx, userID) // 查看者的对外用户号，用于标记 isSelf
 	cacheKey := cache.ContestRank(contestID)
 	// 命中缓存直接返回（轮询期间不打 DB）；isSelf 按查看者临时标，不进缓存
-	var cachedResp dto.ContestRankResp
+	var cachedResp ContestRank
 	if ok, err := s.cache.GetJSON(ctx, cacheKey, &cachedResp); err == nil && ok {
 		markSelf(&cachedResp, viewerUID)
 		return &cachedResp, nil
@@ -1329,19 +1328,19 @@ func (s *ContestService) GetContestRank(ctx context.Context, contestID, userID i
 		}
 	}
 
-	resp := &dto.ContestRankResp{
-		Contest: dto.Contest{
+	resp := &ContestRank{
+		Contest: ContestRankInfo{
 			ID:     contest.PublicID,
 			Title:  contest.Name,
 			Status: int(contestStatus(*contest)),
 		},
-		Problems: make([]dto.ProblemLabel, 0, len(contestProblems)),
-		RankList: make([]dto.ContestRankItem, 0, len(contestUsers)),
+		Problems: make([]ContestProblemLabel, 0, len(contestProblems)),
+		RankList: make([]ContestRankItem, 0, len(contestUsers)),
 	}
 
 	resp.Contest.Rule = contest.Type.String()
 	for i := 0; i < len(contestProblems); i++ {
-		resp.Problems = append(resp.Problems, dto.ProblemLabel{
+		resp.Problems = append(resp.Problems, ContestProblemLabel{
 			Label:    contestProblems[i].Label,
 			Color:    contestProblems[i].Color,
 			MaxScore: contestProblems[i].Score,
@@ -1352,8 +1351,8 @@ func (s *ContestService) GetContestRank(ctx context.Context, contestID, userID i
 		// ===== ACM（含未知/历史 type）：通过数 + 罚时 =====
 		for _, user := range contestUsers {
 			u := userMap[user.UserID]
-			item := dto.ContestRankItem{
-				Problems: make([]dto.ContestProblemStatus, 0, len(contestProblems)),
+			item := ContestRankItem{
+				Problems: make([]ContestProblemStatus, 0, len(contestProblems)),
 			}
 			item.User.ID = u.UID // 对外用户号
 			item.User.Name = u.Username
@@ -1364,7 +1363,7 @@ func (s *ContestService) GetContestRank(ctx context.Context, contestID, userID i
 				// 路①：records 已是从 submissions 现算的最新真值，无需再叠 Redis 覆盖缓存。
 				userContestProblem, ok := recordMap[user.UserID][problem.ProblemID]
 				if ok {
-					item.Problems = append(item.Problems, dto.ContestProblemStatus{
+					item.Problems = append(item.Problems, ContestProblemStatus{
 						Label:  problem.Label,
 						Status: userContestProblem.Status,
 						Tries:  userContestProblem.UnAcCount,
@@ -1382,7 +1381,7 @@ func (s *ContestService) GetContestRank(ctx context.Context, contestID, userID i
 						item.Penalty += int(userContestProblem.AcTime.Sub(contest.StartTime).Minutes()) + 20*userContestProblem.UnAcCount
 					}
 				} else {
-					item.Problems = append(item.Problems, dto.ContestProblemStatus{
+					item.Problems = append(item.Problems, ContestProblemStatus{
 						Label:  problem.Label,
 						Status: 0,
 						Tries:  0,
@@ -1408,14 +1407,14 @@ func (s *ContestService) GetContestRank(ctx context.Context, contestID, userID i
 		cfDur := int(contestEndTime(*contest).Sub(contest.StartTime).Minutes()) // CF 动态分用的赛长（分钟）
 
 		type scoreRow struct {
-			item dto.ContestRankItem
+			item ContestRankItem
 			last time.Time
 		}
 		rows := make([]scoreRow, 0, len(contestUsers))
 		for _, user := range contestUsers {
 			u := userMap[user.UserID]
-			item := dto.ContestRankItem{
-				Problems: make([]dto.ContestProblemStatus, 0, len(contestProblems)),
+			item := ContestRankItem{
+				Problems: make([]ContestProblemStatus, 0, len(contestProblems)),
 			}
 			item.User.ID = u.UID // 对外用户号
 			item.User.Name = u.Username
@@ -1424,7 +1423,7 @@ func (s *ContestService) GetContestRank(ctx context.Context, contestID, userID i
 
 			var last time.Time
 			for _, problem := range contestProblems {
-				cell := dto.ContestProblemStatus{Label: problem.Label}
+				cell := ContestProblemStatus{Label: problem.Label}
 				if !frozen {
 					score := 0
 					if ucp, ok := recordMap[user.UserID][problem.ProblemID]; ok {

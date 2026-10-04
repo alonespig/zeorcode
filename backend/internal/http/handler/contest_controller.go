@@ -248,7 +248,11 @@ func (c *ContestController) GetContestRank(ctx *gin.Context) (any, error) {
 	}
 	v, _ := ctx.Get("userID")
 	userID, _ := v.(int64)
-	return c.contestSrv.GetContestRank(ctx.Request.Context(), contestID, userID)
+	resp, err := c.contestSrv.GetContestRank(ctx.Request.Context(), contestID, userID)
+	if err != nil {
+		return nil, err
+	}
+	return toContestRankResp(resp), nil
 }
 
 // RecomputeContest POST /api/admin/contest/:id/recompute
@@ -269,7 +273,11 @@ func (c *ContestController) GetMyContestRank(ctx *gin.Context) (any, error) {
 	}
 	v, _ := ctx.Get("userID")
 	userID, _ := v.(int64)
-	return c.contestSrv.GetMyContestRank(ctx.Request.Context(), contestID, userID)
+	resp, err := c.contestSrv.GetMyContestRank(ctx.Request.Context(), contestID, userID)
+	if err != nil {
+		return nil, err
+	}
+	return toMyContestRankResp(resp), nil
 }
 
 type MatchEvent struct {
