@@ -6,12 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"zoj/pkg/errcode"
-	"zoj/pkg/publicid"
-	"zoj/internal/dto"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 	"zoj/pkg/judge"
+	"zoj/pkg/publicid"
 )
 
 type fakeSubmissionStore struct {
@@ -165,7 +164,7 @@ func TestCreateSubmissionPersistsAndEnqueues(t *testing.T) {
 		fakeLanguageResolver{},
 	)
 
-	id, err := svc.CreateSubmission(context.Background(), &dto.SubmitCodeReq{
+	id, err := svc.CreateSubmission(context.Background(), SubmitCodeParams{
 		ProblemID: "P1000",
 		Language:  1,
 		Code:      "int main() {}",
@@ -208,7 +207,7 @@ func TestCreateSubmissionReturnsErrorWhenQueueFailsAfterPersist(t *testing.T) {
 		fakeLanguageResolver{},
 	)
 
-	_, err := svc.CreateSubmission(context.Background(), &dto.SubmitCodeReq{
+	_, err := svc.CreateSubmission(context.Background(), SubmitCodeParams{
 		ProblemID: "P1000",
 		Language:  3,
 		Code:      "print(1)",
@@ -242,7 +241,7 @@ func TestCreateSubmissionRejectsLocalProblemWithoutTestData(t *testing.T) {
 		fakeLanguageResolver{},
 	)
 
-	_, err := svc.CreateSubmission(context.Background(), &dto.SubmitCodeReq{
+	_, err := svc.CreateSubmission(context.Background(), SubmitCodeParams{
 		ProblemID: "P1000",
 		Language:  1,
 		Code:      "int main() {}",
@@ -274,7 +273,7 @@ func TestCreateSubmissionAllowsRemoteProblemWithoutLocalTestData(t *testing.T) {
 		fakeLanguageResolver{},
 	)
 
-	if _, err := svc.CreateSubmission(context.Background(), &dto.SubmitCodeReq{
+	if _, err := svc.CreateSubmission(context.Background(), SubmitCodeParams{
 		ProblemID: "P2000",
 		Language:  3,
 		Code:      "print(1)",

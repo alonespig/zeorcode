@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
 	"zoj/internal/infra/logger"
 	"zoj/internal/infra/mq"
@@ -858,9 +857,9 @@ func (s *HomeworkService) SubmissionDetail(
 	sort.Slice(caseList, func(i, j int) bool {
 		return caseList[i].ID < caseList[j].ID
 	})
-	caseResults := make([]dto.SubmissionCaseResult, 0, len(caseList))
+	caseResults := make([]SubmissionCaseResult, 0, len(caseList))
 	for idx, caseResult := range caseList {
-		caseResults = append(caseResults, dto.SubmissionCaseResult{
+		caseResults = append(caseResults, SubmissionCaseResult{
 			ID:         idx + 1,
 			Status:     caseResult.Status,
 			TimeUsed:   caseResult.TimeUsed / nsPerMs,

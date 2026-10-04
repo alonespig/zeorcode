@@ -232,7 +232,11 @@ func (u *UserController) GetUserRecent7DaysPassCount(c *gin.Context) (any, error
 	if err != nil {
 		return nil, err
 	}
-	return u.submitSrv.GetUserRecent7DaysPassCount(c.Request.Context(), userID)
+	resp, err := u.submitSrv.GetUserRecent7DaysPassCount(c.Request.Context(), userID)
+	if err != nil {
+		return nil, err
+	}
+	return toDailyAcceptedCountResp(resp), nil
 }
 
 func (u *UserController) UserProfile(c *gin.Context) (any, error) {

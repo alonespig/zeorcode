@@ -2,8 +2,6 @@ package service
 
 import (
 	"time"
-
-	"zoj/internal/dto"
 )
 
 // ===== 命令 / 查询输入 =====
@@ -159,7 +157,7 @@ type HomeworkSubmissionDetail struct {
 	CompileOutput string
 	TimeUsed      int64
 	MemoryUsed    int64
-	CaseResults   []dto.SubmissionCaseResult // 评测用例结果，暂引用 submission 模块的 HTTP DTO
+	CaseResults   []SubmissionCaseResult // 评测用例结果，复用 submission 模块的 Service 类型
 	InWindow      bool
 	CreatedAt     time.Time
 }

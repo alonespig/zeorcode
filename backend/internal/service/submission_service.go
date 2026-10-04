@@ -6,12 +6,11 @@ import (
 	"sort"
 	"time"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/infra/logger"
-	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
+	"zoj/internal/infra/logger"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 	"zoj/pkg/judge"
 
 	"gorm.io/gorm"
@@ -87,7 +86,7 @@ func NewSubmissionService(subRepo SubmissionStore,
 	}
 }
 
-func (s *SubmissionService) CreateSubmission(ctx context.Context, req *dto.SubmitCodeReq, userID int64, isAdmin bool) (int64, error) {
+func (s *SubmissionService) CreateSubmission(ctx context.Context, req SubmitCodeParams, userID int64, isAdmin bool) (int64, error) {
 	if err := submitRateLimit(ctx, s.cache, userID); err != nil {
 		return 0, err
 	}
@@ -238,13 +237,13 @@ func submitRateLimit(ctx context.Context, c SubmissionCache, userID int64) error
 	return nil
 }
 
-func (s *SubmissionService) List(ctx context.Context, page, pageSize int, status *int, username string, userID int64, problemDisplayID string, isAdmin bool) (*dto.SubmitListResp, error) {
+func (s *SubmissionService) List(ctx context.Context, page, pageSize int, status *int, username string, userID int64, problemDisplayID string, isAdmin bool) (*SubmissionList, error) {
 	// 按题目筛选时，problemDisplayID 是对外题号，先解析成内部主键；解析不到说明没这题，直接返回空
 	var problemPK int64
 	if problemDisplayID != "" {
 		pk, err := s.proRepo.ResolveID(ctx, problemDisplayID)
 		if err != nil {
-			return &dto.SubmitListResp{Total: 0, List: []dto.SubmissionItemResp{}}, nil
+			return &SubmissionList{Total: 0, List: []SubmissionItem{}}, nil
 		}
 		problemPK = pk
 	}
@@ -253,7 +252,7 @@ func (s *SubmissionService) List(ctx context.Context, page, pageSize int, status
 	if userID > 0 {
 		pk, err := s.userRepo.ResolveIDByUID(ctx, userID)
 		if err != nil {
-			return &dto.SubmitListResp{Total: 0, List: []dto.SubmissionItemResp{}}, nil
+			return &SubmissionList{Total: 0, List: []SubmissionItem{}}, nil
 		}
 		userPK = pk
 	}
@@ -261,12 +260,12 @@ func (s *SubmissionService) List(ctx context.Context, page, pageSize int, status
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := dto.SubmitListResp{
+	resp := SubmissionList{
 		Total: total,
-		List:  make([]dto.SubmissionItemResp, 0, len(submitList)),
+		List:  make([]SubmissionItem, 0, len(submitList)),
 	}
 	for _, sub := range submitList {
-		item := dto.SubmissionItemResp{
+		item := SubmissionItem{
 			ID:          sub.PublicID,
 			ProblemID:   sub.ProblemDisplayID, // 对外题号，链接跳 /problem/{题号}
 			ProblemName: sub.ProblemName,
@@ -277,14 +276,14 @@ func (s *SubmissionService) List(ctx context.Context, page, pageSize int, status
 			Result:      sub.Status,
 			TimeUsed:    sub.TimeUsed,
 			MemoryUsed:  sub.MemoryUsed,
-			CreatedAt:   sub.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:   sub.CreatedAt,
 		}
 		resp.List = append(resp.List, item)
 	}
 	return &resp, nil
 }
 
-func (s *SubmissionService) GetSubmissionByPublicID(ctx context.Context, publicID, requesterID int64, isAdmin bool) (*dto.SubmissionResp, error) {
+func (s *SubmissionService) GetSubmissionByPublicID(ctx context.Context, publicID, requesterID int64, isAdmin bool) (*SubmissionDetail, error) {
 	submission, err := s.subRepo.GetSubmissionByPublicID(ctx, publicID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -320,19 +319,19 @@ func (s *SubmissionService) GetSubmissionByPublicID(ctx context.Context, publicI
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
 	canViewCode := submission.UserID == requesterID || isAdmin
-	respDto := dto.SubmissionResp{
-		User: dto.UserDetail{
+	resp := SubmissionDetail{
+		User: SubmissionAuthor{
 			ID:     author.UID, // 对外用户号
 			Name:   author.Username,
 			Avatar: avatarOr(author.Avatar),
 		},
-		Problem: dto.SubmissionProblem{
+		Problem: SubmissionProblem{
 			ID:          problem.DisplayID, // 对外题号
 			Name:        problem.Name,
 			Description: problem.Description,
 			OJ:          problem.OJ,
 		},
-		Submission: dto.SubmissionInfo{
+		Submission: SubmissionInfo{
 			ID:            submission.PublicID,
 			Language:      submission.Language,
 			Code:          submission.Code,
@@ -341,15 +340,15 @@ func (s *SubmissionService) GetSubmissionByPublicID(ctx context.Context, publicI
 			TimeUsed:      submission.TimeUsed,
 			MemoryUsed:    submission.MemoryUsed,
 			CompileOutput: submission.CompileOutput,
-			CreatedAt:     submission.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:     submission.CreatedAt,
 		},
-		CaseResults: make([]dto.SubmissionCaseResult, 0),
+		CaseResults: make([]SubmissionCaseResult, 0),
 	}
 	sort.Slice(caseList, func(i, j int) bool {
 		return caseList[i].ID < caseList[j].ID
 	})
 	for idx, caseResult := range caseList {
-		respDto.CaseResults = append(respDto.CaseResults, dto.SubmissionCaseResult{
+		resp.CaseResults = append(resp.CaseResults, SubmissionCaseResult{
 			ID:         idx + 1,
 			Status:     caseResult.Status,
 			TimeUsed:   caseResult.TimeUsed / nsPerMs,
@@ -358,10 +357,10 @@ func (s *SubmissionService) GetSubmissionByPublicID(ctx context.Context, publicI
 	}
 	// 越权控制：仅本人或管理员可见源代码，其他人一律隐藏
 	if !canViewCode {
-		respDto.Submission.Code = ""
-		respDto.Submission.CompileOutput = ""
+		resp.Submission.Code = ""
+		resp.Submission.CompileOutput = ""
 	}
-	return &respDto, nil
+	return &resp, nil
 }
 
 // ResolveSubmissionID 把外部 8 位提交编号解析为内部主键。
@@ -377,8 +376,8 @@ func (s *SubmissionService) ResolveSubmissionID(ctx context.Context, publicID in
 	return id, nil
 }
 
-func (s *SubmissionService) GetUserRecent7DaysPassCount(ctx context.Context, userID int64) (*dto.DailyAcceptedCountResp, error) {
-	var dailyCounts dto.DailyAcceptedCountResp
+func (s *SubmissionService) GetUserRecent7DaysPassCount(ctx context.Context, userID int64) (*DailyAcceptedCount, error) {
+	var dailyCounts DailyAcceptedCount
 	now := time.Now().In(time.Local)
 	start := time.Date(now.Year(), now.Month(), now.Day()-6, 0, 0, 0, 0, now.Location())
 	result, err := s.subRepo.GetUserRecentAcceptedSubmissions(ctx, userID, start)

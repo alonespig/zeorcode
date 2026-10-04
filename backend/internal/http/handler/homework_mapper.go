@@ -132,7 +132,7 @@ func toHomeworkSubmissionDetailResp(r *service.HomeworkSubmissionDetail) *dto.Ho
 		CompileOutput: r.CompileOutput,
 		TimeUsed:      r.TimeUsed,
 		MemoryUsed:    r.MemoryUsed,
-		CaseResults:   r.CaseResults,
+		CaseResults:   toSubmissionCaseResults(r.CaseResults),
 		InWindow:      r.InWindow,
 		CreatedAt:     r.CreatedAt.Format(homeworkTimeLayout),
 	}

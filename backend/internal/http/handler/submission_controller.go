@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"zoj/pkg/errcode"
 	"zoj/internal/dto"
 	"zoj/internal/infra/mq"
 	"zoj/internal/service"
+	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,7 +37,7 @@ func (s *SubmissionController) Create(c *gin.Context) (any, error) {
 	}
 	roleVal, _ := c.Get("role")
 	role, _ := roleVal.(int)
-	subID, err := s.subSrv.CreateSubmission(c.Request.Context(), &req, userID, role == 1)
+	subID, err := s.subSrv.CreateSubmission(c.Request.Context(), toSubmitCodeParams(req), userID, role == 1)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,11 @@ func (s *SubmissionController) GetSubmissionList(c *gin.Context) (any, error) {
 	// 经 JWTAuthOptional 注入 role：管理员才能在提交列表看到隐藏题的提交
 	roleVal, _ := c.Get("role")
 	role, _ := roleVal.(int)
-	return s.subSrv.List(c.Request.Context(), req.Page, req.PageSize, req.Status, req.Username, req.UserID, req.ProblemID, role == 1)
+	resp, err := s.subSrv.List(c.Request.Context(), req.Page, req.PageSize, req.Status, req.Username, req.UserID, req.ProblemID, role == 1)
+	if err != nil {
+		return nil, err
+	}
+	return toSubmissionListResp(resp), nil
 }
 
 func (s *SubmissionController) GetSubmissionByID(c *gin.Context) (any, error) {
@@ -65,7 +69,11 @@ func (s *SubmissionController) GetSubmissionByID(c *gin.Context) (any, error) {
 	requesterID, _ := uidVal.(int64)
 	roleVal, _ := c.Get("role")
 	role, _ := roleVal.(int)
-	return s.subSrv.GetSubmissionByPublicID(c.Request.Context(), publicID, requesterID, role == 1)
+	resp, err := s.subSrv.GetSubmissionByPublicID(c.Request.Context(), publicID, requesterID, role == 1)
+	if err != nil {
+		return nil, err
+	}
+	return toSubmissionDetailResp(resp), nil
 }
 
 // Rejudge POST /api/admin/submission/:id/rejudge 单条重判（超管）
