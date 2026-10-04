@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"crypto/md5"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 	"time"
 
 	"zoj/pkg/errcode"
-	"zoj/pkg/util"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -19,6 +19,12 @@ import (
 type UploadController struct{}
 
 const maxImageUploadSize = 5 << 20
+
+// md5Hex 取字符串的 MD5 十六进制摘要（用于生成上传文件名）
+func md5Hex(str string) string {
+	sum := md5.Sum([]byte(str))
+	return fmt.Sprintf("%x", sum)
+}
 
 func NewUploadController() *UploadController {
 	return &UploadController{}
@@ -62,7 +68,7 @@ func (u *UploadController) UploadImage(c *gin.Context) (any, error) {
 		return nil, errcode.ErrFileUpload.Wrap(err)
 	}
 
-	fileName := util.MD5(fmt.Sprintf("%s%x", file.Filename, time.Now().UnixNano())) + ext
+	fileName := md5Hex(fmt.Sprintf("%s%x", file.Filename, time.Now().UnixNano())) + ext
 	const uploadDir = "./uploads"
 	if err := os.MkdirAll(uploadDir, 0750); err != nil {
 		return nil, errcode.ErrFileUpload.Wrap(err)

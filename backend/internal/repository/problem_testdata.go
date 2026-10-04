@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"zoj/pkg/util"
+	"zoj/pkg/judge"
 
 	"github.com/spf13/viper"
 )
@@ -133,22 +133,6 @@ type TestCaseInfo struct {
 	Cases   []CaseInfo `json:"cases"`
 }
 
-// RtrimOutput 去掉每行行末空白 + 文末空白（容忍行末空格、末尾多余换行）。
-func RtrimOutput(s string) string {
-	s = strings.ReplaceAll(s, "\r\n", "\n")
-	s = strings.ReplaceAll(s, "\r", "\n")
-	lines := strings.Split(s, "\n")
-	for i, ln := range lines {
-		lines[i] = strings.TrimRight(ln, " \t\f\v")
-	}
-	return strings.TrimRight(strings.Join(lines, "\n"), "\n")
-}
-
-// StripAllSpace 去掉所有空白字符（用于 PE 判定：内容一致仅空白不同）。
-func StripAllSpace(s string) string {
-	return strings.Join(strings.Fields(s), "")
-}
-
 // generateInfo scans basename-matched .in/.out pairs, calculates hashes, and
 // writes info.json. Case IDs are stable for a given filename ordering and do
 // not require the basename itself to be numeric.
@@ -194,9 +178,9 @@ func generateInfo(testDir string) (*TestCaseInfo, error) {
 			Input:          e.Name(),
 			Output:         outName,
 			OutputSize:     len(outBytes),
-			OutputMd5:      util.MD5(out),
-			StrippedMd5:    util.MD5(RtrimOutput(out)),
-			AllStrippedMd5: util.MD5(StripAllSpace(out)),
+			OutputMd5:      judge.MD5(out),
+			StrippedMd5:    judge.MD5(judge.RtrimOutput(out)),
+			AllStrippedMd5: judge.MD5(judge.StripAllSpace(out)),
 		})
 	}
 	sort.Slice(cases, func(i, j int) bool { return cases[i].Input < cases[j].Input })
