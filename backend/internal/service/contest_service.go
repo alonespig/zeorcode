@@ -57,7 +57,7 @@ func NewContestService(repo *repository.ContestRepo,
 	return &ContestService{repo: repo, problemRepo: problem, submitRepo: submitRepo, userRepo: userRepo, cache: cache, mq: mq, notify: notify, testData: testData, languages: languages}
 }
 
-func (s *ContestService) CreateContest(ctx context.Context, req *dto.CreateContestReq) (*dto.CreateContestResp, error) {
+func (s *ContestService) CreateContest(ctx context.Context, req CreateContestParams) (*CreateContestResult, error) {
 	data := req.ContestDate + " " + req.ContestTime + ":00"
 	startTime, err := time.ParseInLocation("2006-01-02 15:04:05", data, time.Local)
 	if err != nil {
@@ -87,7 +87,7 @@ func (s *ContestService) CreateContest(ctx context.Context, req *dto.CreateConte
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
 
-	return &dto.CreateContestResp{
+	return &CreateContestResult{
 		ID: contest.PublicID,
 	}, nil
 }
@@ -100,7 +100,7 @@ func defaultProblemScore(s int) int {
 	return s
 }
 
-func (s *ContestService) resolveContestProblems(ctx context.Context, inputs []dto.ContestProblemInput) ([]model.ContestProblem, error) {
+func (s *ContestService) resolveContestProblems(ctx context.Context, inputs []ContestProblemInput) ([]model.ContestProblem, error) {
 	problems := make([]model.ContestProblem, 0, len(inputs))
 	for idx, p := range inputs {
 		// p.ProblemID 是对外题号，解析成内部主键存 contest_problems。
@@ -131,7 +131,7 @@ func contestProblemLabel(index int) string {
 }
 
 func (s *ContestService) UpdateContest(ctx context.Context, id int64,
-	form *dto.UpdateContestReq) (*dto.CreateContestResp, error) {
+	form UpdateContestParams) (*CreateContestResult, error) {
 	contest, err := s.getContest(ctx, id)
 	if err != nil {
 		return nil, err
@@ -165,7 +165,7 @@ func (s *ContestService) UpdateContest(ctx context.Context, id int64,
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
 
-	return &dto.CreateContestResp{ID: contest.PublicID}, nil
+	return &CreateContestResult{ID: contest.PublicID}, nil
 }
 
 func contestStatus(c model.Contest) model.ContestStatus {
@@ -282,7 +282,7 @@ func (s *ContestService) authorizeContestSubmission(
 	return contest, nil
 }
 
-func (s *ContestService) ListContests(ctx context.Context, userID int64, page, pageSize int, keyword string, ctype int, status *int) (*dto.ContestListResp, error) {
+func (s *ContestService) ListContests(ctx context.Context, userID int64, page, pageSize int, keyword string, ctype int, status *int) (*ContestList, error) {
 	contests, total, err := s.repo.ListContests(ctx, page, pageSize, keyword, ctype, status)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
@@ -329,14 +329,14 @@ func (s *ContestService) ListContests(ctx context.Context, userID int64, page, p
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
 
-	resp := &dto.ContestListResp{
+	resp := &ContestList{
 		Total: total,
-		List:  make([]dto.ContestItem, 0, len(contests)),
+		List:  make([]ContestItem, 0, len(contests)),
 	}
 	for _, c := range contests {
 		count := userCountMap[c.ID]
 		registered := registeredMap[c.ID]
-		resp.List = append(resp.List, dto.ContestItem{
+		resp.List = append(resp.List, ContestItem{
 			ID:             c.PublicID,
 			Name:           c.Name,
 			Description:    c.Description,
@@ -385,12 +385,12 @@ func (s *ContestService) JoinContest(ctx context.Context, userID, contestID int6
 	return nil
 }
 
-func (s *ContestService) GetContestDesc(ctx context.Context, id int64) (*dto.ContestDesc, error) {
+func (s *ContestService) GetContestDesc(ctx context.Context, id int64) (*ContestDesc, error) {
 	contest, err := s.getContest(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	resp := &dto.ContestDesc{
+	resp := &ContestDesc{
 		Name:        contest.Name,
 		Description: contest.Description,
 		StartTime:   contest.StartTime,
@@ -400,7 +400,7 @@ func (s *ContestService) GetContestDesc(ctx context.Context, id int64) (*dto.Con
 }
 
 // GetContestDetail userID=0 表示未登录场景
-func (s *ContestService) GetContestDetail(ctx context.Context, id int64, userID int64) (*dto.ContestDetailResp, error) {
+func (s *ContestService) GetContestDetail(ctx context.Context, id int64, userID int64) (*ContestDetail, error) {
 	contest, err := s.getContest(ctx, id)
 	if err != nil {
 		return nil, err
@@ -412,10 +412,10 @@ func (s *ContestService) GetContestDetail(ctx context.Context, id int64, userID 
 			return nil, errcode.ErrDatabase.Wrap(err)
 		}
 	}
-	resp := &dto.ContestDetailResp{
+	resp := &ContestDetail{
 		Name:           contest.Name,
-		StartTime:      contest.StartTime.UnixMilli(),
-		EndTime:        contestEndTime(*contest).UnixMilli(),
+		StartTime:      contest.StartTime,
+		EndTime:        contestEndTime(*contest),
 		IsRegistered:   registered,
 		NeedInviteCode: contest.InviteCode != "",
 		Rule:           contest.Type.String(),
@@ -425,7 +425,7 @@ func (s *ContestService) GetContestDetail(ctx context.Context, id int64, userID 
 	return resp, nil
 }
 
-func (s *ContestService) GetContestProblemList(ctx context.Context, contestID, userID int64, isAdmin bool) (*dto.ContestProblemListResp, error) {
+func (s *ContestService) GetContestProblemList(ctx context.Context, contestID, userID int64, isAdmin bool) (*ContestProblemList, error) {
 	if _, err := s.authorizeContestProblemAccess(ctx, contestID, userID, isAdmin); err != nil {
 		return nil, err
 	}
@@ -439,8 +439,8 @@ func (s *ContestService) GetContestProblemList(ctx context.Context, contestID, u
 		problemIDs = append(problemIDs, p.ProblemID)
 	}
 
-	resp := &dto.ContestProblemListResp{
-		ProblemList: make([]dto.ContestProblem, 0, len(problems)),
+	resp := &ContestProblemList{
+		ProblemList: make([]ContestProblem, 0, len(problems)),
 	}
 
 	filter := repository.ContestSubmissionFilter{
@@ -493,7 +493,7 @@ func (s *ContestService) GetContestProblemList(ctx context.Context, contestID, u
 		// 路①：status / 提交通过数均已从 submissions 现算（DB），不再叠 Redis 增量覆盖
 		// —— 否则重判后这些计数会漂移。
 
-		resp.ProblemList = append(resp.ProblemList, dto.ContestProblem{
+		resp.ProblemList = append(resp.ProblemList, ContestProblem{
 			ProblemID:     problem.DisplayID,
 			Name:          problem.Name,
 			Label:         p.Label,
@@ -569,7 +569,7 @@ func (s *ContestService) getCachedContestUserProblem(ctx context.Context, contes
 	return record, true
 }
 
-func (s *ContestService) EditContest(ctx context.Context, contestID int64) (*dto.EditContestResp, error) {
+func (s *ContestService) EditContest(ctx context.Context, contestID int64) (*ContestEditInfo, error) {
 	contest, err := s.getContest(ctx, contestID)
 	if err != nil {
 		return nil, err
@@ -578,14 +578,14 @@ func (s *ContestService) EditContest(ctx context.Context, contestID int64) (*dto
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.EditContestResp{
+	resp := &ContestEditInfo{
 		Name:        contest.Name,
 		Description: contest.Description,
 		CoverURL:    contest.CoverURL,
 		Type:        int(contest.Type),
-		StartTime:   contest.StartTime.UnixMilli(),
-		EndTime:     contestEndTime(*contest).UnixMilli(),
-		ProblemList: make([]dto.EasyInfo, 0, len(contestProblems)),
+		StartTime:   contest.StartTime,
+		EndTime:     contestEndTime(*contest),
+		ProblemList: make([]ContestEasyProblem, 0, len(contestProblems)),
 		Rated:       contest.Rated,
 	}
 
@@ -595,7 +595,7 @@ func (s *ContestService) EditContest(ctx context.Context, contestID int64) (*dto
 	problemMap := s.problemsByIDs(ctx, contestProblems)
 	for _, p := range contestProblems {
 		pr := problemMap[p.ProblemID]
-		resp.ProblemList = append(resp.ProblemList, dto.EasyInfo{
+		resp.ProblemList = append(resp.ProblemList, ContestEasyProblem{
 			ID:    pr.DisplayID, // 对外题号（编辑表单据此回显 + 重新提交）
 			Name:  pr.Name,
 			Color: p.Color,
@@ -640,7 +640,7 @@ func (s *ContestService) GetContestProblemDetail(
 	label string,
 	userID int64,
 	isAdmin bool,
-) (*dto.ContestProblemResp, error) {
+) (*ContestProblemDetail, error) {
 	if _, err := s.authorizeContestProblemAccess(ctx, contestID, userID, isAdmin); err != nil {
 		return nil, err
 	}
@@ -666,7 +666,7 @@ func (s *ContestService) GetContestProblemDetail(
 		return nil, err
 	}
 
-	resp := &dto.ContestProblemResp{
+	resp := &ContestProblemDetail{
 		Name:         label + ". " + problem.Name,
 		TimeLimit:    problem.TimeLimit,
 		MemoryLimit:  problem.MemoryLimit,
@@ -674,7 +674,7 @@ func (s *ContestService) GetContestProblemDetail(
 		InputFormat:  problem.InputFormat,
 		OutputFormat: problem.OutputFormat,
 		Hint:         problem.Hint,
-		Samples:      make([]dto.ProblemSample, 0),
+		Samples:      make([]ProblemSample, 0),
 		HasTestData:  hasTestData,
 	}
 	samples, err := s.problemRepo.GetProblemSamplesByID(ctx, problem.ID)
@@ -682,7 +682,7 @@ func (s *ContestService) GetContestProblemDetail(
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
 	for _, sample := range samples {
-		resp.Samples = append(resp.Samples, dto.ProblemSample{
+		resp.Samples = append(resp.Samples, ProblemSample{
 			Input:   sample.Input,
 			Output:  sample.Output,
 			Explain: sample.Explain,
@@ -696,7 +696,7 @@ func (s *ContestService) GetContestSubmitInfo(
 	ctx context.Context,
 	contestID, userID int64,
 	isAdmin bool,
-) (*dto.ContestSubmitResp, error) {
+) (*ContestSubmitInfo, error) {
 	if _, err := s.authorizeContestProblemAccess(ctx, contestID, userID, isAdmin); err != nil {
 		return nil, err
 	}
@@ -704,12 +704,12 @@ func (s *ContestService) GetContestSubmitInfo(
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.ContestSubmitResp{
-		ProblemList: make([]dto.ContestProblemItem, 0, len(problem)),
+	resp := &ContestSubmitInfo{
+		ProblemList: make([]ContestProblemItem, 0, len(problem)),
 	}
 	problemNames := s.problemNamesByIDs(ctx, problem)
 	for _, p := range problem {
-		resp.ProblemList = append(resp.ProblemList, dto.ContestProblemItem{
+		resp.ProblemList = append(resp.ProblemList, ContestProblemItem{
 			Name:  p.Label + ". " + problemNames[p.ProblemID],
 			Label: p.Label,
 		})
@@ -717,7 +717,7 @@ func (s *ContestService) GetContestSubmitInfo(
 	return resp, nil
 }
 
-func (s *ContestService) SubmitContestProblem(ctx context.Context, form *dto.ContestSubmitReq, userID int64) (int64, error) {
+func (s *ContestService) SubmitContestProblem(ctx context.Context, form ContestSubmitParams, userID int64) (int64, error) {
 	if _, err := s.authorizeContestSubmission(ctx, form.ContestID, userID); err != nil {
 		return 0, err
 	}
@@ -784,7 +784,7 @@ func (s *ContestService) SubmitContestProblem(ctx context.Context, form *dto.Con
 // GetContestSubmissions 比赛提交列表。
 //   - 普通用户：只看自己（忽略筛选）。
 //   - 管理员：看全场，支持按用户名/题目/结果筛选。
-func (s *ContestService) GetContestSubmissions(ctx context.Context, contestID, userID int64, isAdmin bool, q *dto.ContestSubmissionQuery) (*dto.ContestSubmissionListResp, error) {
+func (s *ContestService) GetContestSubmissions(ctx context.Context, contestID, userID int64, isAdmin bool, q *ContestSubmissionQueryParams) (*ContestSubmissionList, error) {
 	contest, err := s.getContest(ctx, contestID)
 	if err != nil {
 		return nil, err
@@ -815,12 +815,12 @@ func (s *ContestService) GetContestSubmissions(ctx context.Context, contestID, u
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.ContestSubmissionListResp{
+	resp := &ContestSubmissionList{
 		Total:       int64(len(submissions)),
-		Submissions: make([]dto.ContestSubmissionItem, 0, len(submissions)),
+		Submissions: make([]ContestSubmissionItem, 0, len(submissions)),
 	}
 	for _, sub := range submissions {
-		resp.Submissions = append(resp.Submissions, dto.ContestSubmissionItem{
+		resp.Submissions = append(resp.Submissions, ContestSubmissionItem{
 			ID:          sub.PublicID,
 			ProblemID:   sub.ProblemDisplayID,
 			ProblemName: sub.ProblemLabel + ". " + sub.ProblemName,

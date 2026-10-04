@@ -25,7 +25,11 @@ func (c *ContestController) Create(ctx *gin.Context) (any, error) {
 	if err := ctx.ShouldBindJSON(&form); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return c.contestSrv.CreateContest(ctx.Request.Context(), &form)
+	resp, err := c.contestSrv.CreateContest(ctx.Request.Context(), toCreateContestParams(form))
+	if err != nil {
+		return nil, err
+	}
+	return toCreateContestResult(resp), nil
 }
 
 func (c *ContestController) EditContest(ctx *gin.Context) (any, error) {
@@ -33,7 +37,11 @@ func (c *ContestController) EditContest(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.contestSrv.EditContest(ctx.Request.Context(), contestID)
+	resp, err := c.contestSrv.EditContest(ctx.Request.Context(), contestID)
+	if err != nil {
+		return nil, err
+	}
+	return toEditContestResp(resp), nil
 }
 
 func (c *ContestController) Update(ctx *gin.Context) (any, error) {
@@ -45,7 +53,11 @@ func (c *ContestController) Update(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.contestSrv.UpdateContest(ctx.Request.Context(), id, &form)
+	resp, err := c.contestSrv.UpdateContest(ctx.Request.Context(), id, toUpdateContestParams(form))
+	if err != nil {
+		return nil, err
+	}
+	return toCreateContestResult(resp), nil
 }
 
 func (c *ContestController) List(ctx *gin.Context) (any, error) {
@@ -59,7 +71,11 @@ func (c *ContestController) List(ctx *gin.Context) (any, error) {
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return c.contestSrv.ListContests(ctx.Request.Context(), userID, req.Page, req.PageSize, req.Keyword, req.Type, req.Status)
+	resp, err := c.contestSrv.ListContests(ctx.Request.Context(), userID, req.Page, req.PageSize, req.Keyword, req.Type, req.Status)
+	if err != nil {
+		return nil, err
+	}
+	return toContestListResp(resp), nil
 }
 
 func (c *ContestController) JoinContest(ctx *gin.Context) (any, error) {
@@ -94,7 +110,11 @@ func (c *ContestController) GetContestDetail(ctx *gin.Context) (any, error) {
 	if v, exists := ctx.Get("userID"); exists {
 		userID, _ = v.(int64)
 	}
-	return c.contestSrv.GetContestDetail(ctx.Request.Context(), id, userID)
+	resp, err := c.contestSrv.GetContestDetail(ctx.Request.Context(), id, userID)
+	if err != nil {
+		return nil, err
+	}
+	return toContestDetailResp(resp), nil
 }
 
 func (c *ContestController) GetContestDesc(ctx *gin.Context) (any, error) {
@@ -106,7 +126,7 @@ func (c *ContestController) GetContestDesc(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return contest, nil
+	return toContestDescResp(contest), nil
 }
 
 func (c *ContestController) GetContestProblemList(ctx *gin.Context) (any, error) {
@@ -124,7 +144,11 @@ func (c *ContestController) GetContestProblemList(ctx *gin.Context) (any, error)
 	}
 	roleVal, _ := ctx.Get("role")
 	role, _ := roleVal.(int)
-	return c.contestSrv.GetContestProblemList(ctx.Request.Context(), contestID, userID, role == 1)
+	resp, err := c.contestSrv.GetContestProblemList(ctx.Request.Context(), contestID, userID, role == 1)
+	if err != nil {
+		return nil, err
+	}
+	return toContestProblemListResp(resp), nil
 }
 
 func (c *ContestController) GetContestProblem(ctx *gin.Context) (any, error) {
@@ -142,9 +166,13 @@ func (c *ContestController) GetContestProblem(ctx *gin.Context) (any, error) {
 	}
 	roleVal, _ := ctx.Get("role")
 	role, _ := roleVal.(int)
-	return c.contestSrv.GetContestProblemDetail(
+	resp, err := c.contestSrv.GetContestProblemDetail(
 		ctx.Request.Context(), contestID, ctx.Param("problemID"), userID, role == 1,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return toContestProblemDetailResp(resp), nil
 }
 
 func (c *ContestController) Submit(ctx *gin.Context) (any, error) {
@@ -162,7 +190,7 @@ func (c *ContestController) Submit(ctx *gin.Context) (any, error) {
 		return nil, err
 	}
 	form.ContestID = contestID
-	subID, err := c.contestSrv.SubmitContestProblem(ctx.Request.Context(), &form, userID)
+	subID, err := c.contestSrv.SubmitContestProblem(ctx.Request.Context(), toContestSubmitParams(form), userID)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +212,11 @@ func (c *ContestController) GetContestSubmitInfo(ctx *gin.Context) (any, error) 
 	}
 	roleVal, _ := ctx.Get("role")
 	role, _ := roleVal.(int)
-	return c.contestSrv.GetContestSubmitInfo(ctx.Request.Context(), contestID, userID, role == 1)
+	resp, err := c.contestSrv.GetContestSubmitInfo(ctx.Request.Context(), contestID, userID, role == 1)
+	if err != nil {
+		return nil, err
+	}
+	return toContestSubmitInfoResp(resp), nil
 }
 
 func (c *ContestController) GetContestSubmissions(ctx *gin.Context) (any, error) {
@@ -201,7 +233,12 @@ func (c *ContestController) GetContestSubmissions(ctx *gin.Context) (any, error)
 	role, _ := roleVal.(int)
 	var q dto.ContestSubmissionQuery
 	_ = ctx.ShouldBindQuery(&q)
-	return c.contestSrv.GetContestSubmissions(ctx.Request.Context(), contestID, userID, role == 1, &q)
+	params := toContestSubmissionQueryParams(q)
+	resp, err := c.contestSrv.GetContestSubmissions(ctx.Request.Context(), contestID, userID, role == 1, &params)
+	if err != nil {
+		return nil, err
+	}
+	return toContestSubmissionListResp(resp), nil
 }
 
 func (c *ContestController) GetContestRank(ctx *gin.Context) (any, error) {
@@ -257,8 +294,8 @@ func (c *ContestController) SSEventStream(ctx *gin.Context) {
 	flusher := ctx.Writer.(http.Flusher)
 
 	ctx.SSEvent("init", gin.H{
-		"startTime": contest.StartTime,
-		"endTime":   contest.EndTime,
+		"startTime": contest.StartTime.UnixMilli(),
+		"endTime":   contest.EndTime.UnixMilli(),
 		"now":       time.Now().UnixMilli(),
 	})
 	flusher.Flush()
@@ -272,9 +309,9 @@ func (c *ContestController) SSEventStream(ctx *gin.Context) {
 		case now := <-ticker.C:
 			nowMs := now.UnixMilli()
 			status := model.ContestFinished
-			if nowMs < contest.StartTime {
+			if nowMs < contest.StartTime.UnixMilli() {
 				status = model.ContestNotStarted
-			} else if nowMs < contest.EndTime {
+			} else if nowMs < contest.EndTime.UnixMilli() {
 				status = model.ContestRunning
 			}
 			ctx.SSEvent("contest", MatchEvent{Status: status, Now: nowMs})
