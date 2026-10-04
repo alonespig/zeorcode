@@ -3,7 +3,6 @@ import { onScopeDispose, shallowRef } from "vue";
 
 const props = defineProps({
   output: { type: String, default: "" },
-  restricted: { type: Boolean, default: false },
   embedded: { type: Boolean, default: false },
 });
 
@@ -33,7 +32,7 @@ onScopeDispose(() => window.clearTimeout(copiedTimer));
       <button v-if="output" class="copy-button" type="button" @click="copyOutput">{{ copied ? "已复制" : "复制信息" }}</button>
     </header>
     <pre v-if="output" class="terminal">{{ output }}</pre>
-    <div v-else class="empty-state">{{ restricted ? "仅提交者和管理员可以查看编译器输出。" : "暂无编译器输出。" }}</div>
+    <div v-else class="empty-state">暂无编译器输出。</div>
   </section>
 </template>
 

@@ -18,7 +18,6 @@ const passedCases = computed(() =>
 );
 const isCompilationError = computed(() => detail.value.submission.status === CompileErrorCode);
 const canViewCode = computed(() => detail.value.submission.canViewCode === true);
-const sourceRestricted = computed(() => !canViewCode.value);
 
 function openProblem(problemId) {
   if (problemId) router.push(`/problem/${problemId}`);
@@ -44,13 +43,12 @@ function openUser(userId) {
       />
 
       <SubmissionCompileOutput
-        v-if="isCompilationError"
+        v-if="isCompilationError && canViewCode"
         embedded
         :output="detail.submission.compileOutput"
-        :restricted="sourceRestricted"
       />
       <SubmissionCaseResults
-        v-else
+        v-else-if="!isCompilationError"
         embedded
         :case-results="detail.caseResults"
         :status="detail.submission.status"
