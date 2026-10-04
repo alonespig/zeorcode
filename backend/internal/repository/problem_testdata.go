@@ -1,4 +1,4 @@
-package testdatastore
+package repository
 
 import (
 	"context"
@@ -12,29 +12,29 @@ import (
 
 const defaultRoot = "ojdata/problems"
 
-// Store inspects the filesystem-backed test data owned by local problems.
-type Store struct {
+// ProblemTestDataStore inspects the filesystem-backed test data owned by local problems.
+type ProblemTestDataStore struct {
 	root string
 }
 
-// New creates a test-data store from judge.data_dir.
-func New() *Store {
-	return NewAt(viper.GetString("judge.data_dir"))
+// NewProblemTestDataStore creates a test-data store from judge.data_dir.
+func NewProblemTestDataStore() *ProblemTestDataStore {
+	return NewProblemTestDataStoreAt(viper.GetString("judge.data_dir"))
 }
 
-// NewAt creates a test-data store rooted at root. It is primarily useful for
+// NewProblemTestDataStoreAt creates a test-data store rooted at root. It is primarily useful for
 // explicit process wiring and isolated tests.
-func NewAt(root string) *Store {
+func NewProblemTestDataStoreAt(root string) *ProblemTestDataStore {
 	root = strings.TrimSpace(root)
 	if root == "" {
 		root = defaultRoot
 	}
-	return &Store{root: filepath.Clean(root)}
+	return &ProblemTestDataStore{root: filepath.Clean(root)}
 }
 
 // HasTestData reports whether a problem has at least one readable .in/.out
 // pair. A missing problem directory is a normal "not ready" state.
-func (s *Store) HasTestData(ctx context.Context, problemID int64) (bool, error) {
+func (s *ProblemTestDataStore) HasTestData(ctx context.Context, problemID int64) (bool, error) {
 	if problemID <= 0 {
 		return false, fmt.Errorf("invalid problem id %d", problemID)
 	}

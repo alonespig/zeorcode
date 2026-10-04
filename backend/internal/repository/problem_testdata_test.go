@@ -1,4 +1,4 @@
-package testdatastore
+package repository
 
 import (
 	"context"
@@ -37,7 +37,7 @@ func TestHasTestData(t *testing.T) {
 				}
 			}
 
-			got, err := NewAt(root).HasTestData(context.Background(), problemID)
+			got, err := NewProblemTestDataStoreAt(root).HasTestData(context.Background(), problemID)
 			if err != nil {
 				t.Fatalf("HasTestData() error = %v", err)
 			}
@@ -57,7 +57,7 @@ func TestHasTestDataHonorsCanceledContext(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := NewAt(root).HasTestData(ctx, 7); err == nil {
+	if _, err := NewProblemTestDataStoreAt(root).HasTestData(ctx, 7); err == nil {
 		t.Fatal("HasTestData() error = nil, want canceled context error")
 	}
 }

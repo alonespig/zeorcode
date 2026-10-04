@@ -16,7 +16,6 @@ import (
 	"zoj/internal/infra/mq"
 	"zoj/internal/infra/redis"
 	"zoj/internal/infra/session"
-	"zoj/internal/problem/adapter/testdatastore"
 	"zoj/internal/repository"
 	"zoj/internal/service"
 )
@@ -27,8 +26,8 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 	db, cleanup := database.NewMysqlClient()
 	problemRepo := repository.NewProblemRepo(db)
 	submissionRepo := repository.NewSubmissionRepo(db)
-	store := testdatastore.New()
-	problemService := service.NewProblemService(problemRepo, submissionRepo, store, db)
+	problemTestDataStore := repository.NewProblemTestDataStore()
+	problemService := service.NewProblemService(problemRepo, submissionRepo, problemTestDataStore, db)
 	problemController := handler.NewProblemController(problemService)
 	contestRepo := repository.NewContestRepo(db)
 	userRepo := repository.NewUserRepo(db)
@@ -39,9 +38,9 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 	notificationService := service.NewNotificationService(notificationRepo, userRepo)
 	languageRepo := repository.NewLanguageRepo(db)
 	languageService := service.NewLanguageService(languageRepo)
-	contestService := service.NewContestService(contestRepo, problemRepo, submissionRepo, userRepo, cacheCache, mqMQ, notificationService, store, languageService)
+	contestService := service.NewContestService(contestRepo, problemRepo, submissionRepo, userRepo, cacheCache, mqMQ, notificationService, problemTestDataStore, languageService)
 	contestController := handler.NewContestController(contestService)
-	submissionService := service.NewSubmissionService(submissionRepo, userRepo, problemRepo, store, cacheCache, mqMQ, languageService)
+	submissionService := service.NewSubmissionService(submissionRepo, userRepo, problemRepo, problemTestDataStore, cacheCache, mqMQ, languageService)
 	submissionController := handler.NewSubmissionController(submissionService, contestService, mqMQ)
 	postRepo := repository.NewPostRepo(db)
 	postService := service.NewPostService(postRepo, userRepo, problemRepo, notificationService)
@@ -66,7 +65,7 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 	teamService := service.NewTeamService(teamRepo, userRepo)
 	teamController := handler.NewTeamController(teamService)
 	homeworkRepo := repository.NewHomeworkRepo(db)
-	homeworkService := service.NewHomeworkService(homeworkRepo, teamRepo, problemRepo, submissionRepo, userRepo, teamService, cacheCache, mqMQ, store, languageService)
+	homeworkService := service.NewHomeworkService(homeworkRepo, teamRepo, problemRepo, submissionRepo, userRepo, teamService, cacheCache, mqMQ, problemTestDataStore, languageService)
 	homeworkController := handler.NewHomeworkController(homeworkService)
 	agentRepo := repository.NewAgentRepo(db)
 	llmClient := llm.NewClient()
