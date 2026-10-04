@@ -6,10 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/dto"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 
 	"gorm.io/gorm"
 )
@@ -30,11 +29,9 @@ func NewProblemSetService(
 	return &ProblemSetService{repo: repo, problemRepo: problemRepo, subRepo: subRepo, userRepo: userRepo}
 }
 
-const problemSetTimeLayout = "2006-01-02 15:04:05"
-
 // List 题单分页列表。includeDraft 仅后台传 true。
 // userID 为 nil（未登录）时不查做题状态，SolvedCount 留空，前端不渲染进度。
-func (s *ProblemSetService) List(ctx context.Context, form *dto.ProblemSetListReq, userID *int64, includeDraft bool) (*dto.ProblemSetListResp, error) {
+func (s *ProblemSetService) List(ctx context.Context, form ProblemSetListParams, userID *int64, includeDraft bool) (*ProblemSetList, error) {
 	sets, total, err := s.repo.List(ctx, &repository.ProblemSetQuery{
 		Page:         form.Page,
 		PageSize:     form.PageSize,
@@ -47,7 +44,7 @@ func (s *ProblemSetService) List(ctx context.Context, form *dto.ProblemSetListRe
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
 
-	resp := &dto.ProblemSetListResp{Total: int(total), List: make([]dto.ProblemSetItemResp, 0, len(sets))}
+	resp := &ProblemSetList{Total: total, List: make([]ProblemSetItem, 0, len(sets))}
 	if len(sets) == 0 {
 		return resp, nil
 	}
@@ -89,7 +86,7 @@ func (s *ProblemSetService) List(ctx context.Context, form *dto.ProblemSetListRe
 
 	for _, set := range sets {
 		problemIDs := problemIDsBySet[set.ID]
-		item := dto.ProblemSetItemResp{
+		item := ProblemSetItem{
 			ID:           set.PublicID,
 			Title:        set.Title,
 			Tags:         tagsBySet[set.ID],
@@ -97,7 +94,7 @@ func (s *ProblemSetService) List(ctx context.Context, form *dto.ProblemSetListRe
 			Visibility:   set.Visibility,
 			Published:    set.Published,
 			Author:       authors[set.CreatedBy],
-			UpdatedAt:    set.UpdatedAt.Format(problemSetTimeLayout),
+			UpdatedAt:    set.UpdatedAt,
 		}
 		if userID != nil {
 			solved := countSolved(problemIDs, statusMap)
@@ -111,7 +108,7 @@ func (s *ProblemSetService) List(ctx context.Context, form *dto.ProblemSetListRe
 // Detail 题单详情。
 // 邀请码题单未解锁时 Locked=true 且不返回题目列表，但标题/描述/标签/题数照常返回，
 // 这样别人能知道题单存在、也能看到它讲什么。管理员免解锁。
-func (s *ProblemSetService) Detail(ctx context.Context, id int64, userID *int64, isAdmin bool) (*dto.ProblemSetDetailResp, error) {
+func (s *ProblemSetService) Detail(ctx context.Context, id int64, userID *int64, isAdmin bool) (*ProblemSetDetail, error) {
 	set, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -142,7 +139,7 @@ func (s *ProblemSetService) Detail(ctx context.Context, id int64, userID *int64,
 		return nil, err
 	}
 
-	resp := &dto.ProblemSetDetailResp{
+	resp := &ProblemSetDetail{
 		ID:           set.PublicID,
 		Title:        set.Title,
 		Description:  set.Description,
@@ -151,8 +148,8 @@ func (s *ProblemSetService) Detail(ctx context.Context, id int64, userID *int64,
 		Published:    set.Published,
 		ProblemCount: len(problemIDs),
 		Author:       authors[set.CreatedBy],
-		UpdatedAt:    set.UpdatedAt.Format(problemSetTimeLayout),
-		Problems:     make([]dto.ProblemSetProblemResp, 0, len(problemIDs)),
+		UpdatedAt:    set.UpdatedAt,
+		Problems:     make([]ProblemSetProblem, 0, len(problemIDs)),
 	}
 
 	unlocked, err := s.hasAccess(ctx, set, userID, isAdmin)
@@ -188,13 +185,13 @@ func (s *ProblemSetService) Detail(ctx context.Context, id int64, userID *int64,
 		problemByID[problem.ID] = problem
 	}
 
-	tagsByProblem := make(map[int64][]dto.TagItem)
+	tagsByProblem := make(map[int64][]TagItem)
 	rawTags, err := s.problemRepo.GetProblemTagsByIDs(ctx, problemIDs)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
 	for _, tag := range rawTags {
-		tagsByProblem[tag.ProblemID] = append(tagsByProblem[tag.ProblemID], dto.TagItem{ID: tag.ID, Name: tag.Name})
+		tagsByProblem[tag.ProblemID] = append(tagsByProblem[tag.ProblemID], TagItem{ID: tag.ID, Name: tag.Name})
 	}
 
 	statsByProblem := make(map[int64]repository.ProblemSubmissionStat, len(problemIDs))
@@ -213,7 +210,7 @@ func (s *ProblemSetService) Detail(ctx context.Context, id int64, userID *int64,
 			continue // 题目被删了，跳过而不是报错，避免整单打不开
 		}
 		stat := statsByProblem[problem.ID]
-		item := dto.ProblemSetProblemResp{
+		item := ProblemSetProblem{
 			ID:            problem.DisplayID,
 			Name:          problem.Name,
 			Difficulty:    problem.Difficulty,
@@ -254,7 +251,7 @@ func (s *ProblemSetService) Unlock(ctx context.Context, id, userID int64, code s
 }
 
 // Save 新建（id==0）或更新题单。题目顺序取 req.Problems 的数组下标。
-func (s *ProblemSetService) Save(ctx context.Context, id int64, req *dto.SaveProblemSetReq, actorID int64) (int64, error) {
+func (s *ProblemSetService) Save(ctx context.Context, id int64, req SaveProblemSetParams, actorID int64) (int64, error) {
 	inviteCode := strings.TrimSpace(req.InviteCode)
 	if id == 0 && req.Visibility == model.ProblemSetInviteOnly && inviteCode == "" {
 		return 0, errcode.ErrInvalidParams.WithMsg("选择邀请码可见时必须填写邀请码")
@@ -369,14 +366,14 @@ func (s *ProblemSetService) resolveProblems(ctx context.Context, displayIDs []st
 	return problems, nil
 }
 
-func (s *ProblemSetService) tagsBySetIDs(ctx context.Context, setIDs []int64) (map[int64][]dto.TagItem, error) {
+func (s *ProblemSetService) tagsBySetIDs(ctx context.Context, setIDs []int64) (map[int64][]TagItem, error) {
 	rawTags, err := s.repo.TagsBySetIDs(ctx, setIDs)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	result := make(map[int64][]dto.TagItem, len(setIDs))
+	result := make(map[int64][]TagItem, len(setIDs))
 	for _, tag := range rawTags {
-		result[tag.ProblemSetID] = append(result[tag.ProblemSetID], dto.TagItem{ID: tag.ID, Name: tag.Name})
+		result[tag.ProblemSetID] = append(result[tag.ProblemSetID], TagItem{ID: tag.ID, Name: tag.Name})
 	}
 	return result, nil
 }

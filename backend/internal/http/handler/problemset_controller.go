@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"zoj/pkg/errcode"
 	"zoj/internal/dto"
 	"zoj/internal/service"
+	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,7 +23,11 @@ func (p *ProblemSetController) List(c *gin.Context) (any, error) {
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return p.setSrv.List(c.Request.Context(), &req, optionalUserIDPtr(c), false)
+	resp, err := p.setSrv.List(c.Request.Context(), toProblemSetListParams(req), optionalUserIDPtr(c), false)
+	if err != nil {
+		return nil, err
+	}
+	return toProblemSetListResp(resp), nil
 }
 
 // Detail GET /api/problemset/:id
@@ -32,7 +36,11 @@ func (p *ProblemSetController) Detail(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return p.setSrv.Detail(c.Request.Context(), id, optionalUserIDPtr(c), isAdminFromCtx(c))
+	resp, err := p.setSrv.Detail(c.Request.Context(), id, optionalUserIDPtr(c), isAdminFromCtx(c))
+	if err != nil {
+		return nil, err
+	}
+	return toProblemSetDetailResp(resp), nil
 }
 
 // Unlock POST /api/problemset/:id/unlock 提交邀请码解锁
@@ -61,7 +69,11 @@ func (p *ProblemSetController) AdminList(c *gin.Context) (any, error) {
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return p.setSrv.List(c.Request.Context(), &req, optionalUserIDPtr(c), true)
+	resp, err := p.setSrv.List(c.Request.Context(), toProblemSetListParams(req), optionalUserIDPtr(c), true)
+	if err != nil {
+		return nil, err
+	}
+	return toProblemSetListResp(resp), nil
 }
 
 // AdminCreate POST /api/admin/problemset
@@ -74,7 +86,7 @@ func (p *ProblemSetController) AdminCreate(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	id, err := p.setSrv.Save(c.Request.Context(), 0, &req, actorID)
+	id, err := p.setSrv.Save(c.Request.Context(), 0, toSaveProblemSetParams(req), actorID)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +107,7 @@ func (p *ProblemSetController) AdminUpdate(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := p.setSrv.Save(c.Request.Context(), id, &req, actorID); err != nil {
+	if _, err := p.setSrv.Save(c.Request.Context(), id, toSaveProblemSetParams(req), actorID); err != nil {
 		return nil, err
 	}
 	return nil, nil
