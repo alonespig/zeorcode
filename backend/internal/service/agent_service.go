@@ -86,12 +86,12 @@ type homeworkSettingsInput struct {
 
 type agentReply struct {
 	Content         string
-	Blocks          []dto.AgentBlock
+	Blocks          []AgentBlock
 	Waiting         bool
 	ContentStreamed bool
 }
 
-func (s *AgentService) CreateConversation(ctx context.Context, userID int64, req *dto.CreateAgentConversationReq) (*dto.AgentConversationItem, error) {
+func (s *AgentService) CreateConversation(ctx context.Context, userID int64, req CreateAgentConversationParams) (*AgentConversation, error) {
 	conversationID, err := newUniquePublicID(ctx, s.repo.ConversationPublicIDExists)
 	if err != nil {
 		return nil, err
@@ -104,24 +104,24 @@ func (s *AgentService) CreateConversation(ctx context.Context, userID int64, req
 	if err := s.repo.CreateConversation(ctx, conversation); err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	return &dto.AgentConversationItem{ID: conversation.PublicID, Title: conversation.Title, Status: conversation.Status,
-		UpdatedAt: conversation.UpdatedAt.Format(agentConversationTimeLayout)}, nil
+	return &AgentConversation{ID: conversation.PublicID, Title: conversation.Title, Status: conversation.Status,
+		UpdatedAt: conversation.UpdatedAt}, nil
 }
 
-func (s *AgentService) ListConversations(ctx context.Context, userID int64, req *dto.AgentConversationListReq) (*dto.AgentConversationListResp, error) {
+func (s *AgentService) ListConversations(ctx context.Context, userID int64, req AgentConversationListParams) (*AgentConversationList, error) {
 	list, total, err := s.repo.ListConversations(ctx, userID, strings.TrimSpace(req.Keyword), req.Page, req.PageSize)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.AgentConversationListResp{Total: int(total), List: make([]dto.AgentConversationItem, 0, len(list))}
+	resp := &AgentConversationList{Total: int(total), List: make([]AgentConversation, 0, len(list))}
 	for _, conversation := range list {
-		resp.List = append(resp.List, dto.AgentConversationItem{ID: conversation.PublicID, Title: conversation.Title,
-			Status: conversation.Status, UpdatedAt: conversation.UpdatedAt.Format(agentConversationTimeLayout)})
+		resp.List = append(resp.List, AgentConversation{ID: conversation.PublicID, Title: conversation.Title,
+			Status: conversation.Status, UpdatedAt: conversation.UpdatedAt})
 	}
 	return resp, nil
 }
 
-func (s *AgentService) ConversationDetail(ctx context.Context, publicID, userID int64) (*dto.AgentConversationDetailResp, error) {
+func (s *AgentService) ConversationDetail(ctx context.Context, publicID, userID int64) (*AgentConversationDetail, error) {
 	conversation, err := s.repo.GetConversation(ctx, publicID, userID)
 	if err != nil {
 		return nil, s.conversationError(err)
@@ -130,8 +130,8 @@ func (s *AgentService) ConversationDetail(ctx context.Context, publicID, userID 
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.AgentConversationDetailResp{ID: conversation.PublicID, Title: conversation.Title,
-		Status: conversation.Status, Messages: make([]dto.AgentMessageResp, 0, len(messages))}
+	resp := &AgentConversationDetail{ID: conversation.PublicID, Title: conversation.Title,
+		Status: conversation.Status, Messages: make([]AgentMessage, 0, len(messages))}
 	state, err := decodeAgentState(conversation.StateJSON)
 	if err != nil {
 		return nil, errcode.ErrInternal.WithMsg("对话状态损坏，请新建对话").Wrap(err)
@@ -153,7 +153,7 @@ func (s *AgentService) ConversationDetail(ctx context.Context, publicID, userID 
 	return resp, nil
 }
 
-func (s *AgentService) UpdateConversation(ctx context.Context, publicID, userID int64, req *dto.UpdateAgentConversationReq) error {
+func (s *AgentService) UpdateConversation(ctx context.Context, publicID, userID int64, req UpdateAgentConversationParams) error {
 	conversation, err := s.repo.GetConversation(ctx, publicID, userID)
 	if err != nil {
 		return s.conversationError(err)
@@ -373,17 +373,17 @@ func (s *AgentService) startHomeworkWorkflow(ctx context.Context, state *agentCo
 	}
 	state.Step = agentStepChooseTeam
 	state.PendingRequestID = requestID
-	options := make([]dto.AgentOption, 0, len(teams))
+	options := make([]AgentOption, 0, len(teams))
 	for _, team := range teams {
 		description := fmt.Sprintf("%d 人", team.MemberCount)
 		if summary := conciseText(team.Description, 48); summary != "" {
 			description += " · " + summary
 		}
-		options = append(options, dto.AgentOption{Label: team.Name, Value: team.PublicID, Description: description})
+		options = append(options, AgentOption{Label: team.Name, Value: team.PublicID, Description: description})
 	}
-	block := dto.AgentBlock{Type: "single_select", RequestID: requestID, Title: "选择团队",
+	block := AgentBlock{Type: "single_select", RequestID: requestID, Title: "选择团队",
 		Description: "你管理多个团队，请选择这次要布置作业的团队。", Required: true, Options: options}
-	return agentReply{Content: "先确认一下这次作业属于哪个团队。", Blocks: []dto.AgentBlock{block}, Waiting: true}, nil
+	return agentReply{Content: "先确认一下这次作业属于哪个团队。", Blocks: []AgentBlock{block}, Waiting: true}, nil
 }
 
 func (s *AgentService) resumeInteraction(ctx context.Context, conversation *model.AgentConversation, run *model.AgentRun,
@@ -488,7 +488,7 @@ func (s *AgentService) askHomeworkTags(ctx context.Context, state *agentConversa
 	}
 	state.Step = agentStepChooseTags
 	state.PendingRequestID = requestID
-	options := make([]dto.AgentOption, 0, len(tags))
+	options := make([]AgentOption, 0, len(tags))
 	descriptionLower := strings.ToLower(state.Homework.TeamDescription)
 	for _, tag := range tags {
 		recommended := strings.Contains(descriptionLower, strings.ToLower(tag.Name))
@@ -496,12 +496,12 @@ func (s *AgentService) askHomeworkTags(ctx context.Context, state *agentConversa
 		if recommended {
 			description = "团队简介中提到了该知识点"
 		}
-		options = append(options, dto.AgentOption{Label: tag.Name, Value: tag.ID, Description: description, Recommended: recommended})
+		options = append(options, AgentOption{Label: tag.Name, Value: tag.ID, Description: description, Recommended: recommended})
 	}
-	block := dto.AgentBlock{Type: "multi_select", RequestID: requestID, Title: "选择知识点",
+	block := AgentBlock{Type: "multi_select", RequestID: requestID, Title: "选择知识点",
 		Description: "结合团队简介选择本次训练内容，可同时选择多个知识点。", Required: true, Options: options}
 	content := fmt.Sprintf("已经读取团队“%s”的简介。接下来请选择本次作业需要覆盖的知识点。", state.Homework.TeamName)
-	return agentReply{Content: content, Blocks: []dto.AgentBlock{block}, Waiting: true}, nil
+	return agentReply{Content: content, Blocks: []AgentBlock{block}, Waiting: true}, nil
 }
 
 func (s *AgentService) askHomeworkSettings(state *agentConversationState) agentReply {
@@ -522,9 +522,9 @@ func (s *AgentService) askHomeworkSettings(state *agentConversationState) agentR
 		"defaultStartTime":    now.Format(homeworkTimeLayout),
 		"defaultEndTime":      now.Add(7 * 24 * time.Hour).Format(homeworkTimeLayout),
 	}
-	block := dto.AgentBlock{Type: "homework_settings", RequestID: requestID, Title: "完善作业设置",
+	block := AgentBlock{Type: "homework_settings", RequestID: requestID, Title: "完善作业设置",
 		Description: "时间精确到分钟。默认排除该团队以前作业中使用过的题目。", Required: true, Payload: payload}
-	return agentReply{Content: "知识点已经确定，再补充题目数量、难度和时间。", Blocks: []dto.AgentBlock{block}, Waiting: true}
+	return agentReply{Content: "知识点已经确定，再补充题目数量、难度和时间。", Blocks: []AgentBlock{block}, Waiting: true}
 }
 
 func (s *AgentService) prepareHomeworkCandidates(ctx context.Context, conversation *model.AgentConversation,
@@ -550,18 +550,18 @@ func (s *AgentService) prepareHomeworkCandidates(ctx context.Context, conversati
 		}
 		state.Step = agentStepShortage
 		state.PendingRequestID = requestID
-		options := []dto.AgentOption{
+		options := []AgentOption{
 			{Label: fmt.Sprintf("改为 %d 题", len(candidates)), Value: "reduce_count", Disabled: len(candidates) == 0},
 			{Label: "允许使用历史作业题目", Value: "allow_history", Disabled: state.Homework.RepeatPolicy == "allow_history"},
 			{Label: "重新选择知识点", Value: "change_tags"},
 		}
 		payload := map[string]any{"requested": state.Homework.ProblemCount, "available": len(candidates),
 			"excludedHistory": state.Homework.RepeatPolicy == "exclude_all", "tagNames": state.Homework.TagNames}
-		block := dto.AgentBlock{Type: "notice", RequestID: requestID, Title: "符合条件的题目不足",
+		block := AgentBlock{Type: "notice", RequestID: requestID, Title: "符合条件的题目不足",
 			Description: fmt.Sprintf("需要 %d 题，当前找到 %d 题。", state.Homework.ProblemCount, len(candidates)),
 			Required:    true, Options: options, Payload: payload}
 		return agentReply{Content: "按照当前知识点、难度和重复规则，没有找到足够的题目。你可以选择一种调整方式。",
-			Blocks: []dto.AgentBlock{block}, Waiting: true}, nil
+			Blocks: []AgentBlock{block}, Waiting: true}, nil
 	}
 	return s.buildHomeworkPreview(ctx, conversation, run, state)
 }
@@ -602,8 +602,8 @@ func (s *AgentService) buildHomeworkPreview(ctx context.Context, conversation *m
 		rows = append(rows, map[string]any{"sort": index + 1, "id": problem.DisplayID, "name": problem.Name,
 			"difficulty": problem.Difficulty, "tags": tagNames, "passRate": passRate})
 	}
-	table := dto.AgentBlock{Type: "data_table", Title: "已选择的题目",
-		Columns: []dto.AgentTableColumn{
+	table := AgentBlock{Type: "data_table", Title: "已选择的题目",
+		Columns: []AgentTableColumn{
 			{Key: "sort", Label: "#", Width: 56, Align: "center"}, {Key: "id", Label: "题号", Width: 90},
 			{Key: "name", Label: "题目", Width: 220}, {Key: "difficulty", Label: "难度", Width: 90, Align: "center", Formatter: "difficulty"},
 			{Key: "tags", Label: "知识点", Width: 180, Formatter: "tags"}, {Key: "passRate", Label: "通过率", Width: 90, Align: "right"},
@@ -613,8 +613,8 @@ func (s *AgentService) buildHomeworkPreview(ctx context.Context, conversation *m
 		"description": state.Homework.Description, "startTime": state.Homework.StartTime, "endTime": state.Homework.EndTime,
 		"problemCount": len(state.Homework.SelectedProblems), "knowledgeTags": state.Homework.TagNames,
 		"repeatPolicy": state.Homework.RepeatPolicy}
-	preview := dto.AgentBlock{Type: "action_preview", Title: "创建作业", Description: "请确认下面的信息。确认后才会真正创建作业。", Payload: previewPayload}
-	return agentReply{Content: "作业草稿已经准备好，请检查题目和时间后确认创建。", Blocks: []dto.AgentBlock{table, preview}, Waiting: true}, nil
+	preview := AgentBlock{Type: "action_preview", Title: "创建作业", Description: "请确认下面的信息。确认后才会真正创建作业。", Payload: previewPayload}
+	return agentReply{Content: "作业草稿已经准备好，请检查题目和时间后确认创建。", Blocks: []AgentBlock{table, preview}, Waiting: true}, nil
 }
 
 func (s *AgentService) approveAction(ctx context.Context, conversation *model.AgentConversation,
@@ -692,14 +692,14 @@ func (s *AgentService) rejectAction(ctx context.Context, conversation *model.Age
 	return agentReply{Content: "已取消这次操作，没有创建作业。"}, nil
 }
 
-func (s *AgentService) createAssistantMessage(ctx context.Context, conversationID, runID int64, reply agentReply) (dto.AgentMessageResp, error) {
+func (s *AgentService) createAssistantMessage(ctx context.Context, conversationID, runID int64, reply agentReply) (AgentMessage, error) {
 	messagePublicID, err := newUniquePublicID(ctx, s.repo.MessagePublicIDExists)
 	if err != nil {
-		return dto.AgentMessageResp{}, err
+		return AgentMessage{}, err
 	}
 	blocksJSON, err := json.Marshal(reply.Blocks)
 	if err != nil {
-		return dto.AgentMessageResp{}, errcode.ErrInternal.Wrap(err)
+		return AgentMessage{}, errcode.ErrInternal.Wrap(err)
 	}
 	message := model.AgentMessage{PublicID: messagePublicID, ConversationID: conversationID, RunID: runID,
 		Role: "assistant", Kind: "blocks", Content: reply.Content, BlocksJSON: string(blocksJSON)}
@@ -707,12 +707,12 @@ func (s *AgentService) createAssistantMessage(ctx context.Context, conversationI
 		message.Kind = "text"
 	}
 	if err := s.repo.CreateMessage(ctx, &message); err != nil {
-		return dto.AgentMessageResp{}, errcode.ErrDatabase.Wrap(err)
+		return AgentMessage{}, errcode.ErrDatabase.Wrap(err)
 	}
 	return agentMessageResponse(message)
 }
 
-func (s *AgentService) createMessage(ctx context.Context, conversationID, runID int64, role, kind, content string, blocks []dto.AgentBlock) error {
+func (s *AgentService) createMessage(ctx context.Context, conversationID, runID int64, role, kind, content string, blocks []AgentBlock) error {
 	messagePublicID, err := newUniquePublicID(ctx, s.repo.MessagePublicIDExists)
 	if err != nil {
 		return err
@@ -733,14 +733,14 @@ func (s *AgentService) createMessage(ctx context.Context, conversationID, runID 
 	return nil
 }
 
-func agentMessageResponse(message model.AgentMessage) (dto.AgentMessageResp, error) {
-	blocks := make([]dto.AgentBlock, 0)
+func agentMessageResponse(message model.AgentMessage) (AgentMessage, error) {
+	blocks := make([]AgentBlock, 0)
 	if strings.TrimSpace(message.BlocksJSON) != "" {
 		if err := json.Unmarshal([]byte(message.BlocksJSON), &blocks); err != nil {
-			return dto.AgentMessageResp{}, err
+			return AgentMessage{}, err
 		}
 	}
-	return dto.AgentMessageResp{ID: message.PublicID, Role: message.Role, Kind: message.Kind,
+	return AgentMessage{ID: message.PublicID, Role: message.Role, Kind: message.Kind,
 		Content: message.Content, Blocks: blocks, CreatedAt: message.CreatedAt.Format(agentConversationTimeLayout)}, nil
 }
 
@@ -833,11 +833,11 @@ func sortCandidates(candidates []repository.AgentProblemCandidate, selectedTagID
 
 func agentSuccessReply(draft *homeworkDraft, homeworkPublicID int64) agentReply {
 	link := fmt.Sprintf("/team/%d/homework/%d", draft.TeamPublicID, homeworkPublicID)
-	block := dto.AgentBlock{Type: "action_result", Title: "作业创建成功", Payload: map[string]any{
+	block := AgentBlock{Type: "action_result", Title: "作业创建成功", Payload: map[string]any{
 		"action": "create_homework", "homeworkId": homeworkPublicID, "teamId": draft.TeamPublicID,
 		"title": draft.Title, "link": link,
 	}}
-	return agentReply{Content: fmt.Sprintf("作业“%s”已经创建完成。", draft.Title), Blocks: []dto.AgentBlock{block}}
+	return agentReply{Content: fmt.Sprintf("作业“%s”已经创建完成。", draft.Title), Blocks: []AgentBlock{block}}
 }
 
 func decodeInt64(raw json.RawMessage) (int64, error) {

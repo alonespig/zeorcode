@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"zoj/pkg/errcode"
 	"zoj/internal/dto"
 	"zoj/internal/service"
+	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,7 +30,11 @@ func (h *AgentController) ListConversations(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return h.service.ListConversations(c.Request.Context(), userID, &req)
+	resp, err := h.service.ListConversations(c.Request.Context(), userID, toAgentConversationListParams(req))
+	if err != nil {
+		return nil, err
+	}
+	return toAgentConversationListResp(resp), nil
 }
 
 func (h *AgentController) CreateConversation(c *gin.Context) (any, error) {
@@ -42,7 +46,11 @@ func (h *AgentController) CreateConversation(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return h.service.CreateConversation(c.Request.Context(), userID, &req)
+	resp, err := h.service.CreateConversation(c.Request.Context(), userID, toCreateAgentConversationParams(req))
+	if err != nil {
+		return nil, err
+	}
+	return toAgentConversationResp(*resp), nil
 }
 
 func (h *AgentController) ConversationDetail(c *gin.Context) (any, error) {
@@ -54,7 +62,11 @@ func (h *AgentController) ConversationDetail(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return h.service.ConversationDetail(c.Request.Context(), conversationID, userID)
+	resp, err := h.service.ConversationDetail(c.Request.Context(), conversationID, userID)
+	if err != nil {
+		return nil, err
+	}
+	return toAgentConversationDetailResp(resp), nil
 }
 
 func (h *AgentController) UpdateConversation(c *gin.Context) (any, error) {
@@ -70,7 +82,7 @@ func (h *AgentController) UpdateConversation(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, h.service.UpdateConversation(c.Request.Context(), conversationID, userID, &req)
+	return nil, h.service.UpdateConversation(c.Request.Context(), conversationID, userID, toUpdateAgentConversationParams(req))
 }
 
 // Turn streams a single Agent turn. The service emits transport-neutral events;
