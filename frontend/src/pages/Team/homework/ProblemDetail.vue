@@ -9,6 +9,7 @@ import { useLanguages } from "@/hooks/useLanguages";
 import { getEditorLanguageExtension } from "@/utils/editorLanguage";
 import ContestProblem from "@/components/problem/ContestProblem.vue";
 import HomeworkRecentSubmissions from "@/components/homework/HomeworkRecentSubmissions.vue";
+import HomeworkSubmissionViewer from "@/components/homework/HomeworkSubmissionViewer.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -18,6 +19,9 @@ const code = shallowRef("");
 const language = shallowRef();
 const submitting = shallowRef(false);
 const problemLoading = shallowRef(false);
+const detailVisible = shallowRef(false);
+const selectedSubmissionId = shallowRef(null);
+const recentSubmissionsKey = shallowRef(0);
 let homeworkFetchVersion = 0;
 let problemFetchVersion = 0;
 
@@ -69,7 +73,14 @@ const goProblemList = () => router.push(`${homeworkBase.value}/problems`);
 const goHomeworkHome = () => router.push(homeworkBase.value);
 const goRank = () => router.push(`${homeworkBase.value}/rank`);
 const goSubmissions = () => router.push(`${homeworkBase.value}/submissions`);
-const goSubmissionDetail = (id) => router.push({ name: "SubmissionDetail", params: { id } });
+const goSubmissionDetail = (id) => {
+  selectedSubmissionId.value = id;
+  detailVisible.value = true;
+};
+const refreshSubmissionResults = () => {
+  recentSubmissionsKey.value += 1;
+  fetchHomework(route.params.hid);
+};
 const goProblem = (problemId) => {
   if (String(problemId) === currentProblemId.value) return;
   router.push({
@@ -126,7 +137,8 @@ const handleSubmit = async () => {
       code: code.value,
     });
     ElMessage.success("提交成功");
-    router.push({ name: "SubmissionDetail", params: { id: res.data.id } });
+    recentSubmissionsKey.value += 1;
+    goSubmissionDetail(res.data.id);
   } catch (err) {
     console.error(err);
   } finally {
@@ -142,7 +154,10 @@ watch(
 
 watch(
   () => [route.params.hid, route.params.problemId],
-  ([homeworkId, problemId]) => fetchProblem(homeworkId, problemId),
+  ([homeworkId, problemId]) => {
+    detailVisible.value = false;
+    fetchProblem(homeworkId, problemId);
+  },
   { immediate: true }
 );
 
@@ -206,10 +221,12 @@ onMounted(async () => {
           </div>
         </section>
 
-        <HomeworkRecentSubmissions class="max-lg:order-4" :homework-id="route.params.hid"
+        <HomeworkRecentSubmissions :key="recentSubmissionsKey" class="max-lg:order-4" :homework-id="route.params.hid"
           :problem-id="currentProblem?.id || currentProblemId" @click-id="goSubmissionDetail"
           @view-all="goSubmissions" />
       </aside>
     </div>
+    <HomeworkSubmissionViewer v-model="detailVisible" :homework-id="route.params.hid"
+      :submission-id="selectedSubmissionId" @settled="refreshSubmissionResults" />
   </div>
 </template>
