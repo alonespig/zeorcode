@@ -3,9 +3,9 @@ package handler
 import (
 	"strconv"
 
-	"zoj/pkg/errcode"
 	"zoj/internal/dto"
 	"zoj/internal/service"
+	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,7 +30,11 @@ func (c *RemoteController) GetRemoteProblem(ctx *gin.Context) (any, error) {
 	if oj == "" || pid == "" {
 		return nil, errcode.ErrInvalidParams.WithMsg("缺少 oj 或 pid 参数")
 	}
-	return c.remoteSrv.CrawlProblem(ctx.Request.Context(), oj, pid)
+	resp, err := c.remoteSrv.CrawlProblem(ctx.Request.Context(), oj, pid)
+	if err != nil {
+		return nil, err
+	}
+	return toRemoteProblemResp(resp), nil
 }
 
 // ListAccounts GET /api/admin/remote-account
@@ -39,7 +43,7 @@ func (c *RemoteController) ListAccounts(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return gin.H{"list": list}, nil
+	return gin.H{"list": toRemoteAccounts(list)}, nil
 }
 
 // CreateAccount POST /api/admin/remote-account
@@ -48,7 +52,7 @@ func (c *RemoteController) CreateAccount(ctx *gin.Context) (any, error) {
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	id, err := c.remoteSrv.CreateAccount(ctx.Request.Context(), &req)
+	id, err := c.remoteSrv.CreateAccount(ctx.Request.Context(), toCreateRemoteAccountParams(req))
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +69,7 @@ func (c *RemoteController) UpdateAccount(ctx *gin.Context) (any, error) {
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return nil, c.remoteSrv.UpdateAccount(ctx.Request.Context(), id, &req)
+	return nil, c.remoteSrv.UpdateAccount(ctx.Request.Context(), id, toUpdateRemoteAccountParams(req))
 }
 
 // DeleteAccount DELETE /api/admin/remote-account/:id

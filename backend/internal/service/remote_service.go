@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"zoj/pkg/errcode"
 	"zoj/internal/infra/logger"
-	"zoj/internal/dto"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 	"zoj/pkg/remoteoj"
 	"zoj/pkg/util"
 
@@ -29,7 +28,7 @@ func (s *RemoteService) ListOJ(ctx context.Context) []string {
 }
 
 // CrawlProblem 拉取指定 OJ 的题目（自动带上该 OJ 的启用账号 cookie）
-func (s *RemoteService) CrawlProblem(ctx context.Context, ojName, pid string) (*dto.RemoteProblemResp, error) {
+func (s *RemoteService) CrawlProblem(ctx context.Context, ojName, pid string) (*RemoteProblem, error) {
 	oj, ok := remoteoj.Get(ojName)
 	if !ok {
 		return nil, errcode.ErrRemoteOJUnsupported
@@ -40,16 +39,16 @@ func (s *RemoteService) CrawlProblem(ctx context.Context, ojName, pid string) (*
 		return nil, errcode.ErrRemoteProblemUnavailable.Wrap(err)
 	}
 
-	samples := make([]dto.ProblemSample, 0, len(p.Samples))
+	samples := make([]ProblemSample, 0, len(p.Samples))
 	for _, sp := range p.Samples {
-		samples = append(samples, dto.ProblemSample{
+		samples = append(samples, ProblemSample{
 			Input:   sp.Input,
 			Output:  sp.Output,
 			Explain: sp.Explain,
 		})
 	}
 
-	return &dto.RemoteProblemResp{
+	return &RemoteProblem{
 		OJ:              p.OJ,
 		RemoteProblemID: p.RemoteProblemID,
 		Title:           p.Title,
@@ -86,14 +85,14 @@ func (s *RemoteService) loadAccount(ctx context.Context, ojName string) *remoteo
 
 // ==================== 远程账号管理 ====================
 
-func (s *RemoteService) ListAccounts(ctx context.Context) ([]dto.RemoteAccountItem, error) {
+func (s *RemoteService) ListAccounts(ctx context.Context) ([]RemoteAccount, error) {
 	list, err := s.accRepo.List(ctx)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	items := make([]dto.RemoteAccountItem, 0, len(list))
+	items := make([]RemoteAccount, 0, len(list))
 	for _, m := range list {
-		items = append(items, dto.RemoteAccountItem{
+		items = append(items, RemoteAccount{
 			ID:        m.ID,
 			OJ:        m.OJ,
 			AuthType:  m.AuthType,
@@ -108,7 +107,7 @@ func (s *RemoteService) ListAccounts(ctx context.Context) ([]dto.RemoteAccountIt
 	return items, nil
 }
 
-func (s *RemoteService) CreateAccount(ctx context.Context, req *dto.CreateRemoteAccountReq) (int64, error) {
+func (s *RemoteService) CreateAccount(ctx context.Context, req CreateRemoteAccountParams) (int64, error) {
 	enc, err := encryptSecret(req.Secret)
 	if err != nil {
 		return 0, err
@@ -126,7 +125,7 @@ func (s *RemoteService) CreateAccount(ctx context.Context, req *dto.CreateRemote
 	return id, nil
 }
 
-func (s *RemoteService) UpdateAccount(ctx context.Context, id int64, req *dto.UpdateRemoteAccountReq) error {
+func (s *RemoteService) UpdateAccount(ctx context.Context, id int64, req UpdateRemoteAccountParams) error {
 	fields := map[string]any{
 		"auth_type": req.AuthType,
 		"username":  req.Username,
