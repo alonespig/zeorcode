@@ -5,10 +5,9 @@ import (
 	"errors"
 	"strings"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/dto"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 	"zoj/pkg/judge"
 
 	"gorm.io/gorm"
@@ -22,31 +21,31 @@ type LanguageResolver interface {
 	ResolveEnabledName(ctx context.Context, id int) (string, error)
 }
 
+// SaveLanguageParams 创建/更新语言的输入。
+type SaveLanguageParams struct {
+	Name   string
+	Status int
+	Sort   int
+}
+
 func NewLanguageService(repo *repository.LanguageRepo) *LanguageService {
 	return &LanguageService{repo: repo}
 }
 
-func (s *LanguageService) ListEnabled(ctx context.Context) ([]dto.LanguageItem, error) {
+func (s *LanguageService) ListEnabled(ctx context.Context) ([]model.Language, error) {
 	return s.list(ctx, true)
 }
 
-func (s *LanguageService) AdminList(ctx context.Context) ([]dto.LanguageItem, error) {
+func (s *LanguageService) AdminList(ctx context.Context) ([]model.Language, error) {
 	return s.list(ctx, false)
 }
 
-func (s *LanguageService) list(ctx context.Context, onlyEnabled bool) ([]dto.LanguageItem, error) {
+func (s *LanguageService) list(ctx context.Context, onlyEnabled bool) ([]model.Language, error) {
 	list, err := s.repo.List(ctx, onlyEnabled)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	items := make([]dto.LanguageItem, 0, len(list))
-	for _, language := range list {
-		items = append(items, dto.LanguageItem{
-			ID: language.ID, Name: language.Name, Status: language.Status, Sort: language.Sort,
-			CreatedAt: language.CreatedAt, UpdatedAt: language.UpdatedAt,
-		})
-	}
-	return items, nil
+	return list, nil
 }
 
 // ResolveEnabledName 将前端语言编号解析为提交记录使用的稳定名称。
@@ -64,8 +63,8 @@ func (s *LanguageService) ResolveEnabledName(ctx context.Context, id int) (strin
 	return language.Name, nil
 }
 
-func (s *LanguageService) Create(ctx context.Context, req *dto.SaveLanguageReq) (*dto.LanguageItem, error) {
-	name, err := validateLanguageName(req.Name)
+func (s *LanguageService) Create(ctx context.Context, params SaveLanguageParams) (*model.Language, error) {
+	name, err := validateLanguageName(params.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -76,21 +75,21 @@ func (s *LanguageService) Create(ctx context.Context, req *dto.SaveLanguageReq) 
 	if exists {
 		return nil, errcode.ErrInvalidParams.WithMsg("编程语言已存在")
 	}
-	language := &model.Language{Name: name, Status: req.Status, Sort: req.Sort}
+	language := &model.Language{Name: name, Status: params.Status, Sort: params.Sort}
 	if err := s.repo.Create(ctx, language); err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	return languageItem(language), nil
+	return language, nil
 }
 
-func (s *LanguageService) Update(ctx context.Context, id int, req *dto.SaveLanguageReq) error {
+func (s *LanguageService) Update(ctx context.Context, id int, params SaveLanguageParams) error {
 	if _, err := s.repo.GetByID(ctx, id); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errcode.ErrInvalidParams.WithMsg("编程语言不存在")
 		}
 		return errcode.ErrDatabase.Wrap(err)
 	}
-	name, err := validateLanguageName(req.Name)
+	name, err := validateLanguageName(params.Name)
 	if err != nil {
 		return err
 	}
@@ -101,7 +100,7 @@ func (s *LanguageService) Update(ctx context.Context, id int, req *dto.SaveLangu
 	if exists {
 		return errcode.ErrInvalidParams.WithMsg("编程语言已存在")
 	}
-	if err := s.repo.Update(ctx, id, map[string]any{"name": name, "status": req.Status, "sort": req.Sort}); err != nil {
+	if err := s.repo.Update(ctx, id, map[string]any{"name": name, "status": params.Status, "sort": params.Sort}); err != nil {
 		return errcode.ErrDatabase.Wrap(err)
 	}
 	return nil
@@ -127,11 +126,4 @@ func validateLanguageName(name string) (string, error) {
 		return "", errcode.ErrUnsupportedLanguage.WithMsg("评测程序暂不支持该语言")
 	}
 	return canonical, nil
-}
-
-func languageItem(language *model.Language) *dto.LanguageItem {
-	return &dto.LanguageItem{
-		ID: language.ID, Name: language.Name, Status: language.Status, Sort: language.Sort,
-		CreatedAt: language.CreatedAt, UpdatedAt: language.UpdatedAt,
-	}
 }

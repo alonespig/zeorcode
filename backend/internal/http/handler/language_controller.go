@@ -3,9 +3,10 @@ package handler
 import (
 	"strconv"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/dto"
+	"zoj/internal/http/dto"
+	"zoj/internal/model"
 	"zoj/internal/service"
+	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,11 +20,19 @@ func NewLanguageController(languageService *service.LanguageService) *LanguageCo
 }
 
 func (h *LanguageController) List(c *gin.Context) (any, error) {
-	return h.service.ListEnabled(c.Request.Context())
+	langs, err := h.service.ListEnabled(c.Request.Context())
+	if err != nil {
+		return nil, err
+	}
+	return toLanguageItems(langs), nil
 }
 
 func (h *LanguageController) AdminList(c *gin.Context) (any, error) {
-	return h.service.AdminList(c.Request.Context())
+	langs, err := h.service.AdminList(c.Request.Context())
+	if err != nil {
+		return nil, err
+	}
+	return toLanguageItems(langs), nil
 }
 
 func (h *LanguageController) Create(c *gin.Context) (any, error) {
@@ -31,7 +40,13 @@ func (h *LanguageController) Create(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return h.service.Create(c.Request.Context(), &req)
+	language, err := h.service.Create(c.Request.Context(), service.SaveLanguageParams{
+		Name: req.Name, Status: req.Status, Sort: req.Sort,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toLanguageItem(language), nil
 }
 
 func (h *LanguageController) Update(c *gin.Context) (any, error) {
@@ -43,7 +58,9 @@ func (h *LanguageController) Update(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return nil, h.service.Update(c.Request.Context(), id, &req)
+	return nil, h.service.Update(c.Request.Context(), id, service.SaveLanguageParams{
+		Name: req.Name, Status: req.Status, Sort: req.Sort,
+	})
 }
 
 func (h *LanguageController) Delete(c *gin.Context) (any, error) {
@@ -60,4 +77,30 @@ func languageID(c *gin.Context) (int, error) {
 		return 0, errcode.ErrInvalidParams.WithMsg("非法语言编号")
 	}
 	return id, nil
+}
+
+func toLanguageItems(langs []model.Language) []dto.LanguageItem {
+	items := make([]dto.LanguageItem, 0, len(langs))
+	for _, l := range langs {
+		items = append(items, dto.LanguageItem{
+			ID:        l.ID,
+			Name:      l.Name,
+			Status:    l.Status,
+			Sort:      l.Sort,
+			CreatedAt: l.CreatedAt,
+			UpdatedAt: l.UpdatedAt,
+		})
+	}
+	return items
+}
+
+func toLanguageItem(l *model.Language) *dto.LanguageItem {
+	return &dto.LanguageItem{
+		ID:        l.ID,
+		Name:      l.Name,
+		Status:    l.Status,
+		Sort:      l.Sort,
+		CreatedAt: l.CreatedAt,
+		UpdatedAt: l.UpdatedAt,
+	}
 }
