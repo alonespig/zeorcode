@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/http/response"
 	"zoj/internal/dto"
+	"zoj/internal/http/response"
 	"zoj/internal/service"
+	"zoj/pkg/errcode"
 	"zoj/pkg/judge"
 
 	"github.com/gin-gonic/gin"
@@ -33,7 +33,11 @@ func (a *AdminController) ListUsers(c *gin.Context) (any, error) {
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return a.userSrv.ListAllUsers(c.Request.Context(), req.Page, req.PageSize)
+	resp, err := a.userSrv.ListAllUsers(c.Request.Context(), req.Page, req.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	return toAdminUserListResp(resp), nil
 }
 
 // DownloadUserImportTemplate GET /api/admin/users/import/template
@@ -66,7 +70,11 @@ func (a *AdminController) ImportUsers(c *gin.Context) (any, error) {
 	}
 	defer file.Close()
 
-	return a.userSrv.ImportUsers(c.Request.Context(), file)
+	resp, err := a.userSrv.ImportUsers(c.Request.Context(), file)
+	if err != nil {
+		return nil, err
+	}
+	return toBatchCreateUsersResult(resp), nil
 }
 
 // JudgeStatus GET /api/admin/judge/status 评测机健康面板：现场探活各实例

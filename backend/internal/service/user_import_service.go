@@ -8,9 +8,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/dto"
 	"zoj/internal/model"
+	"zoj/pkg/errcode"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -46,15 +45,15 @@ func (u *UserService) UserImportTemplate() ([]byte, error) {
 }
 
 // ImportUsers 从 Excel 批量创建普通用户，初始密码与学号相同。
-func (u *UserService) ImportUsers(ctx context.Context, reader io.Reader) (*dto.BatchCreateUsersResp, error) {
+func (u *UserService) ImportUsers(ctx context.Context, reader io.Reader) (*BatchCreateUsersResult, error) {
 	rows, err := parseAdminUserImport(reader)
 	if err != nil {
 		return nil, err
 	}
 
-	req := &dto.BatchCreateUsersReq{Users: make([]dto.BatchUserItem, 0, len(rows))}
+	req := &BatchCreateUsersParams{Users: make([]BatchUserParams, 0, len(rows))}
 	for _, row := range rows {
-		req.Users = append(req.Users, dto.BatchUserItem{
+		req.Users = append(req.Users, BatchUserParams{
 			Username:  row.Username,
 			StudentNo: row.StudentNo,
 			RealName:  row.RealName,

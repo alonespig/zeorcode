@@ -11,7 +11,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
 	"zoj/internal/model"
 	"zoj/internal/repository"
@@ -580,17 +579,17 @@ func (u *UserService) Session(ctx context.Context, userID int64) (*LoginResult, 
 }
 
 // ListAllUsers 管理员视角的用户分页列表
-func (u *UserService) ListAllUsers(ctx context.Context, page, pageSize int) (*dto.AdminUserListResp, error) {
+func (u *UserService) ListAllUsers(ctx context.Context, page, pageSize int) (*AdminUserList, error) {
 	users, total, err := u.repo.ListUsers(ctx, page, pageSize)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.AdminUserListResp{
+	resp := &AdminUserList{
 		Total: total,
-		List:  make([]dto.AdminUserItem, 0, len(users)),
+		List:  make([]AdminUser, 0, len(users)),
 	}
 	for _, user := range users {
-		resp.List = append(resp.List, dto.AdminUserItem{
+		resp.List = append(resp.List, AdminUser{
 			ID:        user.UID, // 对外用户号
 			Username:  user.Username,
 			StudentNo: studentNoValue(user.StudentNo),
@@ -599,7 +598,7 @@ func (u *UserService) ListAllUsers(ctx context.Context, page, pageSize int) (*dt
 			Role:      user.Role,
 			Status:    user.Status,
 			Signature: user.Signature,
-			CreatedAt: user.CreatedAt.Unix(),
+			CreatedAt: user.CreatedAt,
 		})
 	}
 	return resp, nil
@@ -685,7 +684,7 @@ func (u *UserService) SetUserRole(ctx context.Context, actorID, uid int64, role 
 //   - 入参列表内用户名、学号、非空邮箱去重
 //   - 与库内任一唯一身份冲突时全部拒绝（一次性返回失败）
 //   - 成功则原子插入
-func (u *UserService) BatchCreateUsers(ctx context.Context, req *dto.BatchCreateUsersReq) (*dto.BatchCreateUsersResp, error) {
+func (u *UserService) BatchCreateUsers(ctx context.Context, req *BatchCreateUsersParams) (*BatchCreateUsersResult, error) {
 	names := make([]string, 0, len(req.Users))
 	emails := make([]string, 0, len(req.Users))
 	studentNos := make([]string, 0, len(req.Users))
@@ -773,7 +772,7 @@ func (u *UserService) BatchCreateUsers(ctx context.Context, req *dto.BatchCreate
 	if err := u.repo.CreateUsersBatch(ctx, users); err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	return &dto.BatchCreateUsersResp{Created: len(users)}, nil
+	return &BatchCreateUsersResult{Created: len(users)}, nil
 }
 
 func studentNoPtr(value string) *string {
