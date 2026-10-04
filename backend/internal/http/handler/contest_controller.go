@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"zoj/internal/dto"
+	"zoj/internal/http/dto"
 	"zoj/internal/model"
 	"zoj/internal/service"
 	"zoj/pkg/errcode"

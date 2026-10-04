@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"zoj/internal/dto"
+	"zoj/internal/http/dto"
 	"zoj/internal/infra/mq"
 	"zoj/internal/service"
 	"zoj/pkg/errcode"

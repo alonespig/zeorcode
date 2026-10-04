@@ -4,7 +4,7 @@ import (
 	"context"
 	"strconv"
 
-	"zoj/internal/dto"
+	"zoj/internal/http/dto"
 	"zoj/internal/http/middleware"
 	"zoj/internal/http/response"
 	"zoj/internal/service"

@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"zoj/internal/dto"
+	"zoj/internal/http/dto"
 	"zoj/internal/service"
 	"zoj/pkg/errcode"
 

@@ -3,7 +3,7 @@ package handler
 import (
 	"strconv"
 
-	"zoj/internal/dto"
+	"zoj/internal/http/dto"
 	"zoj/internal/service"
 	"zoj/pkg/errcode"
 

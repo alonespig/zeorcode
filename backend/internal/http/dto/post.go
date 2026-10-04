@@ -3,7 +3,7 @@ package dto
 type PostListReq struct {
 	Category  string `form:"category" binding:"oneof=all blog help solution announcement"`
 	ProblemID string `form:"problemID"` // 对外题号
-	UserID    int64  `form:"userID"` // >0 时只看该用户发布的帖子（个人主页"帖子"tab）
+	UserID    int64  `form:"userID"`    // >0 时只看该用户发布的帖子（个人主页"帖子"tab）
 	Keyword   string `form:"keyword"`
 	Sort      string `form:"sort"`
 	Page      int    `form:"page"`
