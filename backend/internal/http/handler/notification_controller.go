@@ -3,9 +3,9 @@ package handler
 import (
 	"strconv"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/dto"
+	"zoj/internal/http/dto"
 	"zoj/internal/service"
+	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -38,7 +38,11 @@ func (n *NotificationController) List(c *gin.Context) (any, error) {
 	if pageSize <= 0 {
 		pageSize = 15
 	}
-	return n.srv.List(c.Request.Context(), uid, c.Query("type"), page, pageSize)
+	resp, err := n.srv.List(c.Request.Context(), uid, c.Query("type"), page, pageSize)
+	if err != nil {
+		return nil, err
+	}
+	return toNotificationListResp(resp), nil
 }
 
 // UnreadCount GET /api/notifications/unread-count
@@ -47,7 +51,11 @@ func (n *NotificationController) UnreadCount(c *gin.Context) (any, error) {
 	if uid == 0 {
 		return nil, errcode.ErrUnauthorized
 	}
-	return n.srv.UnreadCount(c.Request.Context(), uid)
+	resp, err := n.srv.UnreadCount(c.Request.Context(), uid)
+	if err != nil {
+		return nil, err
+	}
+	return toUnreadCountResp(resp), nil
 }
 
 // MarkRead POST /api/notifications/read  body: {id} 单条 / {type} 该类型 / 空 全部
@@ -67,5 +75,44 @@ func (n *NotificationController) Broadcast(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return nil, n.srv.Broadcast(c.Request.Context(), &req)
+	return nil, n.srv.Broadcast(c.Request.Context(), service.BroadcastParams{
+		Title: req.Title, Content: req.Content, Link: req.Link,
+	})
+}
+
+func toNotificationListResp(resp *service.NotificationList) *dto.NotificationListResp {
+	items := make([]dto.NotificationItem, 0, len(resp.List))
+	for _, it := range resp.List {
+		item := dto.NotificationItem{
+			ID:         it.ID,
+			Type:       it.Type,
+			Title:      it.Title,
+			Content:    it.Content,
+			Link:       it.Link,
+			SourceType: it.SourceType,
+			IsRead:     it.IsRead,
+			CreatedAt:  it.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
+		if it.Actor != nil {
+			item.Actor = &dto.NotifActor{
+				ID:       it.Actor.ID,
+				Username: it.Actor.Username,
+				Avatar:   it.Actor.Avatar,
+				Rating:   it.Actor.Rating,
+			}
+		}
+		items = append(items, item)
+	}
+	return &dto.NotificationListResp{Total: resp.Total, List: items}
+}
+
+func toUnreadCountResp(u *service.UnreadCount) *dto.UnreadCountResp {
+	return &dto.UnreadCountResp{
+		Comment: u.Comment,
+		Reply:   u.Reply,
+		Like:    u.Like,
+		System:  u.System,
+		Rating:  u.Rating,
+		Total:   u.Total,
+	}
 }

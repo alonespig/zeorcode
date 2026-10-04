@@ -9,15 +9,15 @@ type NotifActor struct {
 }
 
 type NotificationItem struct {
-	ID        int64       `json:"id"`
-	Type      string      `json:"type"`
-	Title     string      `json:"title,omitempty"`
-	Content   string      `json:"content,omitempty"`
+	ID         int64       `json:"id"`
+	Type       string      `json:"type"`
+	Title      string      `json:"title,omitempty"`
+	Content    string      `json:"content,omitempty"`
 	Link       string      `json:"link"`
 	SourceType string      `json:"sourceType,omitempty"` // post / comment / contest …（前端区分点赞帖子/评论）
 	IsRead     bool        `json:"isRead"`
-	CreatedAt string      `json:"createdAt"`
-	Actor     *NotifActor `json:"actor,omitempty"` // 系统/rating 无触发者
+	CreatedAt  string      `json:"createdAt"`
+	Actor      *NotifActor `json:"actor,omitempty"` // 系统/rating 无触发者
 }
 
 type NotificationListResp struct {

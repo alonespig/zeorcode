@@ -2,16 +2,60 @@ package service
 
 import (
 	"context"
+	"time"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/dto"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 )
 
 type NotificationService struct {
 	repo     *repository.NotificationRepo
 	userRepo *repository.UserRepo
+}
+
+// NotifActor 通知触发者。
+type NotifActor struct {
+	ID       int64
+	Username string
+	Avatar   string
+	Rating   int
+}
+
+// NotificationItem 一条通知及其触发者信息。
+type NotificationItem struct {
+	ID         int64
+	Type       string
+	Title      string
+	Content    string
+	Link       string
+	SourceType string
+	IsRead     bool
+	CreatedAt  time.Time
+	Actor      *NotifActor
+}
+
+// NotificationList 通知列表结果。
+type NotificationList struct {
+	Total int64
+	List  []NotificationItem
+}
+
+// UnreadCount 未读通知计数。
+type UnreadCount struct {
+	Comment int64
+	Reply   int64
+	Like    int64
+	System  int64
+	Rating  int64
+	Total   int64
+}
+
+// BroadcastParams 广播系统通知的输入。
+type BroadcastParams struct {
+	Title   string
+	Content string
+	Link    string
 }
 
 func NewNotificationService(repo *repository.NotificationRepo, userRepo *repository.UserRepo) *NotificationService {
@@ -44,7 +88,7 @@ func (s *NotificationService) Notify(ctx context.Context, recipientID, actorID i
 }
 
 // Broadcast 管理员系统通知：扇出给全体用户。
-func (s *NotificationService) Broadcast(ctx context.Context, req *dto.BroadcastReq) error {
+func (s *NotificationService) Broadcast(ctx context.Context, params BroadcastParams) error {
 	ids, err := s.userRepo.AllUserIDs(ctx)
 	if err != nil {
 		return errcode.ErrDatabase.Wrap(err)
@@ -54,9 +98,9 @@ func (s *NotificationService) Broadcast(ctx context.Context, req *dto.BroadcastR
 		ns = append(ns, &model.Notification{
 			RecipientID: id,
 			Type:        "system",
-			Title:       req.Title,
-			Content:     req.Content,
-			Link:        req.Link,
+			Title:       params.Title,
+			Content:     params.Content,
+			Link:        params.Link,
 			SourceType:  "system",
 		})
 	}
@@ -66,7 +110,7 @@ func (s *NotificationService) Broadcast(ctx context.Context, req *dto.BroadcastR
 	return nil
 }
 
-func (s *NotificationService) List(ctx context.Context, recipientID int64, typ string, page, pageSize int) (*dto.NotificationListResp, error) {
+func (s *NotificationService) List(ctx context.Context, recipientID int64, typ string, page, pageSize int) (*NotificationList, error) {
 	list, total, err := s.repo.List(ctx, recipientID, typ, page, pageSize)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
@@ -85,9 +129,9 @@ func (s *NotificationService) List(ctx context.Context, recipientID int64, typ s
 			}
 		}
 	}
-	resp := &dto.NotificationListResp{Total: total, List: make([]dto.NotificationItem, 0, len(list))}
+	resp := &NotificationList{Total: total, List: make([]NotificationItem, 0, len(list))}
 	for _, n := range list {
-		item := dto.NotificationItem{
+		item := NotificationItem{
 			ID:         n.ID,
 			Type:       n.Type,
 			Title:      n.Title,
@@ -95,22 +139,22 @@ func (s *NotificationService) List(ctx context.Context, recipientID int64, typ s
 			Link:       n.Link,
 			SourceType: n.SourceType,
 			IsRead:     n.IsRead,
-			CreatedAt:  n.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:  n.CreatedAt,
 		}
 		if u, ok := userMap[n.ActorID]; ok {
-			item.Actor = &dto.NotifActor{ID: u.UID, Username: u.Username, Avatar: avatarOr(u.Avatar), Rating: u.Rating}
+			item.Actor = &NotifActor{ID: u.UID, Username: u.Username, Avatar: avatarOr(u.Avatar), Rating: u.Rating}
 		}
 		resp.List = append(resp.List, item)
 	}
 	return resp, nil
 }
 
-func (s *NotificationService) UnreadCount(ctx context.Context, recipientID int64) (*dto.UnreadCountResp, error) {
+func (s *NotificationService) UnreadCount(ctx context.Context, recipientID int64) (*UnreadCount, error) {
 	m, err := s.repo.UnreadCountByType(ctx, recipientID)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.UnreadCountResp{
+	resp := &UnreadCount{
 		Comment: m["comment"],
 		Reply:   m["reply"],
 		Like:    m["like"],
