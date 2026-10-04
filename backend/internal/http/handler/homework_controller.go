@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"zoj/pkg/errcode"
 	"zoj/internal/dto"
 	"zoj/internal/service"
+	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,8 +33,12 @@ func (h *HomeworkController) ListByTeam(c *gin.Context) (any, error) {
 	if err := c.ShouldBindQuery(&page); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return h.hwSrv.ListByTeam(c.Request.Context(), teamID,
+	resp, err := h.hwSrv.ListByTeam(c.Request.Context(), teamID,
 		optionalCurrentUserID(c), isAdminFromCtx(c), page.Page, page.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	return toHomeworkListResp(resp), nil
 }
 
 // Create POST /api/team/:id/homework 布置作业
@@ -51,7 +55,7 @@ func (h *HomeworkController) Create(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	id, err := h.hwSrv.Save(c.Request.Context(), teamID, 0, &req, userID, role == 1)
+	id, err := h.hwSrv.Save(c.Request.Context(), teamID, 0, toSaveHomeworkParams(req), userID, role == 1)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +68,11 @@ func (h *HomeworkController) Detail(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return h.hwSrv.Detail(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c))
+	resp, err := h.hwSrv.Detail(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c))
+	if err != nil {
+		return nil, err
+	}
+	return toHomeworkDetailResp(resp), nil
 }
 
 // Problem GET /api/homework/:hid/problem/:problemID
@@ -96,7 +104,7 @@ func (h *HomeworkController) Update(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := h.hwSrv.Save(c.Request.Context(), 0, id, &req, userID, role == 1); err != nil {
+	if _, err := h.hwSrv.Save(c.Request.Context(), 0, id, toSaveHomeworkParams(req), userID, role == 1); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -132,7 +140,7 @@ func (h *HomeworkController) Submit(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	subID, err := h.hwSrv.Submit(c.Request.Context(), id, &req, userID, role == 1)
+	subID, err := h.hwSrv.Submit(c.Request.Context(), id, toHomeworkSubmitParams(req), userID, role == 1)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +153,11 @@ func (h *HomeworkController) Rank(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return h.hwSrv.Rank(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c))
+	resp, err := h.hwSrv.Rank(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c))
+	if err != nil {
+		return nil, err
+	}
+	return toHomeworkRankResp(resp), nil
 }
 
 // Submissions GET /api/homework/:hid/submission
@@ -159,7 +171,11 @@ func (h *HomeworkController) Submissions(c *gin.Context) (any, error) {
 	if err := c.ShouldBindQuery(&q); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return h.hwSrv.Submissions(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c), &q)
+	resp, err := h.hwSrv.Submissions(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c), toHomeworkSubmissionQueryParams(q))
+	if err != nil {
+		return nil, err
+	}
+	return toHomeworkSubmissionListResp(resp), nil
 }
 
 // SubmissionDetail GET /api/homework/:hid/submission/:sid
@@ -173,8 +189,12 @@ func (h *HomeworkController) SubmissionDetail(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return h.hwSrv.SubmissionDetail(c.Request.Context(), id, publicID,
+	resp, err := h.hwSrv.SubmissionDetail(c.Request.Context(), id, publicID,
 		optionalCurrentUserID(c), isAdminFromCtx(c))
+	if err != nil {
+		return nil, err
+	}
+	return toHomeworkSubmissionDetailResp(resp), nil
 }
 
 // ExportRank GET /api/homework/:hid/rank/export 导出排行榜 CSV。

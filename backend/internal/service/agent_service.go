@@ -13,13 +13,13 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"zoj/pkg/errcode"
-	"zoj/pkg/publicid"
 	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
 	"zoj/internal/infra/llm"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
+	"zoj/pkg/publicid"
 
 	"gorm.io/gorm"
 )
@@ -656,9 +656,9 @@ func (s *AgentService) approveAction(ctx context.Context, conversation *model.Ag
 	for _, problem := range draft.SelectedProblems {
 		problems = append(problems, problem.DisplayID)
 	}
-	homeworkReq := &dto.SaveHomeworkReq{Title: draft.Title, Description: draft.Description,
+	homeworkParams := SaveHomeworkParams{Title: draft.Title, Description: draft.Description,
 		StartTime: draft.StartTime, EndTime: draft.EndTime, Problems: problems}
-	homeworkPublicID, err := s.homeworkSrv.CreateFromAgent(ctx, draft.TeamID, homeworkReq, userID, isSiteAdmin, action.ID)
+	homeworkPublicID, err := s.homeworkSrv.CreateFromAgent(ctx, draft.TeamID, homeworkParams, userID, isSiteAdmin, action.ID)
 	if err != nil {
 		_ = s.repo.FinishAction(ctx, action.ID, model.AgentActionFailed, 0, appErrorCode(err))
 		return agentReply{}, err

@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/infra/logger"
 	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
+	"zoj/internal/infra/logger"
 	"zoj/internal/infra/mq"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 	"zoj/pkg/judge"
 
 	"gorm.io/gorm"
@@ -53,7 +53,7 @@ func NewHomeworkService(
 const homeworkTimeLayout = "2006-01-02 15:04:05"
 
 // ListByTeam 团队作业列表，仅团队成员可见。
-func (s *HomeworkService) ListByTeam(ctx context.Context, teamID, userID int64, isSiteAdmin bool, page, pageSize int) (*dto.HomeworkListResp, error) {
+func (s *HomeworkService) ListByTeam(ctx context.Context, teamID, userID int64, isSiteAdmin bool, page, pageSize int) (*HomeworkList, error) {
 	access, err := s.teamAccess(ctx, teamID, userID, isSiteAdmin)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func (s *HomeworkService) ListByTeam(ctx context.Context, teamID, userID int64, 
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.HomeworkListResp{Total: int(total), List: make([]dto.HomeworkItemResp, 0, len(list))}
+	resp := &HomeworkList{Total: total, List: make([]HomeworkItem, 0, len(list))}
 	if len(list) == 0 {
 		return resp, nil
 	}
@@ -94,13 +94,13 @@ func (s *HomeworkService) ListByTeam(ctx context.Context, teamID, userID int64, 
 
 	now := time.Now()
 	for _, hw := range list {
-		item := dto.HomeworkItemResp{
+		item := HomeworkItem{
 			ID:           hw.PublicID,
 			Title:        hw.Title,
 			Status:       hw.Status(now),
 			ProblemCount: countByHW[hw.ID],
-			StartTime:    hw.StartTime.Format(homeworkTimeLayout),
-			EndTime:      hw.EndTime.Format(homeworkTimeLayout),
+			StartTime:    hw.StartTime,
+			EndTime:      hw.EndTime,
 			Creator:      creators[hw.CreatedBy].Username,
 			CanEdit:      canEditHomework(access, &hw) == nil,
 			CanDelete:    canDeleteHomework(access, &hw) == nil,
@@ -116,7 +116,7 @@ func (s *HomeworkService) ListByTeam(ctx context.Context, teamID, userID int64, 
 
 // Detail 作业详情。未开始时普通成员看不到题目列表（防提前刷题），
 // 布置者和团队管理员不受限。
-func (s *HomeworkService) Detail(ctx context.Context, id, userID int64, isSiteAdmin bool) (*dto.HomeworkDetailResp, error) {
+func (s *HomeworkService) Detail(ctx context.Context, id, userID int64, isSiteAdmin bool) (*HomeworkDetail, error) {
 	hw, access, err := s.loadWithAccess(ctx, id, userID, isSiteAdmin)
 	if err != nil {
 		return nil, err
@@ -135,22 +135,22 @@ func (s *HomeworkService) Detail(ctx context.Context, id, userID int64, isSiteAd
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
 	now := time.Now()
-	resp := &dto.HomeworkDetailResp{
+	resp := &HomeworkDetail{
 		ID:            hw.PublicID,
 		TeamID:        team.PublicID,
 		TeamName:      team.Name,
 		Title:         hw.Title,
 		Description:   hw.Description,
 		Status:        hw.Status(now),
-		StartTime:     hw.StartTime.Format(homeworkTimeLayout),
-		EndTime:       hw.EndTime.Format(homeworkTimeLayout),
+		StartTime:     hw.StartTime,
+		EndTime:       hw.EndTime,
 		Creator:       creators[hw.CreatedBy].Username,
 		CreatorAvatar: creators[hw.CreatedBy].Avatar,
 		ProblemCount:  len(refs),
 		TotalScore:    len(refs) * model.HomeworkProblemFullScore,
 		CanEdit:       canEditHomework(access, hw) == nil,
 		CanSeeAll:     access.CanManage(),
-		Problems:      make([]dto.HomeworkProblemResp, 0, len(refs)),
+		Problems:      make([]HomeworkProblem, 0, len(refs)),
 	}
 
 	// 未开始：只有能编辑的人（布置者/超管）和团队管理员可以提前看题
@@ -215,7 +215,7 @@ func (s *HomeworkService) Detail(ctx context.Context, id, userID int64, isSiteAd
 			continue // 题目被删了，跳过而不是整单打不开
 		}
 		st := statsByProblem[p.ID]
-		item := dto.HomeworkProblemResp{
+		item := HomeworkProblem{
 			ID:            p.DisplayID,
 			Name:          p.Name,
 			Difficulty:    p.Difficulty,
@@ -343,7 +343,7 @@ func (s *HomeworkService) ProblemDetail(
 
 // Save 布置（id==0）或编辑作业。
 // 布置需要团队管理员及以上；编辑按方案 B 只允许布置者本人。
-func (s *HomeworkService) Save(ctx context.Context, teamID, id int64, req *dto.SaveHomeworkReq, userID int64, isSiteAdmin bool) (int64, error) {
+func (s *HomeworkService) Save(ctx context.Context, teamID, id int64, req SaveHomeworkParams, userID int64, isSiteAdmin bool) (int64, error) {
 	start, end, err := parseHomeworkWindow(req)
 	if err != nil {
 		return 0, err
@@ -403,7 +403,7 @@ func (s *HomeworkService) Save(ctx context.Context, teamID, id int64, req *dto.S
 
 // CreateFromAgent creates one homework for one confirmed Agent action. The
 // source action unique key makes retries safe after an uncertain network result.
-func (s *HomeworkService) CreateFromAgent(ctx context.Context, teamID int64, req *dto.SaveHomeworkReq, userID int64, isSiteAdmin bool, actionID int64) (int64, error) {
+func (s *HomeworkService) CreateFromAgent(ctx context.Context, teamID int64, req SaveHomeworkParams, userID int64, isSiteAdmin bool, actionID int64) (int64, error) {
 	if actionID <= 0 {
 		return 0, errcode.ErrInvalidParams.WithMsg("非法 Agent 操作")
 	}
@@ -463,7 +463,7 @@ func (s *HomeworkService) Delete(ctx context.Context, id, userID int64, isSiteAd
 }
 
 // Submit 作业内提交。截止后仍可提交（不计入排行榜），但未开始不能提交。
-func (s *HomeworkService) Submit(ctx context.Context, id int64, req *dto.HomeworkSubmitReq, userID int64, isSiteAdmin bool) (int64, error) {
+func (s *HomeworkService) Submit(ctx context.Context, id int64, req HomeworkSubmitParams, userID int64, isSiteAdmin bool) (int64, error) {
 	hw, access, err := s.loadWithAccess(ctx, id, userID, isSiteAdmin)
 	if err != nil {
 		return 0, err
@@ -540,7 +540,7 @@ func (s *HomeworkService) Submit(ctx context.Context, id int64, req *dto.Homewor
 
 // Rank 排行榜（IOI）：每题取时间窗内最高分，总分为各题之和；
 // 按总分降序，同分时达成时间早者靠前。
-func (s *HomeworkService) Rank(ctx context.Context, id, userID int64, isSiteAdmin bool) (*dto.HomeworkRankResp, error) {
+func (s *HomeworkService) Rank(ctx context.Context, id, userID int64, isSiteAdmin bool) (*HomeworkRank, error) {
 	hw, access, err := s.loadWithAccess(ctx, id, userID, isSiteAdmin)
 	if err != nil {
 		return nil, err
@@ -553,12 +553,12 @@ func (s *HomeworkService) Rank(ctx context.Context, id, userID int64, isSiteAdmi
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.HomeworkRankResp{
-		StartTime:  hw.StartTime.Format(homeworkTimeLayout),
-		EndTime:    hw.EndTime.Format(homeworkTimeLayout),
+	resp := &HomeworkRank{
+		StartTime:  hw.StartTime,
+		EndTime:    hw.EndTime,
 		ProblemIDs: make([]string, 0, len(refs)),
 		TotalScore: len(refs) * model.HomeworkProblemFullScore,
-		List:       []dto.HomeworkRankRow{},
+		List:       []HomeworkRankRow{},
 	}
 	if len(refs) == 0 {
 		return resp, nil
@@ -618,7 +618,7 @@ type homeworkRankAggregate struct {
 }
 
 type homeworkRankEntry struct {
-	row           dto.HomeworkRankRow
+	row           HomeworkRankRow
 	achievedAt    time.Time
 	hasSubmission bool
 }
@@ -629,7 +629,7 @@ func buildHomeworkRankRows(
 	members []model.TeamMember,
 	users []model.User,
 	best []repository.HomeworkBestScore,
-) []dto.HomeworkRankRow {
+) []HomeworkRankRow {
 	byUser := make(map[int64]*homeworkRankAggregate, len(members))
 	for _, member := range members {
 		byUser[member.UserID] = &homeworkRankAggregate{scores: make(map[int64]int, len(refs))}
@@ -661,7 +661,7 @@ func buildHomeworkRankRows(
 			continue
 		}
 		a := byUser[member.UserID]
-		row := dto.HomeworkRankRow{
+		row := HomeworkRankRow{
 			UID:         user.UID,
 			Username:    user.Username,
 			StudentNo:   studentNoValue(user.StudentNo),
@@ -669,7 +669,7 @@ func buildHomeworkRankRows(
 			Avatar:      user.Avatar,
 			TotalScore:  a.total,
 			SolvedCount: a.solved,
-			Cells:       make([]dto.RankCell, 0, len(refs)),
+			Cells:       make([]RankCell, 0, len(refs)),
 		}
 		for _, ref := range refs {
 			display, exists := displayByID[ref.ProblemID]
@@ -677,7 +677,7 @@ func buildHomeworkRankRows(
 				continue
 			}
 			score := a.scores[ref.ProblemID]
-			row.Cells = append(row.Cells, dto.RankCell{
+			row.Cells = append(row.Cells, RankCell{
 				ProblemID: display,
 				Score:     score,
 				Solved:    score >= model.HomeworkProblemFullScore,
@@ -707,7 +707,7 @@ func buildHomeworkRankRows(
 		return entries[i].row.UID < entries[j].row.UID
 	})
 
-	rows := make([]dto.HomeworkRankRow, 0, len(entries))
+	rows := make([]HomeworkRankRow, 0, len(entries))
 	for i := range entries {
 		entries[i].row.Rank = i + 1
 		rows = append(rows, entries[i].row)
@@ -717,7 +717,7 @@ func buildHomeworkRankRows(
 
 // Submissions 作业提交列表。
 // 普通成员只看自己（忽略 uid 筛选）；团队管理员及以上可看全部并按成员筛选。
-func (s *HomeworkService) Submissions(ctx context.Context, id, userID int64, isSiteAdmin bool, q *dto.HomeworkSubmissionQuery) (*dto.HomeworkSubmissionListResp, error) {
+func (s *HomeworkService) Submissions(ctx context.Context, id, userID int64, isSiteAdmin bool, q HomeworkSubmissionQueryParams) (*HomeworkSubmissionList, error) {
 	hw, access, err := s.loadWithAccess(ctx, id, userID, isSiteAdmin)
 	if err != nil {
 		return nil, err
@@ -757,10 +757,10 @@ func (s *HomeworkService) Submissions(ctx context.Context, id, userID int64, isS
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.HomeworkSubmissionListResp{
-		Total:     int(total),
+	resp := &HomeworkSubmissionList{
+		Total:     total,
 		CanSeeAll: canSeeAll,
-		List:      make([]dto.HomeworkSubmissionItem, 0, len(list)),
+		List:      make([]HomeworkSubmissionItem, 0, len(list)),
 	}
 	if len(list) == 0 {
 		return resp, nil
@@ -791,7 +791,7 @@ func (s *HomeworkService) Submissions(ctx context.Context, id, userID int64, isS
 	for _, sub := range list {
 		u := userByID[sub.UserID]
 		p := problemByID[sub.ProblemID]
-		resp.List = append(resp.List, dto.HomeworkSubmissionItem{
+		resp.List = append(resp.List, HomeworkSubmissionItem{
 			ID:          sub.PublicID,
 			UID:         u.UID,
 			Username:    u.Username,
@@ -806,7 +806,7 @@ func (s *HomeworkService) Submissions(ctx context.Context, id, userID int64, isS
 			TimeUsed:    sub.TimeUsed,
 			MemoryUsed:  sub.MemoryUsed,
 			InWindow:    hw.InWindow(sub.CreatedAt),
-			CreatedAt:   sub.CreatedAt.Format(homeworkTimeLayout),
+			CreatedAt:   sub.CreatedAt,
 		})
 	}
 	return resp, nil
@@ -818,7 +818,7 @@ func (s *HomeworkService) SubmissionDetail(
 	ctx context.Context,
 	homeworkID, submissionPublicID, userID int64,
 	isSiteAdmin bool,
-) (*dto.HomeworkSubmissionDetailResp, error) {
+) (*HomeworkSubmissionDetail, error) {
 	hw, access, err := s.loadWithAccess(ctx, homeworkID, userID, isSiteAdmin)
 	if err != nil {
 		return nil, err
@@ -868,7 +868,7 @@ func (s *HomeworkService) SubmissionDetail(
 		})
 	}
 
-	return &dto.HomeworkSubmissionDetailResp{
+	return &HomeworkSubmissionDetail{
 		ID:            submission.PublicID,
 		UID:           user.UID,
 		Username:      user.Username,
@@ -887,7 +887,7 @@ func (s *HomeworkService) SubmissionDetail(
 		MemoryUsed:    submission.MemoryUsed,
 		CaseResults:   caseResults,
 		InWindow:      hw.InWindow(submission.CreatedAt),
-		CreatedAt:     submission.CreatedAt.Format(homeworkTimeLayout),
+		CreatedAt:     submission.CreatedAt,
 	}, nil
 }
 
@@ -984,7 +984,7 @@ func (s *HomeworkService) creatorUsers(ctx context.Context, list []model.Homewor
 }
 
 // parseHomeworkWindow 解析并校验起止时间。
-func parseHomeworkWindow(req *dto.SaveHomeworkReq) (time.Time, time.Time, error) {
+func parseHomeworkWindow(req SaveHomeworkParams) (time.Time, time.Time, error) {
 	start, err := time.ParseInLocation(homeworkTimeLayout, strings.TrimSpace(req.StartTime), time.Local)
 	if err != nil {
 		return time.Time{}, time.Time{}, errcode.ErrInvalidParams.WithMsg("开始时间格式错误")
