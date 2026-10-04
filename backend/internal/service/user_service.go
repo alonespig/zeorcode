@@ -93,9 +93,9 @@ func avatarOr(a string) string {
 	return a
 }
 
-func loginResponse(user *model.User) *dto.LoginResp {
-	return &dto.LoginResp{
-		User: dto.UserInfo{
+func loginResponse(user *model.User) *LoginResult {
+	return &LoginResult{
+		User: AuthenticatedUser{
 			ID:       user.UID,
 			Username: user.Username,
 			Role:     user.Role,
@@ -129,7 +129,7 @@ func NewUserService(repo *repository.UserRepo,
 	}
 }
 
-func (u *UserService) CreateUser(ctx context.Context, req *dto.CreateUserReq) error {
+func (u *UserService) CreateUser(ctx context.Context, req CreateUserParams) error {
 	username := strings.TrimSpace(req.Username)
 	studentNo := strings.TrimSpace(req.StudentNo)
 	realName := registrationRealName(req.RealName, username)
@@ -528,7 +528,7 @@ func (u *UserService) Profile(ctx context.Context, id int64) (*Profile, error) {
 }
 
 // UpdateProfile 更新当前用户可编辑资料（签名、学校、性别、头像）；邮箱换绑走独立验证流程。
-func (u *UserService) UpdateProfile(ctx context.Context, userID int64, req *dto.UpdateProfileReq) error {
+func (u *UserService) UpdateProfile(ctx context.Context, userID int64, req UpdateProfileParams) error {
 	user, err := u.repo.GetUserByID(ctx, userID)
 	if err != nil {
 		return errcode.ErrUserNotFound
@@ -545,7 +545,7 @@ func (u *UserService) UpdateProfile(ctx context.Context, userID int64, req *dto.
 }
 
 // Login 支持用户名或邮箱登录（name 传任意一个）
-func (u *UserService) Login(ctx context.Context, name, password string) (*dto.LoginResp, string, error) {
+func (u *UserService) Login(ctx context.Context, name, password string) (*LoginResult, string, error) {
 	user, err := u.repo.GetUserByLogin(ctx, name)
 	if err != nil {
 		return nil, "", errcode.ErrUserNotFound
@@ -565,7 +565,7 @@ func (u *UserService) Login(ctx context.Context, name, password string) (*dto.Lo
 
 // Session 根据已通过 JWTAuthOptional 验证的内部用户主键返回当前会话用户。
 // 前端用它在应用启动时把本地展示状态与 HttpOnly Cookie 同步。
-func (u *UserService) Session(ctx context.Context, userID int64) (*dto.LoginResp, error) {
+func (u *UserService) Session(ctx context.Context, userID int64) (*LoginResult, error) {
 	user, err := u.repo.GetUserByID(ctx, userID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errcode.ErrUserNotFound

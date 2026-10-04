@@ -8,9 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
+	"zoj/pkg/errcode"
 
 	"github.com/mojocn/base64Captcha"
 	goredis "github.com/redis/go-redis/v9"
@@ -46,7 +45,7 @@ func newCaptchaID() (string, error) {
 }
 
 // Generate 生成登录验证码并将答案保存到 Redis，不使用依赖库的进程内全局 Store。
-func (s *CaptchaService) Generate(ctx context.Context) (*dto.CaptchaResp, error) {
+func (s *CaptchaService) Generate(ctx context.Context) (*CaptchaChallenge, error) {
 	id, err := newCaptchaID()
 	if err != nil {
 		return nil, errcode.ErrInternal.Wrap(err)
@@ -59,7 +58,7 @@ func (s *CaptchaService) Generate(ctx context.Context) (*dto.CaptchaResp, error)
 	if err := s.store.Set(ctx, captchaKey(id), answer, captchaTTL); err != nil {
 		return nil, errcode.ErrRedis.Wrap(err)
 	}
-	return &dto.CaptchaResp{
+	return &CaptchaChallenge{
 		ID:    id,
 		Image: item.EncodeB64string(),
 	}, nil

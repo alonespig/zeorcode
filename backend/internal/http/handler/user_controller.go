@@ -37,7 +37,11 @@ func NewUserController(userSrv *service.UserService,
 
 // GenerateCaptcha GET /api/captcha 生成一次性登录图形验证码。
 func (u *UserController) GenerateCaptcha(c *gin.Context) (any, error) {
-	return u.captchaSrv.Generate(c.Request.Context())
+	resp, err := u.captchaSrv.Generate(c.Request.Context())
+	if err != nil {
+		return nil, err
+	}
+	return toCaptchaChallengeResp(resp), nil
 }
 
 // resolveUserPK 把 URL 里的对外用户号(:id)解析成内部主键；找不到返回用户不存在。
@@ -99,7 +103,7 @@ func (u *UserController) CreateUser(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	if err := u.userSrv.CreateUser(c.Request.Context(), &req); err != nil {
+	if err := u.userSrv.CreateUser(c.Request.Context(), toCreateUserParams(req)); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -190,7 +194,7 @@ func (u *UserController) UpdateUserInfo(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return nil, u.userSrv.UpdateProfile(c.Request.Context(), userID, &req)
+	return nil, u.userSrv.UpdateProfile(c.Request.Context(), userID, toUpdateProfileParams(req))
 }
 
 // Login 登录：验证用户名密码，成功后将 JWT 写入 HttpOnly Cookie
@@ -210,7 +214,7 @@ func (u *UserController) Login(c *gin.Context) {
 		return
 	}
 	middleware.SetTokenCookie(c, token, u.auth.ExpireDuration())
-	response.Success(c, resp)
+	response.Success(c, toLoginResp(resp))
 }
 
 // Session GET /api/session 同步服务端 Cookie 登录态。
@@ -229,9 +233,10 @@ func (u *UserController) Session(c *gin.Context) (any, error) {
 		_ = u.auth.Revoke(context.Background(), userID)
 		return nil, err
 	}
+	user := toAuthenticatedUser(loginResp.User)
 	return &dto.SessionResp{
 		Authenticated: true,
-		User:          &loginResp.User,
+		User:          &user,
 		Avatar:        loginResp.Avatar,
 	}, nil
 }
