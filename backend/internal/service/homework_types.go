@@ -61,7 +61,7 @@ type HomeworkProblem struct {
 	Name          string
 	Status        *int
 	Difficulty    int
-	Tags          []dto.TagItem // 题目标签，暂引用 problem 模块的 HTTP DTO
+	Tags          []TagItem // 题目标签，复用 problem 模块的 Service 类型
 	MyScore       *int
 	AcceptedCount int
 	SubmitCount   int

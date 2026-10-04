@@ -86,8 +86,12 @@ func (h *HomeworkController) Problem(c *gin.Context) (any, error) {
 	if problemID == "" {
 		return nil, errcode.ErrInvalidParams.WithMsg("非法题号")
 	}
-	return h.hwSrv.ProblemDetail(c.Request.Context(), id, problemID,
+	resp, err := h.hwSrv.ProblemDetail(c.Request.Context(), id, problemID,
 		optionalCurrentUserID(c), isAdminFromCtx(c))
+	if err != nil {
+		return nil, err
+	}
+	return toProblemDetailResp(resp), nil
 }
 
 // Update PUT /api/homework/:hid 仅布置者本人可改

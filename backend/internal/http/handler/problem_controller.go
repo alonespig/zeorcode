@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"strings"
 
-	"zoj/pkg/errcode"
 	"zoj/internal/dto"
 	"zoj/internal/judgeworker"
 	"zoj/internal/service"
+	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -38,7 +38,7 @@ func (p *ProblemController) CreateProblem(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	id, err := p.problemSrv.Create(c.Request.Context(), &req)
+	id, err := p.problemSrv.Create(c.Request.Context(), toCreateProblemParams(req))
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (p *ProblemController) UpdateProblem(c *gin.Context) (any, error) {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
 	req.ID = pk
-	problemID, err := p.problemSrv.Update(c.Request.Context(), &req)
+	problemID, err := p.problemSrv.Update(c.Request.Context(), toUpdateProblemParams(req))
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,11 @@ func (p *ProblemController) List(c *gin.Context) (any, error) {
 	role, _ := roleVal.(int)
 	isAdmin := role == 1
 
-	return p.problemSrv.List(c.Request.Context(), &req, &userID, isAdmin)
+	resp, err := p.problemSrv.List(c.Request.Context(), toProblemListParams(req), &userID, isAdmin)
+	if err != nil {
+		return nil, err
+	}
+	return toProblemListResp(resp), nil
 }
 
 func (p *ProblemController) GetProblemDetail(c *gin.Context) (any, error) {
@@ -94,7 +98,11 @@ func (p *ProblemController) GetProblemDetail(c *gin.Context) (any, error) {
 	roleVal, _ := c.Get("role")
 	role, _ := roleVal.(int)
 	isAdmin := role == 1
-	return p.problemSrv.GetByID(c.Request.Context(), pk, isAdmin)
+	resp, err := p.problemSrv.GetByID(c.Request.Context(), pk, isAdmin)
+	if err != nil {
+		return nil, err
+	}
+	return toProblemDetailResp(resp), nil
 }
 
 func (p *ProblemController) GetProblemForEdit(c *gin.Context) (any, error) {
@@ -102,7 +110,11 @@ func (p *ProblemController) GetProblemForEdit(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return p.problemSrv.GetForEdit(c.Request.Context(), pk)
+	resp, err := p.problemSrv.GetForEdit(c.Request.Context(), pk)
+	if err != nil {
+		return nil, err
+	}
+	return toProblemForEdit(resp), nil
 }
 
 func (p *ProblemController) GetTagList(c *gin.Context) (any, error) {
@@ -110,7 +122,7 @@ func (p *ProblemController) GetTagList(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return gin.H{"tags": resp.Tags}, nil
+	return gin.H{"tags": toTagItems(resp.Tags)}, nil
 }
 
 func (p *ProblemController) GetAdminTagList(c *gin.Context) (any, error) {
@@ -118,7 +130,7 @@ func (p *ProblemController) GetAdminTagList(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return gin.H{"tags": tags}, nil
+	return gin.H{"tags": toAdminTagItems(tags)}, nil
 }
 
 func (p *ProblemController) CreateTag(c *gin.Context) (any, error) {
@@ -130,7 +142,7 @@ func (p *ProblemController) CreateTag(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return tag, nil
+	return toTagItem(tag), nil
 }
 
 func (p *ProblemController) UpdateTag(c *gin.Context) (any, error) {
@@ -146,7 +158,7 @@ func (p *ProblemController) UpdateTag(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return tag, nil
+	return toTagItem(tag), nil
 }
 
 func (p *ProblemController) DeleteTag(c *gin.Context) (any, error) {

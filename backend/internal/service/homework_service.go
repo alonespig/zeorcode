@@ -175,10 +175,10 @@ func (s *HomeworkService) Detail(ctx context.Context, id, userID int64, isSiteAd
 		problemByID[p.ID] = p
 	}
 
-	tagsByProblem := make(map[int64][]dto.TagItem)
+	tagsByProblem := make(map[int64][]TagItem)
 	if rawTags, err := s.problemRepo.GetProblemTagsByIDs(ctx, problemIDs); err == nil {
 		for _, tg := range rawTags {
-			tagsByProblem[tg.ProblemID] = append(tagsByProblem[tg.ProblemID], dto.TagItem{ID: tg.ID, Name: tg.Name})
+			tagsByProblem[tg.ProblemID] = append(tagsByProblem[tg.ProblemID], TagItem{ID: tg.ID, Name: tg.Name})
 		}
 	}
 	stats, err := s.submitRepo.GetHomeworkProblemStats(ctx, id, problemIDs)
@@ -251,7 +251,7 @@ func (s *HomeworkService) ProblemDetail(
 	problemDisplayID string,
 	userID int64,
 	isSiteAdmin bool,
-) (*dto.ProblemDetailResp, error) {
+) (*ProblemDetail, error) {
 	hw, access, err := s.loadWithAccess(ctx, homeworkID, userID, isSiteAdmin)
 	if err != nil {
 		return nil, err
@@ -295,17 +295,17 @@ func (s *HomeworkService) ProblemDetail(
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	tags := make([]dto.TagItem, 0, len(rawTags))
+	tags := make([]TagItem, 0, len(rawTags))
 	for _, tag := range rawTags {
-		tags = append(tags, dto.TagItem{ID: tag.ID, Name: tag.Name})
+		tags = append(tags, TagItem{ID: tag.ID, Name: tag.Name})
 	}
 	rawSamples, err := s.problemRepo.GetProblemSamplesByID(ctx, problem.ID)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	samples := make([]dto.ProblemSample, 0, len(rawSamples))
+	samples := make([]ProblemSample, 0, len(rawSamples))
 	for _, sample := range rawSamples {
-		samples = append(samples, dto.ProblemSample{
+		samples = append(samples, ProblemSample{
 			Input: sample.Input, Output: sample.Output, Explain: sample.Explain,
 		})
 	}
@@ -320,7 +320,7 @@ func (s *HomeworkService) ProblemDetail(
 		submitCount = int(stats[0].SubmitCount)
 	}
 
-	return &dto.ProblemDetailResp{
+	return &ProblemDetail{
 		ID:              problem.DisplayID,
 		Name:            problem.Name,
 		Difficulty:      problem.Difficulty,

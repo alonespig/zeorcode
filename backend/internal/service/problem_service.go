@@ -9,10 +9,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/dto"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 
 	"gorm.io/gorm"
 )
@@ -58,7 +57,7 @@ func (s *ProblemService) ResolveID(ctx context.Context, displayID string) (int64
 	return id, nil
 }
 
-func (s *ProblemService) Create(ctx context.Context, req *dto.CreateProblemReq) (string, error) {
+func (s *ProblemService) Create(ctx context.Context, req CreateProblemParams) (string, error) {
 	// 题号查重
 	if exists, err := s.repo.ExistsByDisplayID(ctx, req.DisplayID, 0); err != nil {
 		return "", errcode.ErrDatabase.Wrap(err)
@@ -119,7 +118,7 @@ func (s *ProblemService) Create(ctx context.Context, req *dto.CreateProblemReq) 
 	return problem.DisplayID, err
 }
 
-func (s *ProblemService) List(ctx context.Context, form *dto.ProblemListReq, userID *int64, isAdmin bool) (*dto.ProblemListResp, error) {
+func (s *ProblemService) List(ctx context.Context, form ProblemListParams, userID *int64, isAdmin bool) (*ProblemList, error) {
 	problems, total, err := s.repo.List(ctx, &repository.ProblemQuery{
 		Page:          form.Page,
 		PageSize:      form.PageSize,
@@ -133,9 +132,9 @@ func (s *ProblemService) List(ctx context.Context, form *dto.ProblemListReq, use
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
 
-	resp := dto.ProblemListResp{
-		Total: int(total),
-		List:  make([]dto.ProblemItemResp, 0, len(problems)),
+	resp := ProblemList{
+		Total: total,
+		List:  make([]ProblemItem, 0, len(problems)),
 	}
 
 	problemIDs := make([]int64, 0, len(problems))
@@ -152,13 +151,13 @@ func (s *ProblemService) List(ctx context.Context, form *dto.ProblemListReq, use
 		}
 	}
 
-	tagsByProblem := make(map[int64][]dto.TagItem, len(problems))
+	tagsByProblem := make(map[int64][]TagItem, len(problems))
 	rawTags, err := s.repo.GetProblemTagsByIDs(ctx, problemIDs)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
 	for _, tag := range rawTags {
-		tagsByProblem[tag.ProblemID] = append(tagsByProblem[tag.ProblemID], dto.TagItem{
+		tagsByProblem[tag.ProblemID] = append(tagsByProblem[tag.ProblemID], TagItem{
 			ID:   tag.ID,
 			Name: tag.Name,
 		})
@@ -176,14 +175,14 @@ func (s *ProblemService) List(ctx context.Context, form *dto.ProblemListReq, use
 	for _, problem := range problems {
 		tags := tagsByProblem[problem.ID]
 		stat := statsByProblem[problem.ID]
-		item := dto.ProblemItemResp{
+		item := ProblemItem{
 			ID:            problem.DisplayID, // 对外用题号，不暴露自增主键
 			Name:          problem.Name,
 			Tags:          tags,
 			Difficulty:    problem.Difficulty,
 			AcceptedCount: int(stat.AcceptedCount),
 			SubmitCount:   int(stat.SubmitCount),
-			CreatedAt:     problem.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:     problem.CreatedAt,
 			Hidden:        problem.Hidden,
 			OJ:            problem.OJ,
 		}
@@ -198,27 +197,27 @@ func (s *ProblemService) List(ctx context.Context, form *dto.ProblemListReq, use
 }
 
 // fetchTagsAndSamples 获取题目的标签和样例（公用逻辑）
-func (s *ProblemService) fetchTagsAndSamples(ctx context.Context, problemID int64) ([]dto.TagItem, []dto.ProblemSample, error) {
+func (s *ProblemService) fetchTagsAndSamples(ctx context.Context, problemID int64) ([]TagItem, []ProblemSample, error) {
 	rawTags, _ := s.repo.GetProblemTagByID(ctx, problemID)
-	tags := make([]dto.TagItem, 0, len(rawTags))
+	tags := make([]TagItem, 0, len(rawTags))
 	for _, tag := range rawTags {
-		tags = append(tags, dto.TagItem{ID: tag.ID, Name: tag.Name})
+		tags = append(tags, TagItem{ID: tag.ID, Name: tag.Name})
 	}
 
 	rawSamples, err := s.repo.GetProblemSamplesByID(ctx, problemID)
 	if err != nil {
 		return nil, nil, errcode.ErrDatabase.Wrap(err)
 	}
-	samples := make([]dto.ProblemSample, 0, len(rawSamples))
+	samples := make([]ProblemSample, 0, len(rawSamples))
 	for _, s := range rawSamples {
-		samples = append(samples, dto.ProblemSample{
+		samples = append(samples, ProblemSample{
 			Input: s.Input, Output: s.Output, Explain: s.Explain,
 		})
 	}
 	return tags, samples, nil
 }
 
-func (s *ProblemService) GetByID(ctx context.Context, id int64, isAdmin bool) (*dto.ProblemDetailResp, error) {
+func (s *ProblemService) GetByID(ctx context.Context, id int64, isAdmin bool) (*ProblemDetail, error) {
 	problem, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -242,7 +241,7 @@ func (s *ProblemService) GetByID(ctx context.Context, id int64, isAdmin bool) (*
 	if err != nil {
 		return nil, err
 	}
-	return &dto.ProblemDetailResp{
+	return &ProblemDetail{
 		ID:              problem.DisplayID, // 对外题号
 		Name:            problem.Name,
 		Difficulty:      problem.Difficulty,
@@ -263,7 +262,7 @@ func (s *ProblemService) GetByID(ctx context.Context, id int64, isAdmin bool) (*
 	}, nil
 }
 
-func (s *ProblemService) GetForEdit(ctx context.Context, id int64) (*dto.ProblemModel, error) {
+func (s *ProblemService) GetForEdit(ctx context.Context, id int64) (*ProblemForEdit, error) {
 	problem, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -276,7 +275,7 @@ func (s *ProblemService) GetForEdit(ctx context.Context, id int64) (*dto.Problem
 	if err != nil {
 		return nil, err
 	}
-	return &dto.ProblemModel{
+	return &ProblemForEdit{
 		ID:           problem.DisplayID, // 对外题号
 		Name:         problem.Name,
 		Difficulty:   problem.Difficulty,
@@ -292,16 +291,16 @@ func (s *ProblemService) GetForEdit(ctx context.Context, id int64) (*dto.Problem
 	}, nil
 }
 
-func (s *ProblemService) GetTagList(ctx context.Context) (*dto.TagsListResp, error) {
+func (s *ProblemService) GetTagList(ctx context.Context) (*TagList, error) {
 	tags, err := s.repo.GetTagsList(ctx)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.TagsListResp{
-		Tags: make([]dto.TagItem, 0, len(tags)),
+	resp := &TagList{
+		Tags: make([]TagItem, 0, len(tags)),
 	}
 	for _, tag := range tags {
-		resp.Tags = append(resp.Tags, dto.TagItem{
+		resp.Tags = append(resp.Tags, TagItem{
 			ID:   tag.ID,
 			Name: tag.Name,
 		})
@@ -309,14 +308,14 @@ func (s *ProblemService) GetTagList(ctx context.Context) (*dto.TagsListResp, err
 	return resp, nil
 }
 
-func (s *ProblemService) GetAdminTagList(ctx context.Context) ([]dto.AdminTagItem, error) {
+func (s *ProblemService) GetAdminTagList(ctx context.Context) ([]AdminTagItem, error) {
 	tags, err := s.repo.GetAdminTagsList(ctx)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	result := make([]dto.AdminTagItem, 0, len(tags))
+	result := make([]AdminTagItem, 0, len(tags))
 	for _, tag := range tags {
-		result = append(result, dto.AdminTagItem{
+		result = append(result, AdminTagItem{
 			ID:              tag.ID,
 			Name:            tag.Name,
 			ProblemCount:    tag.ProblemCount,
@@ -337,7 +336,7 @@ func normalizeTagName(name string) (string, error) {
 	return name, nil
 }
 
-func (s *ProblemService) CreateTag(ctx context.Context, name string) (*dto.TagItem, error) {
+func (s *ProblemService) CreateTag(ctx context.Context, name string) (*TagItem, error) {
 	name, err := normalizeTagName(name)
 	if err != nil {
 		return nil, err
@@ -353,10 +352,10 @@ func (s *ProblemService) CreateTag(ctx context.Context, name string) (*dto.TagIt
 	if err := s.repo.CreateTag(ctx, tag); err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	return &dto.TagItem{ID: tag.ID, Name: tag.Name}, nil
+	return &TagItem{ID: tag.ID, Name: tag.Name}, nil
 }
 
-func (s *ProblemService) UpdateTag(ctx context.Context, id int64, name string) (*dto.TagItem, error) {
+func (s *ProblemService) UpdateTag(ctx context.Context, id int64, name string) (*TagItem, error) {
 	name, err := normalizeTagName(name)
 	if err != nil {
 		return nil, err
@@ -377,7 +376,7 @@ func (s *ProblemService) UpdateTag(ctx context.Context, id int64, name string) (
 	if err := s.repo.UpdateTagName(ctx, id, name); err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	return &dto.TagItem{ID: id, Name: name}, nil
+	return &TagItem{ID: id, Name: name}, nil
 }
 
 func (s *ProblemService) DeleteTag(ctx context.Context, id int64) error {
@@ -393,7 +392,7 @@ func (s *ProblemService) DeleteTag(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (s *ProblemService) Update(ctx context.Context, req *dto.UpdateProblemReq) (string, error) {
+func (s *ProblemService) Update(ctx context.Context, req UpdateProblemParams) (string, error) {
 	// 题号查重（排除自身，支持改题号）
 	if exists, err := s.repo.ExistsByDisplayID(ctx, req.DisplayID, req.ID); err != nil {
 		return "", errcode.ErrDatabase.Wrap(err)

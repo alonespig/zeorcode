@@ -34,7 +34,7 @@ func toHomeworkDetailResp(r *service.HomeworkDetail) *dto.HomeworkDetailResp {
 			Name:          p.Name,
 			Status:        p.Status,
 			Difficulty:    p.Difficulty,
-			Tags:          p.Tags,
+			Tags:          toTagItems(p.Tags),
 			MyScore:       p.MyScore,
 			AcceptedCount: p.AcceptedCount,
 			SubmitCount:   p.SubmitCount,
