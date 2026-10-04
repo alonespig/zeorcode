@@ -89,9 +89,9 @@ func (h *HttpServer) Register(r *gin.Engine) {
 	h.initContestRouter(r)
 	h.initSubmissionRouter(r)
 	h.initPostRouter(r)
-	h.initUploadRouter(r)
-	h.initAdminRouter(r)
-	h.initRemoteRouter(r)
 	h.initNotificationRouter(r)
+	h.initUploadRouter(r)
+	h.initRemoteRouter(r)
 	h.initAgentRouter(r)
+	h.initAdminRouter(r)
 }

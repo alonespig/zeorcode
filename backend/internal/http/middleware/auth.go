@@ -9,12 +9,7 @@ import (
 	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 )
-
-func getTokenExpireDuration() time.Duration {
-	return time.Duration(viper.GetInt("jwt.expire")) * time.Hour
-}
 
 // JWTAuth 校验登录态，成功后在 gin.Context 注入 userID / role。
 func JWTAuth(ts *service.TokenService) gin.HandlerFunc {
@@ -82,8 +77,8 @@ func extractToken(c *gin.Context) string {
 }
 
 // SetTokenCookie 将 JWT 写入 HttpOnly Cookie
-func SetTokenCookie(c *gin.Context, tokenString string) {
-	expireSeconds := int(getTokenExpireDuration().Seconds())
+func SetTokenCookie(c *gin.Context, tokenString string, expire time.Duration) {
+	expireSeconds := int(expire.Seconds())
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("token", tokenString, expireSeconds, "/", "", false, true)
 }

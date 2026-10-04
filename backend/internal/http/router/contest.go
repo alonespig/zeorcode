@@ -39,4 +39,10 @@ func (h *HttpServer) initContestRouter(r *gin.Engine) {
 		contestAdmin.GET("/:id/info", response.Wrap(h.contestController.EditContest))
 		contestAdmin.PUT("/:id", response.Wrap(h.contestController.Update))
 	}
+
+	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired())
+	{
+		// 比赛榜从 submissions 明细整场重算（榜单漂移时手动重建；路①下重判已不需要它）
+		admin.POST("/contest/:id/recompute", response.Wrap(h.contestController.RecomputeContest))
+	}
 }

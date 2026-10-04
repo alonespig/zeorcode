@@ -4,11 +4,11 @@ import (
 	"context"
 	"strconv"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/http/response"
 	"zoj/internal/dto"
 	"zoj/internal/http/middleware"
+	"zoj/internal/http/response"
 	"zoj/internal/service"
+	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -189,7 +189,7 @@ func (u *UserController) Login(c *gin.Context) {
 		response.Fail(c, err)
 		return
 	}
-	middleware.SetTokenCookie(c, token)
+	middleware.SetTokenCookie(c, token, u.auth.ExpireDuration())
 	response.Success(c, resp)
 }
 
