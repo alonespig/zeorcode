@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"zoj/internal/model"
+	"zoj/internal/repository"
 	judgeapi "zoj/pkg/judge"
 )
 
@@ -66,8 +67,8 @@ func TestLoadCasesFromDirRejectsMissingDeclaredInput(t *testing.T) {
 	inputPath := filepath.Join(dir, "1.in")
 	writeTestcaseFile(t, dir, "1.in", "input")
 	writeTestcaseFile(t, dir, "1.out", "output")
-	if err := GenerateInfo(dir); err != nil {
-		t.Fatalf("GenerateInfo() error = %v", err)
+	if err := repository.RebuildInfo(dir); err != nil {
+		t.Fatalf("RebuildInfo() error = %v", err)
 	}
 	if err := os.Remove(inputPath); err != nil {
 		t.Fatalf("Remove() error = %v", err)

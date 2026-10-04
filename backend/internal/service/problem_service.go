@@ -45,6 +45,13 @@ func NewProblemService(repo *repository.ProblemRepo,
 	return &ProblemService{repo: repo, subRepo: subRepo, testData: testData, db: db}
 }
 
+// RebuildTestDataInfo 立即扫描目录、算哈希并写出 info.json（测试点清单）。
+// 供上传/改动测试数据后调用；失败会删除旧清单，交由判题时懒生成兜底。
+// Handler 通过本方法触发，避免直接依赖 Repository / Judge Worker。
+func (s *ProblemService) RebuildTestDataInfo(dir string) error {
+	return repository.RebuildInfo(dir)
+}
+
 // ResolveID 把对外题号解析成内部主键（handler 用它把 URL 里的题号换成主键）。
 func (s *ProblemService) ResolveID(ctx context.Context, displayID string) (int64, error) {
 	id, err := s.repo.ResolveID(ctx, displayID)

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"zoj/internal/model"
+	"zoj/internal/repository"
 	judgeapi "zoj/pkg/judge"
 
 	"github.com/spf13/viper"
@@ -48,7 +49,7 @@ func (w *Worker) loadCases(problemID int64) ([]TestCase, error) {
 }
 
 func loadCasesFromDir(testDir string) ([]TestCase, error) {
-	info, err := loadOrGenInfo(testDir)
+	info, err := repository.LoadOrGenInfo(testDir)
 	if err != nil {
 		return nil, fmt.Errorf("load testcase info from %q: %w", testDir, err)
 	}

@@ -11,18 +11,15 @@ import (
 
 	"zoj/internal/http/dto"
 	"zoj/internal/service"
-	"zoj/internal/worker/judge"
 	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
 
 // regenTestInfo 在上传/改动测试数据后立即重建 info.json（测试点清单）。
-// 成功 → 清单即时就位，首次判题无需再算哈希；失败 → 删掉旧清单，交由判题时懒生成兜底（避免留下过期哈希）。
-func regenTestInfo(dir string) {
-	if err := judge.GenerateInfo(dir); err != nil {
-		_ = os.Remove(filepath.Join(dir, "info.json"))
-	}
+// 通过 ProblemService 触发：成功 → 清单即时就位；失败 → 删掉旧清单，交由判题时懒生成兜底。
+func (p *ProblemController) regenTestInfo(dir string) {
+	_ = p.problemSrv.RebuildTestDataInfo(dir)
 }
 
 type ProblemController struct {
@@ -322,7 +319,7 @@ func (p *ProblemController) UploadFile(c *gin.Context) (any, error) {
 		if extracted == 0 {
 			return nil, errcode.ErrInvalidParams.WithMsg("压缩包内没有 N.in/N.out 测试点文件")
 		}
-		regenTestInfo(dstDir) // 数据变了 → 立即重建清单
+		p.regenTestInfo(dstDir) // 数据变了 → 立即重建清单
 		pairs, missing := countTestcasePairs(dstDir)
 		return gin.H{"count": pairs, "missing": missing}, nil
 	}
@@ -342,7 +339,7 @@ func (p *ProblemController) UploadFile(c *gin.Context) (any, error) {
 		return nil, errcode.ErrFileUpload.Wrap(err)
 	}
 	// 测试数据变了 → 立即按新数据重建清单(info.json)，避免哈希过期
-	regenTestInfo(dstDir)
+	p.regenTestInfo(dstDir)
 	return nil, nil
 }
 
@@ -516,7 +513,7 @@ func (p *ProblemController) UploadTestcaseZip(c *gin.Context) (any, error) {
 	_ = os.RemoveAll(oldDir)
 
 	// 数据已就位 → 立即生成清单(info.json)，首次判题无需再算哈希
-	regenTestInfo(dstDir)
+	p.regenTestInfo(dstDir)
 	return gin.H{"count": pairs, "missing": missing}, nil
 }
 
@@ -591,7 +588,7 @@ func (p *ProblemController) DeleteFiles(c *gin.Context) (any, error) {
 		}
 	}
 	// 测试数据变了 → 立即按当前目录重建清单
-	regenTestInfo(filepath.Join(TestDataDir, id))
+	p.regenTestInfo(filepath.Join(TestDataDir, id))
 	if len(failed) > 0 {
 		return gin.H{"failed": failed}, nil
 	}
