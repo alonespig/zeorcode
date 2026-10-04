@@ -111,8 +111,9 @@ func (h *AgentController) Turn(c *gin.Context) {
 	c.Status(http.StatusOK)
 	c.Writer.Flush()
 
-	emit := func(event dto.AgentEvent) error {
-		payload, marshalErr := json.Marshal(event)
+	emit := func(event service.AgentEvent) error {
+		dtoEvent := dto.AgentEvent{Type: event.Type, RunID: event.RunID, Data: toAgentEventData(event.Data)}
+		payload, marshalErr := json.Marshal(dtoEvent)
 		if marshalErr != nil {
 			return marshalErr
 		}
@@ -123,9 +124,10 @@ func (h *AgentController) Turn(c *gin.Context) {
 		return nil
 	}
 
-	if err := h.service.StreamTurn(c.Request.Context(), conversationID, userID, role == 1, &req, emit); err != nil {
+	params := toAgentTurnParams(req)
+	if err := h.service.StreamTurn(c.Request.Context(), conversationID, userID, role == 1, &params, emit); err != nil {
 		code, message := agentPublicError(err)
-		_ = emit(dto.AgentEvent{Type: "run.failed", Data: map[string]any{"code": code, "message": message}})
+		_ = emit(service.AgentEvent{Type: "run.failed", Data: map[string]any{"code": code, "message": message}})
 	}
 }
 

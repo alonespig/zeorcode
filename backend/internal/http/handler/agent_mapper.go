@@ -54,7 +54,29 @@ func toAgentMessageResp(m service.AgentMessage) dto.AgentMessageResp {
 		Kind:      m.Kind,
 		Content:   m.Content,
 		Blocks:    toAgentBlocks(m.Blocks),
-		CreatedAt: m.CreatedAt,
+		CreatedAt: m.CreatedAt.Format(agentConversationTimeLayout),
+	}
+}
+
+func toAgentTurnParams(req dto.AgentTurnReq) service.AgentTurnParams {
+	return service.AgentTurnParams{
+		Type:         req.Type,
+		Content:      req.Content,
+		RequestID:    req.RequestID,
+		Value:        req.Value,
+		ActionID:     req.ActionID,
+		DraftVersion: req.DraftVersion,
+	}
+}
+
+func toAgentEventData(data any) any {
+	switch v := data.(type) {
+	case service.AgentMessage:
+		return toAgentMessageResp(v)
+	case []service.AgentBlock:
+		return toAgentBlocks(v)
+	default:
+		return data
 	}
 }
 

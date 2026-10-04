@@ -1,6 +1,9 @@
 package service
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // ===== 查询 / 命令输入 =====
 
@@ -63,15 +66,14 @@ type AgentConversationList struct {
 	List  []AgentConversation
 }
 
-// AgentMessage 一条消息。CreatedAt 保留字符串：会直接放进 AgentEvent.Data 序列化，
-// 必须与旧 DTO 的格式化字符串一致。
+// AgentMessage 一条消息。
 type AgentMessage struct {
 	ID        int64        `json:"id"`
 	Role      string       `json:"role"`
 	Kind      string       `json:"kind"`
 	Content   string       `json:"content"`
 	Blocks    []AgentBlock `json:"blocks"`
-	CreatedAt string       `json:"createdAt"`
+	CreatedAt time.Time    `json:"createdAt"`
 }
 
 type AgentConversationDetail struct {
@@ -82,3 +84,25 @@ type AgentConversationDetail struct {
 	PendingActionID  int64
 	Messages         []AgentMessage
 }
+
+// ===== Turn 与事件 =====
+
+// AgentTurnParams 一次用户交互的输入。
+type AgentTurnParams struct {
+	Type         string
+	Content      string
+	RequestID    int64
+	Value        json.RawMessage
+	ActionID     int64
+	DraftVersion int
+}
+
+// AgentEvent 传输无关的事件，由 HTTP Handler 映射为传输层事件后再序列化。
+type AgentEvent struct {
+	Type  string
+	RunID int64
+	Data  any
+}
+
+// AgentEventEmitter 事件回调。
+type AgentEventEmitter func(AgentEvent) error
