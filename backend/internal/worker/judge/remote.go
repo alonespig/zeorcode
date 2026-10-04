@@ -6,13 +6,13 @@ import (
 	"errors"
 	"time"
 
+	"zoj/internal/infra/credential"
 	"zoj/internal/infra/logger"
 	"zoj/internal/infra/mq"
 	"zoj/internal/model"
 	"zoj/internal/repository"
 	judgeapi "zoj/pkg/judge"
 	"zoj/pkg/remoteoj"
-	"zoj/pkg/util"
 
 	"go.uber.org/zap"
 )
@@ -297,7 +297,7 @@ func (w *Worker) publishRemoteDone(s *model.Submission, log *zap.SugaredLogger) 
 // 解密失败返回的账号 secret 为空，由各 OJ 实现自行报错。
 func buildRemoteAccount(m *model.RemoteAccount) *remoteoj.RemoteAccount {
 	acc := &remoteoj.RemoteAccount{ID: m.ID, OJ: m.OJ, Username: m.Username, Valid: m.Valid}
-	secret, err := util.Decrypt(m.Secret)
+	secret, err := credential.Decrypt(m.Secret)
 	if err != nil {
 		logger.Warnw("decrypt remote account secret failed", "oj", m.OJ, "accountID", m.ID, "err", err)
 		return acc

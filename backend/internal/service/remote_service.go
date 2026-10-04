@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 
+	"zoj/internal/infra/credential"
 	"zoj/internal/infra/logger"
 	"zoj/internal/model"
 	"zoj/internal/repository"
 	"zoj/pkg/errcode"
 	"zoj/pkg/remoteoj"
-	"zoj/pkg/util"
 
 	"gorm.io/gorm"
 )
@@ -69,7 +69,7 @@ func (s *RemoteService) loadAccount(ctx context.Context, ojName string) *remoteo
 	if err != nil {
 		return nil // 无启用账号，按匿名处理
 	}
-	secret, err := util.Decrypt(m.Secret)
+	secret, err := credential.Decrypt(m.Secret)
 	if err != nil {
 		logger.Warnw("decrypt remote account secret failed", "oj", ojName, "accountID", m.ID, "err", err)
 		return nil
@@ -163,7 +163,7 @@ func encryptSecret(plain string) (string, error) {
 	if plain == "" {
 		return "", nil
 	}
-	enc, err := util.Encrypt(plain)
+	enc, err := credential.Encrypt(plain)
 	if err != nil {
 		return "", errcode.ErrInternal.WithMsg("凭证加密失败").Wrap(err)
 	}

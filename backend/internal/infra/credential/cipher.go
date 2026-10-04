@@ -1,4 +1,4 @@
-package util
+package credential
 
 import (
 	"crypto/aes"
