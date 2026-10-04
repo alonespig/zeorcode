@@ -55,7 +55,11 @@ func (u *UserController) RatingHistory(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return u.userSrv.GetRatingHistory(c.Request.Context(), id)
+	resp, err := u.userSrv.GetRatingHistory(c.Request.Context(), id)
+	if err != nil {
+		return nil, err
+	}
+	return toRatingHistoryResp(resp), nil
 }
 
 // ContestHistory GET /api/user/:id/contest-history 用户参赛记录（公开）
@@ -64,7 +68,11 @@ func (u *UserController) ContestHistory(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return u.userSrv.GetContestHistory(c.Request.Context(), id)
+	resp, err := u.userSrv.GetContestHistory(c.Request.Context(), id)
+	if err != nil {
+		return nil, err
+	}
+	return toContestHistoryResp(resp), nil
 }
 
 // RatingRank GET /api/user/rating-rank 按 rating 排名（公开）
@@ -79,7 +87,11 @@ func (u *UserController) RatingRank(c *gin.Context) (any, error) {
 	if req.PageSize <= 0 {
 		req.PageSize = 15
 	}
-	return u.userSrv.RatingRankList(c.Request.Context(), req.Page, req.PageSize, req.UserName)
+	resp, err := u.userSrv.RatingRankList(c.Request.Context(), req.Page, req.PageSize, req.UserName)
+	if err != nil {
+		return nil, err
+	}
+	return toUserRankListResp(resp), nil
 }
 
 func (u *UserController) CreateUser(c *gin.Context) (any, error) {
@@ -153,13 +165,21 @@ func (u *UserController) Rank(c *gin.Context) (any, error) {
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return u.userSrv.UserRankList(c.Request.Context(), req.Page, req.PageSize, req.UserName)
+	resp, err := u.userSrv.UserRankList(c.Request.Context(), req.Page, req.PageSize, req.UserName)
+	if err != nil {
+		return nil, err
+	}
+	return toUserRankListResp(resp), nil
 }
 
 func (u *UserController) GetUserInfo(c *gin.Context) (any, error) {
 	v, _ := c.Get("userID")
 	userID, _ := v.(int64)
-	return u.userSrv.UserInfo(c.Request.Context(), userID)
+	resp, err := u.userSrv.UserInfo(c.Request.Context(), userID)
+	if err != nil {
+		return nil, err
+	}
+	return toUserInfoResp(resp), nil
 }
 
 // UpdateUserInfo PUT /api/user/info 更新当前登录用户的资料
@@ -244,5 +264,9 @@ func (u *UserController) UserProfile(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return u.userSrv.Profile(c.Request.Context(), userID)
+	resp, err := u.userSrv.Profile(c.Request.Context(), userID)
+	if err != nil {
+		return nil, err
+	}
+	return toProfileResp(resp), nil
 }

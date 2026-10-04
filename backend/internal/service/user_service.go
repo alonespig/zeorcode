@@ -11,11 +11,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"zoj/pkg/errcode"
 	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 	"zoj/pkg/util"
 
 	"gorm.io/gorm"
@@ -262,7 +262,7 @@ func (u *UserService) BindEmail(ctx context.Context, userID int64, email, code s
 	return nil
 }
 
-func (u *UserService) UserRankList(ctx context.Context, page, pageSize int, username *string) (*dto.UserRank, error) {
+func (u *UserService) UserRankList(ctx context.Context, page, pageSize int, username *string) (*UserRankList, error) {
 
 	filter := repository.UserSubmitCountFilter{
 		Page:     page,
@@ -284,9 +284,9 @@ func (u *UserService) UserRankList(ctx context.Context, page, pageSize int, user
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
 
-	resp := dto.UserRank{
-		Total:    total,
-		UserRank: make([]dto.UserInfo, len(rank)),
+	resp := UserRankList{
+		Total: total,
+		List:  make([]UserRankItem, len(rank)),
 	}
 	// 批量取用户信息，避免每个排名一条查询（N+1）
 	userIDs := make([]int64, 0, len(rank))
@@ -303,7 +303,7 @@ func (u *UserService) UserRankList(ctx context.Context, page, pageSize int, user
 	}
 	for i, item := range rank {
 		user := userMap[item.UserID]
-		resp.UserRank[i] = dto.UserInfo{
+		resp.List[i] = UserRankItem{
 			ID:          user.UID,
 			Index:       (page-1)*pageSize + i + 1,
 			Username:    user.Username,
@@ -320,14 +320,14 @@ func (u *UserService) UserRankList(ctx context.Context, page, pageSize int, user
 }
 
 // RatingRankList 按 rating 降序的全站排名。
-func (u *UserService) RatingRankList(ctx context.Context, page, pageSize int, username *string) (*dto.UserRank, error) {
+func (u *UserService) RatingRankList(ctx context.Context, page, pageSize int, username *string) (*UserRankList, error) {
 	users, total, err := u.repo.RatingRankList(ctx, page, pageSize, username)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.UserRank{Total: total, UserRank: make([]dto.UserInfo, len(users))}
+	resp := &UserRankList{Total: total, List: make([]UserRankItem, len(users))}
 	for i, usr := range users {
-		resp.UserRank[i] = dto.UserInfo{
+		resp.List[i] = UserRankItem{
 			ID:        usr.UID,
 			Index:     (page-1)*pageSize + i + 1,
 			Username:  usr.Username,
@@ -341,7 +341,7 @@ func (u *UserService) RatingRankList(ctx context.Context, page, pageSize int, us
 }
 
 // GetRatingHistory 某用户当前 rating + 历次 rating 变化（个人页折线图用）。
-func (u *UserService) GetRatingHistory(ctx context.Context, userID int64) (*dto.RatingHistoryResp, error) {
+func (u *UserService) GetRatingHistory(ctx context.Context, userID int64) (*RatingHistory, error) {
 	user, err := u.repo.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, errcode.ErrUserNotFound
@@ -350,39 +350,39 @@ func (u *UserService) GetRatingHistory(ctx context.Context, userID int64) (*dto.
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.RatingHistoryResp{
+	resp := &RatingHistory{
 		Rating:    user.Rating,
 		MaxRating: user.MaxRating,
-		History:   make([]dto.RatingHistoryItem, len(rows)),
+		History:   make([]RatingHistoryItem, len(rows)),
 	}
 	for i, r := range rows {
-		resp.History[i] = dto.RatingHistoryItem{
+		resp.History[i] = RatingHistoryItem{
 			ContestID:   r.ContestID,
 			ContestName: r.ContestName,
 			Rank:        r.Rank,
 			OldRating:   r.OldRating,
 			NewRating:   r.NewRating,
 			Delta:       r.Delta,
-			Time:        r.CreatedAt.UnixMilli(),
+			Time:        r.CreatedAt,
 		}
 	}
 	return resp, nil
 }
 
 // GetContestHistory 个人页「比赛记录」：用户报名过的比赛 + 每场结算状态（settled 带 rating 变化）。
-func (u *UserService) GetContestHistory(ctx context.Context, userID int64) (*dto.ContestHistoryResp, error) {
+func (u *UserService) GetContestHistory(ctx context.Context, userID int64) (*ContestHistory, error) {
 	rows, err := u.repo.GetContestHistory(ctx, userID)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
 	now := time.Now()
-	resp := &dto.ContestHistoryResp{List: make([]dto.ContestHistoryItem, 0, len(rows))}
+	resp := &ContestHistory{List: make([]ContestHistoryItem, 0, len(rows))}
 	for _, r := range rows {
-		item := dto.ContestHistoryItem{
+		item := ContestHistoryItem{
 			ContestID:   r.ContestID,
 			ContestName: r.ContestName,
 			Type:        r.Type,
-			Time:        r.StartTime.Unix(),
+			Time:        r.StartTime,
 		}
 		switch {
 		case r.NewRating != nil: // 有 rating 变化即已结算
@@ -412,12 +412,12 @@ func (u *UserService) GetContestHistory(ctx context.Context, userID int64) (*dto
 	return resp, nil
 }
 
-func (u *UserService) UserInfo(ctx context.Context, id int64) (*dto.UserInfoResp, error) {
+func (u *UserService) UserInfo(ctx context.Context, id int64) (*UserInfo, error) {
 	user, err := u.repo.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	resp := dto.UserInfoResp{
+	resp := UserInfo{
 		ID:          user.UID,
 		Name:        user.Username,
 		Avatar:      avatarOr(user.Avatar),
@@ -425,9 +425,9 @@ func (u *UserService) UserInfo(ctx context.Context, id int64) (*dto.UserInfoResp
 		Gender:      user.Gender,
 		Signature:   &user.Signature,
 		School:      user.School,
-		CreatedAt:   user.CreatedAt.Unix(),
-		SolveItem:   make([]dto.ProblemSimple, 0, 10),
-		UnsolveItem: make([]dto.ProblemSimple, 0, 10),
+		CreatedAt:   user.CreatedAt,
+		SolveItem:   make([]UserProblem, 0, 10),
+		UnsolveItem: make([]UserProblem, 0, 10),
 	}
 
 	acIds, unacIds, err := u.problemRepo.GetProblemIDByUserID(ctx, id)
@@ -449,13 +449,13 @@ func (u *UserService) UserInfo(ctx context.Context, id int64) (*dto.UserInfoResp
 		displayOf[p.ID] = p.DisplayID
 	}
 	for _, pid := range acIds {
-		resp.SolveItem = append(resp.SolveItem, dto.ProblemSimple{
+		resp.SolveItem = append(resp.SolveItem, UserProblem{
 			ID:   displayOf[pid], // 对外题号，链接跳 /problem/{题号}
 			Name: nameOf[pid],
 		})
 	}
 	for _, pid := range unacIds {
-		resp.UnsolveItem = append(resp.UnsolveItem, dto.ProblemSimple{
+		resp.UnsolveItem = append(resp.UnsolveItem, UserProblem{
 			ID:   displayOf[pid],
 			Name: nameOf[pid],
 		})
@@ -467,7 +467,7 @@ func (u *UserService) UserInfo(ctx context.Context, id int64) (*dto.UserInfoResp
 	return &resp, nil
 }
 
-func (u *UserService) Profile(ctx context.Context, id int64) (*dto.UserProfile, error) {
+func (u *UserService) Profile(ctx context.Context, id int64) (*Profile, error) {
 	user, err := u.repo.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -478,18 +478,18 @@ func (u *UserService) Profile(ctx context.Context, id int64) (*dto.UserProfile, 
 		return nil, err
 	}
 
-	resp := dto.UserProfile{
-		User: dto.UserDetail{
+	resp := Profile{
+		User: ProfileUser{
 			ID:        user.UID,
 			Name:      user.Username,
 			Gender:    user.Gender,
 			Signature: &user.Signature,
 			School:    user.School,
 			Avatar:    avatarOr(user.Avatar),
-			CreatedAt: user.CreatedAt.Format("2006-6-6"),
+			CreatedAt: user.CreatedAt,
 		},
-		SolveItem:   make([]dto.ProblemSimple, 0, len(acIds)),
-		UnsolveItem: make([]dto.ProblemSimple, 0, len(unacIds)),
+		SolveItem:   make([]UserProblem, 0, len(acIds)),
+		UnsolveItem: make([]UserProblem, 0, len(unacIds)),
 	}
 
 	var (
@@ -508,14 +508,14 @@ func (u *UserService) Profile(ctx context.Context, id int64) (*dto.UserProfile, 
 	}
 
 	for _, p := range acProblemList {
-		resp.SolveItem = append(resp.SolveItem, dto.ProblemSimple{
+		resp.SolveItem = append(resp.SolveItem, UserProblem{
 			ID:   p.DisplayID, // 对外题号
 			Name: p.Name,
 		})
 	}
 
 	for _, p := range unacProblemList {
-		resp.UnsolveItem = append(resp.UnsolveItem, dto.ProblemSimple{
+		resp.UnsolveItem = append(resp.UnsolveItem, UserProblem{
 			ID:   p.DisplayID,
 			Name: p.Name,
 		})
