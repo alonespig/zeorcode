@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	"zoj/internal/bootstrap"
+	"zoj/internal/di"
 	"zoj/internal/infra/logger"
 
 	"github.com/gin-gonic/gin"
@@ -20,7 +20,7 @@ var httpCmd = &cobra.Command{
 	Short: "启动http服务",
 	Run: func(cmd *cobra.Command, args []string) {
 		r := gin.Default()
-		httpSrv, cleanup, err := bootstrap.InitHttpServer()
+		httpSrv, cleanup, err := di.InitHttpServer()
 		if err != nil {
 			logger.Fatalw("init http server failed", "err", err)
 		}

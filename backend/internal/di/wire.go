@@ -1,19 +1,20 @@
 //go:build wireinject
 // +build wireinject
 
-package bootstrap
+package di
 
 import (
 	"zoj/internal/http/handler"
+	"zoj/internal/http/router"
 	"zoj/internal/infra/cache"
-	"zoj/internal/infra/conn"
+	"zoj/internal/infra/database"
 	"zoj/internal/infra/llm"
 	"zoj/internal/infra/mail"
 	"zoj/internal/infra/mq"
+	"zoj/internal/infra/redis"
 	"zoj/internal/infra/session"
 	"zoj/internal/problem/adapter/testdatastore"
 	"zoj/internal/repository"
-	"zoj/internal/http/router"
 	"zoj/internal/service"
 
 	"github.com/google/wire"
@@ -21,8 +22,8 @@ import (
 
 func InitHttpServer() (*router.HttpServer, func(), error) {
 	wire.Build(
-		conn.NewMysqlClient,
-		conn.NewRedisClient,
+		database.NewMysqlClient,
+		redis.NewRedisClient,
 		session.New,
 		service.NewTokenService,
 		mq.New,

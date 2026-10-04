@@ -4,16 +4,17 @@
 //go:build !wireinject
 // +build !wireinject
 
-package bootstrap
+package di
 
 import (
 	"zoj/internal/http/handler"
 	"zoj/internal/http/router"
 	"zoj/internal/infra/cache"
-	"zoj/internal/infra/conn"
+	"zoj/internal/infra/database"
 	"zoj/internal/infra/llm"
 	"zoj/internal/infra/mail"
 	"zoj/internal/infra/mq"
+	"zoj/internal/infra/redis"
 	"zoj/internal/infra/session"
 	"zoj/internal/problem/adapter/testdatastore"
 	"zoj/internal/repository"
@@ -23,7 +24,7 @@ import (
 // Injectors from wire.go:
 
 func InitHttpServer() (*router.HttpServer, func(), error) {
-	db, cleanup := conn.NewMysqlClient()
+	db, cleanup := database.NewMysqlClient()
 	problemRepo := repository.NewProblemRepo(db)
 	submissionRepo := repository.NewSubmissionRepo(db)
 	store := testdatastore.New()
@@ -31,7 +32,7 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 	problemController := handler.NewProblemController(problemService)
 	contestRepo := repository.NewContestRepo(db)
 	userRepo := repository.NewUserRepo(db)
-	client, cleanup2 := conn.NewRedisClient()
+	client, cleanup2 := redis.NewRedisClient()
 	cacheCache := cache.NewCache(client)
 	mqMQ := mq.New(client)
 	notificationRepo := repository.NewNotificationRepo(db)

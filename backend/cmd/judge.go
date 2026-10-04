@@ -9,10 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"zoj/internal/infra/logger"
 	"zoj/internal/infra/cache"
-	"zoj/internal/infra/conn"
+	"zoj/internal/infra/database"
+	"zoj/internal/infra/logger"
 	"zoj/internal/infra/mq"
+	"zoj/internal/infra/redis"
 	"zoj/internal/judgeworker"
 	"zoj/internal/repository"
 	"zoj/internal/submission/adapter/outboxstore"
@@ -32,9 +33,9 @@ var judgeCmd = &cobra.Command{
 		ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 		defer stop()
 
-		db, closeDB := conn.NewMysqlClient()
+		db, closeDB := database.NewMysqlClient()
 		defer closeDB()
-		rdb, closeRedis := conn.NewRedisClient()
+		rdb, closeRedis := redis.NewRedisClient()
 		defer closeRedis()
 
 		// 判题机地址：优先用 judge.urls（多台，负载均衡）；没配就回退单个 judge.url
