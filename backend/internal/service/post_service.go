@@ -8,10 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/dto"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 
 	"gorm.io/gorm"
 )
@@ -49,7 +48,7 @@ func commentLookupError(err error) error {
 	return errcode.ErrDatabase.Wrap(err)
 }
 
-func (s *PostService) ListPosts(ctx context.Context, req *dto.PostListReq, viewerPK int64) (*dto.PostListResp, error) {
+func (s *PostService) ListPosts(ctx context.Context, req *PostListParams, viewerPK int64) (*PostList, error) {
 	normalizePostPage(req)
 	// 按题目筛选时 req.ProblemID 是对外题号，解析成内部主键；解析不到直接返回空
 	var problemPK int64
@@ -59,7 +58,7 @@ func (s *PostService) ListPosts(ctx context.Context, req *dto.PostListReq, viewe
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil, errcode.ErrDatabase.Wrap(err)
 			}
-			return &dto.PostListResp{Total: 0, List: []dto.PostItem{}}, nil
+			return &PostList{Total: 0, List: []PostItem{}}, nil
 		}
 		problemPK = pk
 	}
@@ -71,7 +70,7 @@ func (s *PostService) ListPosts(ctx context.Context, req *dto.PostListReq, viewe
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil, errcode.ErrDatabase.Wrap(err)
 			}
-			return &dto.PostListResp{Total: 0, List: []dto.PostItem{}}, nil
+			return &PostList{Total: 0, List: []PostItem{}}, nil
 		}
 		userPK = pk
 	}
@@ -90,14 +89,14 @@ func (s *PostService) ListPosts(ctx context.Context, req *dto.PostListReq, viewe
 	if err != nil {
 		return nil, err
 	}
-	return &dto.PostListResp{
+	return &PostList{
 		Total: total,
 		List:  items,
 	}, nil
 }
 
 // AdminListPending 管理员审核队列：列出待审核帖子（不受可见性限制）。
-func (s *PostService) AdminListPending(ctx context.Context, page, pageSize int) (*dto.PostListResp, error) {
+func (s *PostService) AdminListPending(ctx context.Context, page, pageSize int) (*PostList, error) {
 	if page <= 0 {
 		page = 1
 	}
@@ -113,7 +112,7 @@ func (s *PostService) AdminListPending(ctx context.Context, page, pageSize int) 
 	if err != nil {
 		return nil, err
 	}
-	return &dto.PostListResp{Total: total, List: items}, nil
+	return &PostList{Total: total, List: items}, nil
 }
 
 // ReviewPost 管理员通过/拒绝帖子。status 只接受 通过(1)/拒绝(2)；拒绝可带理由。
@@ -136,7 +135,7 @@ func (s *PostService) ReviewPost(ctx context.Context, id int64, status int, reas
 	return nil
 }
 
-func (s *PostService) CreatePost(ctx context.Context, req *dto.CreatePostReq, userID int64, role int) (*dto.CreatePostResp, error) {
+func (s *PostService) CreatePost(ctx context.Context, req CreatePostParams, userID int64, role int) (*CreatePostResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
 		return nil, errcode.ErrInvalidParams.WithMsg("标题不能为空")
@@ -169,10 +168,10 @@ func (s *PostService) CreatePost(ctx context.Context, req *dto.CreatePostReq, us
 	if err := s.repo.Create(ctx, post); err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	return &dto.CreatePostResp{ID: post.ID, ReviewStatus: reviewStatus}, nil
+	return &CreatePostResult{ID: post.ID, ReviewStatus: reviewStatus}, nil
 }
 
-func (s *PostService) UpdatePost(ctx context.Context, id int64, req *dto.UpdatePostReq, userID int64, role int) error {
+func (s *PostService) UpdatePost(ctx context.Context, id int64, req UpdatePostParams, userID int64, role int) error {
 	post, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return postLookupError(err)
@@ -229,7 +228,7 @@ func (s *PostService) DeletePost(ctx context.Context, id int64, userID int64, ro
 	return nil
 }
 
-func (s *PostService) GetPost(ctx context.Context, id int64, userID int64, role int) (*dto.PostDetailResp, error) {
+func (s *PostService) GetPost(ctx context.Context, id int64, userID int64, role int) (*PostDetail, error) {
 	post, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, postLookupError(err)
@@ -251,7 +250,7 @@ func (s *PostService) GetPost(ctx context.Context, id int64, userID int64, role 
 		return nil, err
 	}
 	item := items[0]
-	resp := &dto.PostDetailResp{
+	resp := &PostDetail{
 		PostItem: item,
 		Content:  post.Content,
 	}
@@ -265,7 +264,7 @@ func (s *PostService) GetPost(ctx context.Context, id int64, userID int64, role 
 	return resp, nil
 }
 
-func (s *PostService) ToggleLike(ctx context.Context, postID, userID int64) (*dto.TogglePostLikeResp, error) {
+func (s *PostService) ToggleLike(ctx context.Context, postID, userID int64) (*ToggleLikeResult, error) {
 	post, err := s.repo.GetByID(ctx, postID)
 	if err != nil {
 		return nil, postLookupError(err)
@@ -277,11 +276,11 @@ func (s *PostService) ToggleLike(ctx context.Context, postID, userID int64) (*dt
 	if liked { // 仅点赞（非取消）时通知帖子作者
 		s.notify.Notify(ctx, post.UserID, userID, "like", post.Title, "", "/blog/"+strconv.FormatInt(postID, 10), "post", postID)
 	}
-	return &dto.TogglePostLikeResp{Liked: liked}, nil
+	return &ToggleLikeResult{Liked: liked}, nil
 }
 
 // ToggleCommentLike 点赞/取消点赞评论；点赞时通知评论作者。
-func (s *PostService) ToggleCommentLike(ctx context.Context, commentID, userID int64) (*dto.TogglePostLikeResp, error) {
+func (s *PostService) ToggleCommentLike(ctx context.Context, commentID, userID int64) (*ToggleLikeResult, error) {
 	comment, err := s.repo.GetComment(ctx, commentID)
 	if err != nil {
 		return nil, commentLookupError(err)
@@ -294,13 +293,13 @@ func (s *PostService) ToggleCommentLike(ctx context.Context, commentID, userID i
 		s.notify.Notify(ctx, comment.UserID, userID, "like", "", "赞了你的评论",
 			"/blog/"+strconv.FormatInt(comment.PostID, 10), "comment", commentID)
 	}
-	return &dto.TogglePostLikeResp{Liked: liked}, nil
+	return &ToggleLikeResult{Liked: liked}, nil
 }
 
 // ListComments 返回单层楼中楼：顶层评论按时间序，每条顶层评论挂它的全部回复。
 // 回复若回复的是另一条回复（而非直接回复楼主），ReplyTo 填被回复者，前端显示 @某人。
 // Total 为评论总数（顶层 + 回复）。
-func (s *PostService) ListComments(ctx context.Context, postID, userID int64) (*dto.PostCommentListResp, error) {
+func (s *PostService) ListComments(ctx context.Context, postID, userID int64) (*PostCommentList, error) {
 	if _, err := s.repo.GetByID(ctx, postID); err != nil {
 		return nil, postLookupError(err)
 	}
@@ -313,13 +312,13 @@ func (s *PostService) ListComments(ctx context.Context, postID, userID int64) (*
 	if err != nil {
 		return nil, err
 	}
-	return &dto.PostCommentListResp{
+	return &PostCommentList{
 		Total: int64(len(comments)),
 		List:  roots,
 	}, nil
 }
 
-func (s *PostService) CreateComment(ctx context.Context, postID, userID int64, req *dto.CreatePostCommentReq) error {
+func (s *PostService) CreateComment(ctx context.Context, postID, userID int64, req CreateCommentParams) error {
 	content := strings.TrimSpace(req.Content)
 	if content == "" {
 		return errcode.ErrInvalidParams.WithMsg("评论内容不能为空")
@@ -405,7 +404,7 @@ func (s *PostService) resolvePostProblem(ctx context.Context, category string, p
 	return 0, nil
 }
 
-func (s *PostService) buildPostItems(ctx context.Context, posts []model.Post) ([]dto.PostItem, error) {
+func (s *PostService) buildPostItems(ctx context.Context, posts []model.Post) ([]PostItem, error) {
 	userIDs := make([]int64, 0, len(posts))
 	problemIDs := make([]int64, 0)
 	for _, post := range posts {
@@ -433,9 +432,9 @@ func (s *PostService) buildPostItems(ctx context.Context, posts []model.Post) ([
 		problemMap[problem.ID] = problem
 	}
 
-	items := make([]dto.PostItem, 0, len(posts))
+	items := make([]PostItem, 0, len(posts))
 	for _, post := range posts {
-		item := dto.PostItem{
+		item := PostItem{
 			ID:           post.ID,
 			Category:     post.Category,
 			ReviewStatus: post.ReviewStatus,
@@ -446,14 +445,14 @@ func (s *PostService) buildPostItems(ctx context.Context, posts []model.Post) ([
 			LikeCount:    post.LikeCount,
 			ViewCount:    post.ViewCount,
 			CommentCount: post.CommentCount,
-			CreatedAt:    time.Unix(post.CreatedAt, 0).Format("2006-01-02 15:04:05"),
-			UpdatedAt:    time.Unix(post.UpdatedAt, 0).Format("2006-01-02 15:04:05"),
+			CreatedAt:    time.Unix(post.CreatedAt, 0),
+			UpdatedAt:    time.Unix(post.UpdatedAt, 0),
 		}
 		if user, ok := userMap[post.UserID]; ok {
-			item.User = dto.PostUser{ID: user.UID, Username: user.Username, Avatar: user.Avatar, Rating: user.Rating}
+			item.User = PostUser{ID: user.UID, Username: user.Username, Avatar: user.Avatar, Rating: user.Rating}
 		}
 		if problem, ok := problemMap[post.ProblemID]; ok {
-			item.Problem = &dto.ProblemSimple{ID: problem.DisplayID, Name: problem.Name}
+			item.Problem = &PostProblem{ID: problem.DisplayID, Name: problem.Name}
 			item.ProblemID = problem.DisplayID
 		}
 		items = append(items, item)
@@ -462,7 +461,7 @@ func (s *PostService) buildPostItems(ctx context.Context, posts []model.Post) ([
 }
 
 // buildCommentTree 把扁平评论组装成单层楼中楼：顶层评论 + 各自的回复，回复带 ReplyTo。
-func (s *PostService) buildCommentTree(ctx context.Context, comments []model.PostComment, likedSet map[int64]bool) ([]dto.PostCommentItem, error) {
+func (s *PostService) buildCommentTree(ctx context.Context, comments []model.PostComment, likedSet map[int64]bool) ([]PostComment, error) {
 	userIDs := make([]int64, 0, len(comments))
 	for _, comment := range comments {
 		userIDs = append(userIDs, comment.UserID)
@@ -475,30 +474,30 @@ func (s *PostService) buildCommentTree(ctx context.Context, comments []model.Pos
 	for _, user := range users {
 		userMap[user.ID] = user
 	}
-	userOf := func(id int64) dto.PostUser {
+	userOf := func(id int64) PostUser {
 		if u, ok := userMap[id]; ok {
-			return dto.PostUser{ID: u.UID, Username: u.Username, Avatar: u.Avatar, Rating: u.Rating}
+			return PostUser{ID: u.UID, Username: u.Username, Avatar: u.Avatar, Rating: u.Rating}
 		}
-		return dto.PostUser{} // 用户不存在：不暴露任何 id
+		return PostUser{} // 用户不存在：不暴露任何 id
 	}
 
 	// 一级评论(root_id=0)按顺序放好，二级评论按 root_id 挂到对应一级评论下
-	roots := make([]dto.PostCommentItem, 0)
+	roots := make([]PostComment, 0)
 	rootIdx := make(map[int64]int) // 一级评论 id -> roots 下标
 	for i := range comments {
 		c := &comments[i]
 		if c.RootID != 0 {
 			continue
 		}
-		roots = append(roots, dto.PostCommentItem{
+		roots = append(roots, PostComment{
 			ID:        c.ID,
 			PostID:    c.PostID,
 			Content:   c.Content,
 			User:      userOf(c.UserID),
 			LikeCount: c.LikeCount,
 			IsLiked:   likedSet[c.ID],
-			CreatedAt: c.CreatedAt,
-			Replies:   []dto.PostCommentItem{},
+			CreatedAt: time.Unix(c.CreatedAt, 0),
+			Replies:   []PostComment{},
 		})
 		rootIdx[c.ID] = len(roots) - 1
 	}
@@ -511,12 +510,12 @@ func (s *PostService) buildCommentTree(ctx context.Context, comments []model.Pos
 		if !ok {
 			continue // 所属一级评论已被删，跳过孤儿回复
 		}
-		var replyTo *dto.PostUser
+		var replyTo *PostUser
 		if c.ReplyUserID != 0 {
 			u := userOf(c.ReplyUserID)
 			replyTo = &u
 		}
-		roots[idx].Replies = append(roots[idx].Replies, dto.PostCommentItem{
+		roots[idx].Replies = append(roots[idx].Replies, PostComment{
 			ID:        c.ID,
 			PostID:    c.PostID,
 			Content:   c.Content,
@@ -524,13 +523,13 @@ func (s *PostService) buildCommentTree(ctx context.Context, comments []model.Pos
 			ReplyTo:   replyTo,
 			LikeCount: c.LikeCount,
 			IsLiked:   likedSet[c.ID],
-			CreatedAt: c.CreatedAt,
+			CreatedAt: time.Unix(c.CreatedAt, 0),
 		})
 	}
 	return roots, nil
 }
 
-func normalizePostPage(req *dto.PostListReq) {
+func normalizePostPage(req *PostListParams) {
 	if req.Page <= 0 {
 		req.Page = defaultPostPage
 	}

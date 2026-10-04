@@ -3,9 +3,9 @@ package handler
 import (
 	"strconv"
 
-	"zoj/pkg/errcode"
 	"zoj/internal/dto"
 	"zoj/internal/service"
+	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,7 +24,12 @@ func (p *PostController) ListPosts(c *gin.Context) (any, error) {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
 	// 经 JWTAuthOptional 注入：查看自己的帖子时能带出待审/被拒的
-	return p.postSrv.ListPosts(c.Request.Context(), &req, optionalCurrentUserID(c))
+	params := toPostListParams(req)
+	resp, err := p.postSrv.ListPosts(c.Request.Context(), &params, optionalCurrentUserID(c))
+	if err != nil {
+		return nil, err
+	}
+	return toPostListResp(resp), nil
 }
 
 // ReviewListPending GET /api/admin/posts/pending 审核队列（超管）
@@ -33,7 +38,11 @@ func (p *PostController) ReviewListPending(c *gin.Context) (any, error) {
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return p.postSrv.AdminListPending(c.Request.Context(), req.Page, req.PageSize)
+	resp, err := p.postSrv.AdminListPending(c.Request.Context(), req.Page, req.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	return toPostListResp(resp), nil
 }
 
 // ReviewPost PUT /api/admin/posts/:id/review 通过/拒绝帖子（超管）
@@ -58,7 +67,11 @@ func (p *PostController) CreatePost(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return p.postSrv.CreatePost(c.Request.Context(), &req, userID, role)
+	resp, err := p.postSrv.CreatePost(c.Request.Context(), toCreatePostParams(req), userID, role)
+	if err != nil {
+		return nil, err
+	}
+	return toCreatePostResult(resp), nil
 }
 
 func (p *PostController) GetPost(c *gin.Context) (any, error) {
@@ -68,7 +81,11 @@ func (p *PostController) GetPost(c *gin.Context) (any, error) {
 	}
 	roleVal, _ := c.Get("role")
 	role, _ := roleVal.(int)
-	return p.postSrv.GetPost(c.Request.Context(), id, optionalCurrentUserID(c), role)
+	resp, err := p.postSrv.GetPost(c.Request.Context(), id, optionalCurrentUserID(c), role)
+	if err != nil {
+		return nil, err
+	}
+	return toPostDetailResp(resp), nil
 }
 
 func (p *PostController) UpdatePost(c *gin.Context) (any, error) {
@@ -84,7 +101,7 @@ func (p *PostController) UpdatePost(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, p.postSrv.UpdatePost(c.Request.Context(), id, &req, userID, role)
+	return nil, p.postSrv.UpdatePost(c.Request.Context(), id, toUpdatePostParams(req), userID, role)
 }
 
 func (p *PostController) DeletePost(c *gin.Context) (any, error) {
@@ -108,7 +125,11 @@ func (p *PostController) ToggleLike(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return p.postSrv.ToggleLike(c.Request.Context(), id, userID)
+	resp, err := p.postSrv.ToggleLike(c.Request.Context(), id, userID)
+	if err != nil {
+		return nil, err
+	}
+	return toToggleLikeResult(resp), nil
 }
 
 func (p *PostController) ListComments(c *gin.Context) (any, error) {
@@ -118,7 +139,11 @@ func (p *PostController) ListComments(c *gin.Context) (any, error) {
 	}
 	v, _ := c.Get("userID") // 可选：登录了才知道 isLiked
 	uid, _ := v.(int64)
-	return p.postSrv.ListComments(c.Request.Context(), id, uid)
+	resp, err := p.postSrv.ListComments(c.Request.Context(), id, uid)
+	if err != nil {
+		return nil, err
+	}
+	return toPostCommentListResp(resp), nil
 }
 
 // ToggleCommentLike POST /api/comments/:cid/like
@@ -131,7 +156,11 @@ func (p *PostController) ToggleCommentLike(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return p.postSrv.ToggleCommentLike(c.Request.Context(), cid, userID)
+	resp, err := p.postSrv.ToggleCommentLike(c.Request.Context(), cid, userID)
+	if err != nil {
+		return nil, err
+	}
+	return toToggleLikeResult(resp), nil
 }
 
 func (p *PostController) CreateComment(c *gin.Context) (any, error) {
@@ -147,7 +176,7 @@ func (p *PostController) CreateComment(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, p.postSrv.CreateComment(c.Request.Context(), id, userID, &req)
+	return nil, p.postSrv.CreateComment(c.Request.Context(), id, userID, toCreateCommentParams(req))
 }
 
 func (p *PostController) DeleteComment(c *gin.Context) (any, error) {
