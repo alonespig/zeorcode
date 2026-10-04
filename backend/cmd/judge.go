@@ -17,8 +17,8 @@ import (
 	"zoj/internal/repository"
 	"zoj/internal/repository/outbox"
 	"zoj/internal/worker/dispatch"
-	judgeworker "zoj/internal/worker/judge"
-	"zoj/pkg/judge"
+	"zoj/internal/worker/judge"
+	judgeapi "zoj/pkg/judge"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -45,7 +45,7 @@ var judgeCmd = &cobra.Command{
 				urls = []string{u}
 			}
 		}
-		pool := judge.NewPool(urls)
+		pool := judgeapi.NewPool(urls)
 		if pool.Size() == 0 {
 			logger.Fatalw("未配置判题机地址（judge.urls 或 judge.url）")
 		}
@@ -54,14 +54,14 @@ var judgeCmd = &cobra.Command{
 		logger.Infow("judge pool ready", "instances", pool.Size(), "urls", pool.URLs())
 
 		submissionRepo := repository.NewSubmissionRepo(db)
-		repos := judgeworker.Repositories{
+		repos := judge.Repositories{
 			Submissions:    submissionRepo,
 			Problems:       repository.NewProblemRepo(db),
 			Contests:       repository.NewContestRepo(db),
 			RemoteAccounts: repository.NewRemoteAccountRepo(db),
 		}
 		queue := mq.New(rdb)
-		w := judgeworker.NewWorker(db, pool, repos, judgeConcurrency, queue, cache.NewCache(rdb))
+		w := judge.NewWorker(db, pool, repos, judgeConcurrency, queue, cache.NewCache(rdb))
 		relay, err := dispatch.New(
 			outbox.New(db),
 			queue,
@@ -96,5 +96,5 @@ func dispatchRelayOwner() string {
 }
 
 func init() {
-	judgeCmd.Flags().IntVarP(&judgeConcurrency, "concurrency", "c", judgeworker.DefaultConcurrency, "评测并发 worker 数量")
+	judgeCmd.Flags().IntVarP(&judgeConcurrency, "concurrency", "c", judge.DefaultConcurrency, "评测并发 worker 数量")
 }

@@ -59,7 +59,7 @@ func DefaultConfig() Config {
 	}
 }
 
-// Relay 不自行创建 goroutine；Run 的生命周期由 bootstrap 调用方持有。
+// Relay 不自行创建 goroutine；Run 的生命周期由调用方持有。
 type Relay struct {
 	store Store
 	queue Queue

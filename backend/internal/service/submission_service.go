@@ -33,7 +33,7 @@ type SubmissionService struct {
 }
 
 // SubmissionStore 由提交用例定义，只暴露当前用例实际使用的持久化能力。
-// 具体的 GORM repository 通过 bootstrap 注入并隐式实现该接口。
+// 具体的 GORM repository 通过 DI 注入并隐式实现该接口。
 type SubmissionStore interface {
 	PublicIDExists(ctx context.Context, publicID int64) (bool, error)
 	CreatePending(ctx context.Context, submission *model.Submission) (repository.SubmissionDispatch, error)
