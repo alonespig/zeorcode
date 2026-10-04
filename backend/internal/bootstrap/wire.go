@@ -4,17 +4,16 @@
 package bootstrap
 
 import (
-	"zoj/internal/handler"
+	"zoj/internal/http/handler"
 	"zoj/internal/infra/cache"
 	"zoj/internal/infra/conn"
 	"zoj/internal/infra/llm"
 	"zoj/internal/infra/mail"
 	"zoj/internal/infra/mq"
 	"zoj/internal/infra/session"
-	"zoj/internal/middleware"
 	"zoj/internal/problem/adapter/testdatastore"
 	"zoj/internal/repository"
-	"zoj/internal/router"
+	"zoj/internal/http/router"
 	"zoj/internal/service"
 
 	"github.com/google/wire"
@@ -25,7 +24,7 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 		conn.NewMysqlClient,
 		conn.NewRedisClient,
 		session.New,
-		middleware.NewAuth,
+		service.NewTokenService,
 		mq.New,
 		cache.CacheSet,
 		mail.MailSet,

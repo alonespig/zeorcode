@@ -7,17 +7,16 @@
 package bootstrap
 
 import (
-	"zoj/internal/handler"
+	"zoj/internal/http/handler"
+	"zoj/internal/http/router"
 	"zoj/internal/infra/cache"
 	"zoj/internal/infra/conn"
 	"zoj/internal/infra/llm"
 	"zoj/internal/infra/mail"
 	"zoj/internal/infra/mq"
 	"zoj/internal/infra/session"
-	"zoj/internal/middleware"
 	"zoj/internal/problem/adapter/testdatastore"
 	"zoj/internal/repository"
-	"zoj/internal/router"
 	"zoj/internal/service"
 )
 
@@ -47,12 +46,12 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 	postService := service.NewPostService(postRepo, userRepo, problemRepo, notificationService)
 	postController := handler.NewPostController(postService)
 	sessionSession := session.New(client)
-	auth := middleware.NewAuth(sessionSession)
+	tokenService := service.NewTokenService(sessionSession)
 	mailer := mail.NewMailer()
 	verifyService := service.NewVerifyService(cacheCache, mailer, userRepo)
-	userService := service.NewUserService(userRepo, submissionRepo, problemRepo, cacheCache, auth, verifyService)
+	userService := service.NewUserService(userRepo, submissionRepo, problemRepo, cacheCache, tokenService, verifyService)
 	captchaService := service.NewCaptchaService(cacheCache)
-	userController := handler.NewUserController(userService, submissionService, verifyService, captchaService, auth)
+	userController := handler.NewUserController(userService, submissionService, verifyService, captchaService, tokenService)
 	uploadController := handler.NewUploadController()
 	adminController := handler.NewAdminController(userService)
 	remoteAccountRepo := repository.NewRemoteAccountRepo(db)
@@ -73,7 +72,7 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 	agentService := service.NewAgentService(agentRepo, problemRepo, homeworkService, cacheCache, llmClient)
 	agentController := handler.NewAgentController(agentService)
 	languageController := handler.NewLanguageController(languageService)
-	httpServer := router.NewHttpServer(problemController, contestController, submissionController, postController, userController, uploadController, adminController, remoteController, notificationController, problemSetController, teamController, homeworkController, agentController, languageController, auth, cacheCache)
+	httpServer := router.NewHttpServer(problemController, contestController, submissionController, postController, userController, uploadController, adminController, remoteController, notificationController, problemSetController, teamController, homeworkController, agentController, languageController, tokenService, cacheCache)
 	return httpServer, func() {
 		cleanup2()
 		cleanup()

@@ -7,7 +7,7 @@ import (
 	"zoj/pkg/errcode"
 	"zoj/internal/http/response"
 	"zoj/internal/dto"
-	"zoj/internal/middleware"
+	"zoj/internal/http/middleware"
 	"zoj/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -18,14 +18,14 @@ type UserController struct {
 	submitSrv  *service.SubmissionService
 	verifySrv  *service.VerifyService
 	captchaSrv *service.CaptchaService
-	auth       *middleware.Auth
+	auth       *service.TokenService
 }
 
 func NewUserController(userSrv *service.UserService,
 	submitSrv *service.SubmissionService,
 	verifySrv *service.VerifyService,
 	captchaSrv *service.CaptchaService,
-	auth *middleware.Auth) *UserController {
+	auth *service.TokenService) *UserController {
 	return &UserController{
 		userSrv:    userSrv,
 		submitSrv:  submitSrv,

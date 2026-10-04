@@ -14,7 +14,6 @@ import (
 	"zoj/pkg/errcode"
 	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
-	"zoj/internal/middleware"
 	"zoj/internal/model"
 	"zoj/internal/repository"
 	"zoj/pkg/util"
@@ -110,7 +109,7 @@ type UserService struct {
 	subRepo     *repository.SubmissionRepo
 	problemRepo *repository.ProblemRepo
 	cache       *cache.Cache
-	auth        *middleware.Auth
+	auth        *TokenService
 	verify      *VerifyService
 }
 
@@ -118,7 +117,7 @@ func NewUserService(repo *repository.UserRepo,
 	subRepo *repository.SubmissionRepo,
 	problemRepo *repository.ProblemRepo,
 	cache *cache.Cache,
-	auth *middleware.Auth,
+	auth *TokenService,
 	verify *VerifyService) *UserService {
 	return &UserService{
 		repo:        repo,
