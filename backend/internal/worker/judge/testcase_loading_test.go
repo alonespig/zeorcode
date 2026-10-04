@@ -1,4 +1,4 @@
-package judgeworker
+package judge
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"zoj/internal/model"
-	"zoj/pkg/judge"
+	judgeapi "zoj/pkg/judge"
 )
 
 func TestRunAllCasesRejectsEmptyCases(t *testing.T) {
@@ -18,7 +18,7 @@ func TestRunAllCasesRejectsEmptyCases(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		judge.Limits{},
+		judgeapi.Limits{},
 		nil,
 	)
 	if err == nil {

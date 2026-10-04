@@ -1,4 +1,4 @@
-package judgeworker
+package judge
 
 import (
 	"context"
@@ -7,11 +7,10 @@ import (
 	"time"
 
 	"zoj/internal/infra/logger"
-	"zoj/internal/dto"
 	"zoj/internal/infra/mq"
 	"zoj/internal/model"
 	"zoj/internal/repository"
-	"zoj/pkg/judge"
+	judgeapi "zoj/pkg/judge"
 	"zoj/pkg/remoteoj"
 	"zoj/pkg/util"
 
@@ -175,7 +174,7 @@ func (w *Worker) pollPending(ctx context.Context, pending []*pendingRemote) []*p
 			continue
 		}
 
-		if v.Status == judge.Pending {
+		if v.Status == judgeapi.Pending {
 			if p.polls >= remoteMaxPolls {
 				log.Warnw("remote judge timeout")
 				p.persisted, _ = w.failRemote(ctx, &p.sub, log)
@@ -231,7 +230,7 @@ func (w *Worker) completeRemote(ctx context.Context, s *model.Submission, v *rem
 		if s.ContestID != 0 {
 			fullScore = w.contestProblemFullScore(s.ContestID, s.ProblemID)
 		}
-		if v.Status == judge.Accepted {
+		if v.Status == judgeapi.Accepted {
 			s.Score = fullScore
 		} else {
 			s.Score = 0
@@ -258,7 +257,7 @@ func (w *Worker) completeRemote(ctx context.Context, s *model.Submission, v *rem
 
 // failRemote 远程提交/判题失败：标未知错误，落库并推送，避免前端一直转圈
 func (w *Worker) failRemote(ctx context.Context, s *model.Submission, log *zap.SugaredLogger) (bool, error) {
-	s.Status = judge.UnknownError
+	s.Status = judgeapi.UnknownError
 	s.TimeUsed = 0
 	s.MemoryUsed = 0
 	if err := w.saveResultGuarded(ctx, s, dlqStageFinalSave, log); err != nil {
@@ -274,7 +273,7 @@ func (w *Worker) failRemote(ctx context.Context, s *model.Submission, log *zap.S
 // publishRemoteDone 发送评测完成事件(远程题没有逐点结果，caseResults 为空)
 func (w *Worker) publishRemoteDone(s *model.Submission, log *zap.SugaredLogger) {
 	mp := map[string]any{
-		"submission": dto.SubmissionEventInfo{
+		"submission": SubmissionEventInfo{
 			ID:         s.PublicID,
 			Language:   s.Language,
 			Status:     s.Status,
@@ -282,7 +281,7 @@ func (w *Worker) publishRemoteDone(s *model.Submission, log *zap.SugaredLogger) 
 			MemoryUsed: s.MemoryUsed,
 			CreatedAt:  s.CreatedAt.Format("2006-01-02 15:04:05"),
 		},
-		"caseResults": []dto.SubmissionCaseResult{},
+		"caseResults": []SubmissionCaseResult{},
 	}
 	data, err := json.Marshal(mp)
 	if err != nil {

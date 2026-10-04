@@ -1,4 +1,4 @@
-package judgeworker
+package judge
 
 import (
 	"context"
@@ -11,13 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
 	"zoj/internal/infra/logger"
 	"zoj/internal/infra/mq"
 	"zoj/internal/model"
 	"zoj/internal/repository"
-	"zoj/pkg/judge"
+	judgeapi "zoj/pkg/judge"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -52,7 +51,7 @@ type TestCase struct {
 // Worker 判题机：dispatcher 单线程拉 Redis，N 个 worker 并发处理
 type Worker struct {
 	db          *gorm.DB
-	judgePool   *judge.Pool
+	judgePool   *judgeapi.Pool
 	subRepo     *repository.SubmissionRepo
 	problemRepo *repository.ProblemRepo
 	contestRepo *repository.ContestRepo
@@ -76,7 +75,7 @@ type Repositories struct {
 
 // NewWorker concurrency<=0 时回退默认值。mq / cache 由调用方（判题进程入口）注入。
 // pool 为判题机负载均衡池（一台或多台 go-judge）。
-func NewWorker(db *gorm.DB, pool *judge.Pool, repos Repositories, concurrency int, m *mq.MQ, c *cache.Cache) *Worker {
+func NewWorker(db *gorm.DB, pool *judgeapi.Pool, repos Repositories, concurrency int, m *mq.MQ, c *cache.Cache) *Worker {
 	if concurrency <= 0 {
 		concurrency = DefaultConcurrency
 	}
@@ -314,7 +313,7 @@ func (w *Worker) processSubmission(
 	problem, err := w.problemRepo.GetByID(ctx, s.ProblemID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			s.Status = judge.UnknownError
+			s.Status = judgeapi.UnknownError
 			s.TimeUsed = 0
 			s.MemoryUsed = 0
 			s.Score = 0
@@ -336,7 +335,7 @@ func (w *Worker) processSubmission(
 	lim := w.loadLimits(s.ProblemID, log)
 	cases, err := w.loadCases(s.ProblemID)
 	if err != nil {
-		s.Status = judge.UnknownError
+		s.Status = judgeapi.UnknownError
 		s.TimeUsed = 0
 		s.MemoryUsed = 0
 		s.Score = 0
@@ -354,7 +353,7 @@ func (w *Worker) processSubmission(
 	// 从池子挑一台判题机；一次提交的编译/运行/删除都用这一台（编译产物在它上面）
 	client := w.judgePool.Next()
 	if client == nil {
-		s.Status = judge.UnknownError
+		s.Status = judgeapi.UnknownError
 		if err := w.saveResultGuarded(ctx, &s, dlqStageCompileSave, log); err != nil && !errors.Is(err, errSubmissionSuperseded) {
 			return taskProcessDeferred, err
 		}
@@ -364,7 +363,7 @@ func (w *Worker) processSubmission(
 
 	artifact, err := client.Compile(s.Language, s.Code)
 	// 编译时若该机不可达（网络层），标记下线并换一台重试一次；用户代码编译失败不算不可达
-	if err != nil && judge.IsUnavailable(err) {
+	if err != nil && judgeapi.IsUnavailable(err) {
 		log.Warnw("judge unavailable on compile, failover", "url", err)
 		w.judgePool.MarkDown(client)
 		if next := w.judgePool.Next(); next != nil {
@@ -373,11 +372,11 @@ func (w *Worker) processSubmission(
 		}
 	}
 	if err != nil {
-		s.Status = judge.CompileError
+		s.Status = judgeapi.CompileError
 		s.TimeUsed = 0
 		s.MemoryUsed = 0
 		s.Score = 0
-		s.CompileOutput = judge.CompilationOutput(err)
+		s.CompileOutput = judgeapi.CompilationOutput(err)
 		if saveErr := w.saveResultGuarded(ctx, &s, dlqStageCompileSave, log); saveErr != nil && !errors.Is(saveErr, errSubmissionSuperseded) {
 			return taskProcessDeferred, saveErr
 		}
@@ -446,8 +445,8 @@ func (w *Worker) saveResultGuarded(ctx context.Context, s *model.Submission, sta
 }
 
 // loadLimits 读题目限制；失败回退默认
-func (w *Worker) loadLimits(problemID int64, log *zap.SugaredLogger) judge.Limits {
-	lim := judge.Limits{TimeMs: 1000, MemoryMB: 128}
+func (w *Worker) loadLimits(problemID int64, log *zap.SugaredLogger) judgeapi.Limits {
+	lim := judgeapi.Limits{TimeMs: 1000, MemoryMB: 128}
 	problem, err := w.problemRepo.GetByID(context.Background(), problemID)
 	if err != nil {
 		log.Warnw("get problem limits failed, fallback to defaults", "err", err)
@@ -514,10 +513,10 @@ type runCasesResult struct {
 func (w *Worker) runAllCases(
 	ctx context.Context,
 	s *model.Submission,
-	client *judge.Client,
-	artifact *judge.Artifact,
+	client *judgeapi.Client,
+	artifact *judgeapi.Artifact,
 	cases []TestCase,
-	lim judge.Limits,
+	lim judgeapi.Limits,
 	log *zap.SugaredLogger,
 ) (runCasesResult, error) {
 	if len(cases) == 0 {
@@ -525,23 +524,23 @@ func (w *Worker) runAllCases(
 	}
 
 	results := make([]*model.JudgeResult, 0, len(cases))
-	caseResultDto := make([]dto.SubmissionCaseResult, 0, len(cases))
+	caseResultDto := make([]SubmissionCaseResult, 0, len(cases))
 
-	subDto := dto.SubmissionEventInfo{
+	subDto := SubmissionEventInfo{
 		ID:        s.PublicID,
 		Language:  s.Language,
-		Status:    judge.Accepted,
+		Status:    judgeapi.Accepted,
 		CreatedAt: s.CreatedAt.Format("2006-01-02 15:04:05"),
 	}
 	mp := map[string]any{"submission": subDto}
 
-	finalStatus := judge.Accepted
+	finalStatus := judgeapi.Accepted
 
 	for index, tc := range cases {
 		verdict, err := client.Run(artifact, tc.Input, lim)
 		if err != nil {
 			log.Errorw("judge run failed", "caseID", tc.ID, "err", err)
-			s.Status = judge.UnknownError
+			s.Status = judgeapi.UnknownError
 			s.TimeUsed = 0
 			s.MemoryUsed = 0
 			s.Score = 0
@@ -554,7 +553,7 @@ func (w *Worker) runAllCases(
 
 		// 沙箱跑干净(Accepted)时，用清单哈希判 AC/PE/WA；TLE/MLE/RE 等运行态直接沿用
 		status := verdict.Status
-		if status == judge.Accepted {
+		if status == judgeapi.Accepted {
 			status = judgeOutput(verdict.Stdout, tc.StrippedMd5, tc.AllStrippedMd5)
 		}
 
@@ -565,7 +564,7 @@ func (w *Worker) runAllCases(
 			"memoryBytes", verdict.MemoryByte,
 		)
 
-		if status != judge.Accepted && finalStatus == judge.Accepted {
+		if status != judgeapi.Accepted && finalStatus == judgeapi.Accepted {
 			finalStatus = status
 		}
 
@@ -576,7 +575,7 @@ func (w *Worker) runAllCases(
 			TimeUsed:     verdict.TimeNs,
 			MemoryUsed:   verdict.MemoryByte,
 		}
-		caseResultDto = append(caseResultDto, dto.SubmissionCaseResult{
+		caseResultDto = append(caseResultDto, SubmissionCaseResult{
 			ID:         index + 1,
 			Status:     jr.Status,
 			TimeUsed:   jr.TimeUsed / 1_000_000,
@@ -631,9 +630,9 @@ func (w *Worker) finalizeSubmission(
 		return false, nil
 	}
 
-	caseDtos := make([]dto.SubmissionCaseResult, 0, len(results))
+	caseDtos := make([]SubmissionCaseResult, 0, len(results))
 	for i, cr := range results {
-		caseDtos = append(caseDtos, dto.SubmissionCaseResult{
+		caseDtos = append(caseDtos, SubmissionCaseResult{
 			ID:         i + 1,
 			Status:     cr.Status,
 			TimeUsed:   cr.TimeUsed / 1_000_000,
@@ -641,7 +640,7 @@ func (w *Worker) finalizeSubmission(
 		})
 	}
 	mp := map[string]any{
-		"submission": dto.SubmissionEventInfo{
+		"submission": SubmissionEventInfo{
 			ID:         s.PublicID,
 			Language:   s.Language,
 			Status:     s.Status,
@@ -667,7 +666,7 @@ func (w *Worker) finalizeSubmission(
 // 不再用 ++ 累加 —— 那样重判会重复计数；改为按当前所有有效提交现算。
 func (w *Worker) updateUserProblem(s model.Submission, log *zap.SugaredLogger) {
 	// AC 可能改变全站排名 → 换代使用户榜所有分页缓存失效
-	if s.Status == judge.Accepted {
+	if s.Status == judgeapi.Accepted {
 		defer w.cache.Incr(context.Background(), cache.UserRankGen())
 	}
 
@@ -686,12 +685,12 @@ func (w *Worker) updateUserProblem(s model.Submission, log *zap.SugaredLogger) {
 		SubmitCount: len(subs),
 	}
 	for _, r := range subs {
-		if r.Status == judge.Accepted {
+		if r.Status == judgeapi.Accepted {
 			up.AcCount++
 		}
 	}
 	if up.AcCount > 0 {
-		up.Status = judge.Accepted
+		up.Status = judgeapi.Accepted
 	} else {
 		up.Status = subs[0].Status
 	}
@@ -710,7 +709,7 @@ func caseAverageScore(results []*model.JudgeResult, full int) int {
 	}
 	passed := 0
 	for _, r := range results {
-		if r.Status == judge.Accepted {
+		if r.Status == judgeapi.Accepted {
 			passed++
 		}
 	}
@@ -766,7 +765,7 @@ func (w *Worker) updateScoreContestStats(s model.Submission, contest model.Conte
 				SubCount:  1,
 				AcTime:    &submittedAt,
 			}
-			if s.Status == judge.Accepted {
+			if s.Status == judgeapi.Accepted {
 				ucp.AcCount = 1
 			} else {
 				ucp.UnAcCount = 1
@@ -779,7 +778,7 @@ func (w *Worker) updateScoreContestStats(s model.Submission, contest model.Conte
 
 		ucp.SubCount++
 		ucp.Status = s.Status
-		if s.Status == judge.Accepted {
+		if s.Status == judgeapi.Accepted {
 			ucp.AcCount++
 		} else {
 			ucp.UnAcCount++
@@ -816,7 +815,7 @@ func (w *Worker) updateContestStats(s model.Submission, log *zap.SugaredLogger) 
 	// OI/IOI 走得分榜：本次得分已在 processSubmission 落到 s.Score，这里维护 UserContestProblem.Score
 	if contest, err := w.contestRepo.GetContestByID(context.Background(), s.ContestID); err == nil &&
 		(contest.Type == model.ContestOI || contest.Type == model.ContestIOI) {
-		if s.Status == judge.CompileError {
+		if s.Status == judgeapi.CompileError {
 			return
 		}
 		w.updateScoreContestStats(s, *contest, log)
@@ -843,11 +842,11 @@ func (w *Worker) updateContestStats(s model.Submission, log *zap.SugaredLogger) 
 				ProblemID: s.ProblemID,
 				Status:    s.Status,
 			}
-			if s.Status == judge.Accepted {
+			if s.Status == judgeapi.Accepted {
 				ucp.AcCount = 1
 				ucp.AcTime = &submittedAt
 				isNewAccepted = true
-			} else if s.Status != judge.CompileError {
+			} else if s.Status != judgeapi.CompileError {
 				ucp.UnAcCount = 1 // CE 不计入错误提交（对齐 CF/ICPC 惯例）
 			}
 			// 唯一索引兜底：并发下若另一 worker 抢先插入，这里会撞唯一键报错，
@@ -859,14 +858,14 @@ func (w *Worker) updateContestStats(s model.Submission, log *zap.SugaredLogger) 
 		}
 
 		// 已有行且已加锁，安全地读-改-写
-		if s.Status == judge.Accepted && ucp.Status != judge.Accepted {
-			ucp.Status = judge.Accepted
+		if s.Status == judgeapi.Accepted && ucp.Status != judgeapi.Accepted {
+			ucp.Status = judgeapi.Accepted
 			ucp.AcCount = 1
 			ucp.AcTime = &submittedAt
 			isNewAccepted = true
-		} else if s.Status != judge.Accepted && ucp.Status != judge.Accepted {
+		} else if s.Status != judgeapi.Accepted && ucp.Status != judgeapi.Accepted {
 			ucp.Status = s.Status
-			if s.Status != judge.CompileError {
+			if s.Status != judgeapi.CompileError {
 				ucp.UnAcCount++ // CE 不计入错误提交
 			}
 		}
@@ -909,7 +908,7 @@ func (w *Worker) updateContestCache(s model.Submission, ucp model.UserContestPro
 		log.Warnw("cache user problem status failed", "err", err)
 	}
 
-	if s.Status != judge.Accepted {
+	if s.Status != judgeapi.Accepted {
 		return
 	}
 	if err := w.cache.SAdd(ctx, cache.ContestProblemAcceptedUsers(s.ContestID, s.ProblemID), s.UserID); err != nil {

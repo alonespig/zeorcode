@@ -14,10 +14,10 @@ import (
 	"zoj/internal/infra/logger"
 	"zoj/internal/infra/mq"
 	"zoj/internal/infra/redis"
-	"zoj/internal/judgeworker"
 	"zoj/internal/repository"
 	"zoj/internal/repository/outbox"
 	"zoj/internal/worker/dispatch"
+	judgeworker "zoj/internal/worker/judge"
 	"zoj/pkg/judge"
 
 	"github.com/spf13/cobra"

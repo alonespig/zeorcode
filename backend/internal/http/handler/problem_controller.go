@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"zoj/internal/dto"
-	"zoj/internal/judgeworker"
 	"zoj/internal/service"
+	"zoj/internal/worker/judge"
 	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
@@ -20,7 +20,7 @@ import (
 // regenTestInfo 在上传/改动测试数据后立即重建 info.json（测试点清单）。
 // 成功 → 清单即时就位，首次判题无需再算哈希；失败 → 删掉旧清单，交由判题时懒生成兜底（避免留下过期哈希）。
 func regenTestInfo(dir string) {
-	if err := judgeworker.GenerateInfo(dir); err != nil {
+	if err := judge.GenerateInfo(dir); err != nil {
 		_ = os.Remove(filepath.Join(dir, "info.json"))
 	}
 }

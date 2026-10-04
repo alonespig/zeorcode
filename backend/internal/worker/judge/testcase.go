@@ -1,4 +1,4 @@
-package judgeworker
+package judge
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"zoj/pkg/judge"
+	judgeapi "zoj/pkg/judge"
 	"zoj/pkg/util"
 )
 
@@ -56,12 +56,12 @@ func stripAllSpace(s string) string {
 // judgeOutput 用清单哈希判定用户输出：AC / PE / WA
 func judgeOutput(stdout, strippedMd5, allStrippedMd5 string) int {
 	if util.MD5(rtrimOutput(stdout)) == strippedMd5 {
-		return judge.Accepted
+		return judgeapi.Accepted
 	}
 	if util.MD5(stripAllSpace(stdout)) == allStrippedMd5 {
-		return judge.PresentationError
+		return judgeapi.PresentationError
 	}
-	return judge.WrongAnswer
+	return judgeapi.WrongAnswer
 }
 
 // generateInfo scans basename-matched .in/.out pairs, calculates hashes, and

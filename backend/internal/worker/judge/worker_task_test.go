@@ -1,4 +1,4 @@
-package judgeworker
+package judge
 
 import (
 	"context"

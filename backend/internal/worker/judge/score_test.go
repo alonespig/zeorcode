@@ -1,10 +1,10 @@
-package judgeworker
+package judge
 
 import (
 	"testing"
 
 	"zoj/internal/model"
-	"zoj/pkg/judge"
+	judgeapi "zoj/pkg/judge"
 )
 
 func results(statuses ...int) []*model.JudgeResult {
@@ -24,37 +24,37 @@ func TestCaseAverageScore(t *testing.T) {
 	}{
 		{
 			name:    "全部通过给满分",
-			results: results(judge.Accepted, judge.Accepted, judge.Accepted),
+			results: results(judgeapi.Accepted, judgeapi.Accepted, judgeapi.Accepted),
 			full:    100,
 			want:    100,
 		},
 		{
 			name:    "全错给0",
-			results: results(judge.WrongAnswer, judge.WrongAnswer),
+			results: results(judgeapi.WrongAnswer, judgeapi.WrongAnswer),
 			full:    100,
 			want:    0,
 		},
 		{
 			name:    "过半数按比例给部分分",
-			results: results(judge.Accepted, judge.Accepted, judge.WrongAnswer, judge.WrongAnswer),
+			results: results(judgeapi.Accepted, judgeapi.Accepted, judgeapi.WrongAnswer, judgeapi.WrongAnswer),
 			full:    100,
 			want:    50,
 		},
 		{
 			name:    "非整除四舍五入",
-			results: results(judge.Accepted, judge.WrongAnswer, judge.WrongAnswer),
+			results: results(judgeapi.Accepted, judgeapi.WrongAnswer, judgeapi.WrongAnswer),
 			full:    100,
 			want:    33, // 1/3*100 = 33.33 -> 33
 		},
 		{
 			name:    "TLE/RE 等非 AC 一律不计通过",
-			results: results(judge.Accepted, judge.TimeLimitExceeded, judge.RuntimeError),
+			results: results(judgeapi.Accepted, judgeapi.TimeLimitExceeded, judgeapi.RuntimeError),
 			full:    100,
 			want:    33,
 		},
 		{
 			name:    "尊重比赛自定义满分",
-			results: results(judge.Accepted, judge.WrongAnswer),
+			results: results(judgeapi.Accepted, judgeapi.WrongAnswer),
 			full:    500,
 			want:    250,
 		},
@@ -66,7 +66,7 @@ func TestCaseAverageScore(t *testing.T) {
 		},
 		{
 			name:    "满分非正给0",
-			results: results(judge.Accepted),
+			results: results(judgeapi.Accepted),
 			full:    0,
 			want:    0,
 		},
@@ -85,7 +85,7 @@ func TestCaseAverageScore(t *testing.T) {
 // 改动前 Score 只在 ContestID != 0 时计算，作业提交分数会恒为 0。
 func TestSubmissionScoreRouting(t *testing.T) {
 	w := &Worker{}
-	half := results(judge.Accepted, judge.WrongAnswer)
+	half := results(judgeapi.Accepted, judgeapi.WrongAnswer)
 
 	t.Run("作业提交按满分100算部分分", func(t *testing.T) {
 		s := &model.Submission{HomeworkID: 7}
