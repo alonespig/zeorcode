@@ -1,7 +1,7 @@
 package service
 
 import (
-	"zoj/internal/common/errcode"
+	"zoj/pkg/errcode"
 	"zoj/internal/model"
 )
 

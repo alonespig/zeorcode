@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"zoj/internal/common/errcode"
+	"zoj/pkg/errcode"
 
 	goredis "github.com/redis/go-redis/v9"
 )

@@ -9,14 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"zoj/internal/common/consts"
-	"zoj/internal/common/errcode"
-	"zoj/internal/common/logger"
 	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
+	"zoj/internal/infra/logger"
 	"zoj/internal/infra/mq"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 	"zoj/pkg/judge"
 	"zoj/pkg/rating"
 	"zoj/pkg/scoring"
@@ -73,7 +72,7 @@ func (s *ContestService) CreateContest(ctx context.Context, req *dto.CreateConte
 		Name:        req.Name,
 		Description: req.Description,
 		CoverURL:    strings.TrimSpace(req.CoverURL),
-		Type:        consts.ContestType(req.Type),
+		Type:        model.ContestType(req.Type),
 		StartTime:   startTime,
 		EndTime:     startTime.Add(time.Duration(req.Duration) * time.Minute), // Duration 单位为分钟
 		Duration:    req.Duration,
@@ -146,14 +145,14 @@ func (s *ContestService) UpdateContest(ctx context.Context, id int64,
 
 	// 比赛一旦开始，赛制不可再改（ACM/OI/IOI/CF 计分逻辑不同，改了会让已判成绩/榜单错乱）
 	started := time.Now().After(contest.StartTime)
-	if started && consts.ContestType(form.Type) != contest.Type {
+	if started && model.ContestType(form.Type) != contest.Type {
 		return nil, errcode.ErrInvalidParams.WithMsg("比赛已开始，不能修改赛制")
 	}
 
 	contest.Name = form.Name
 	contest.Description = form.Description
 	contest.CoverURL = strings.TrimSpace(form.CoverURL)
-	contest.Type = consts.ContestType(form.Type)
+	contest.Type = model.ContestType(form.Type)
 	contest.StartTime = start
 	contest.EndTime = end
 	contest.Duration = int(end.Sub(start).Minutes())
@@ -169,15 +168,15 @@ func (s *ContestService) UpdateContest(ctx context.Context, id int64,
 	return &dto.CreateContestResp{ID: contest.PublicID}, nil
 }
 
-func contestStatus(c model.Contest) consts.ContestStatus {
+func contestStatus(c model.Contest) model.ContestStatus {
 	now := time.Now()
 	if now.Before(c.StartTime) {
-		return consts.ContestNotStarted
+		return model.ContestNotStarted
 	}
 	if now.Before(contestEndTime(c)) {
-		return consts.ContestRunning
+		return model.ContestRunning
 	}
-	return consts.ContestFinished
+	return model.ContestFinished
 }
 
 func contestEndTime(contest model.Contest) time.Time {
@@ -1008,7 +1007,7 @@ func settleContestRating(ctx context.Context, tx *gorm.DB, c *model.Contest) ([]
 //   - IOI：取历史最高 Score 及其达成时间；Status 取最后一次。
 //
 // subs 不能为空。
-func buildContestUCP(contestType consts.ContestType, contestID, userID, problemID int64, subs []repository.RecomputeSubmissionRow) model.UserContestProblem {
+func buildContestUCP(contestType model.ContestType, contestID, userID, problemID int64, subs []repository.RecomputeSubmissionRow) model.UserContestProblem {
 	ucp := model.UserContestProblem{
 		ContestID: contestID,
 		UserID:    userID,
@@ -1016,7 +1015,7 @@ func buildContestUCP(contestType consts.ContestType, contestID, userID, problemI
 		SubCount:  len(subs),
 	}
 	switch contestType {
-	case consts.ContestOI:
+	case model.ContestOI:
 		for _, r := range subs {
 			if r.Status == judge.Accepted {
 				ucp.AcCount++
@@ -1029,7 +1028,7 @@ func buildContestUCP(contestType consts.ContestType, contestID, userID, problemI
 		ucp.Score = last.Score
 		t := last.CreatedAt
 		ucp.AcTime = &t
-	case consts.ContestIOI:
+	case model.ContestIOI:
 		maxScore := -1
 		var maxTime time.Time
 		for _, r := range subs {
@@ -1181,8 +1180,8 @@ func (s *ContestService) contestStandings(ctx context.Context, contest *model.Co
 	for _, r := range records {
 		byUser[r.UserID] = append(byUser[r.UserID], r)
 	}
-	acm := contest.Type != consts.ContestOI && contest.Type != consts.ContestIOI && contest.Type != consts.ContestCF
-	isCF := contest.Type == consts.ContestCF
+	acm := contest.Type != model.ContestOI && contest.Type != model.ContestIOI && contest.Type != model.ContestCF
+	isCF := contest.Type == model.ContestCF
 	cfDur := int(contestEndTime(*contest).Sub(contest.StartTime).Minutes())
 	cpScore := map[int64]int{} // CF：题目初始分 x
 	if isCF {
@@ -1349,7 +1348,7 @@ func (s *ContestService) GetContestRank(ctx context.Context, contestID, userID i
 		})
 	}
 
-	if contest.Type != consts.ContestOI && contest.Type != consts.ContestIOI && contest.Type != consts.ContestCF {
+	if contest.Type != model.ContestOI && contest.Type != model.ContestIOI && contest.Type != model.ContestCF {
 		// ===== ACM（含未知/历史 type）：通过数 + 罚时 =====
 		for _, user := range contestUsers {
 			u := userMap[user.UserID]
@@ -1403,9 +1402,9 @@ func (s *ContestService) GetContestRank(ctx context.Context, contestID, userID i
 	} else {
 		// ===== OI / IOI：每题得分 + 总分（IOI 取最高分、OI 取最后一次，已在判题时落库）=====
 		// OI 赛中封榜：只列参赛者、不公布分数，结束后再放开
-		frozen := contest.Type == consts.ContestOI && contestStatus(*contest) == consts.ContestRunning
+		frozen := contest.Type == model.ContestOI && contestStatus(*contest) == model.ContestRunning
 		resp.Contest.Frozen = frozen
-		isCF := contest.Type == consts.ContestCF
+		isCF := contest.Type == model.ContestCF
 		cfDur := int(contestEndTime(*contest).Sub(contest.StartTime).Minutes()) // CF 动态分用的赛长（分钟）
 
 		type scoreRow struct {

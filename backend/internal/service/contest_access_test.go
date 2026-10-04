@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"zoj/internal/common/errcode"
+	"zoj/pkg/errcode"
 	"zoj/internal/model"
 )
 

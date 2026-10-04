@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"zoj/internal/common/errcode"
+	"zoj/pkg/errcode"
 	"zoj/internal/model"
 	"zoj/internal/repository"
 )

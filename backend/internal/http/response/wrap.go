@@ -3,8 +3,8 @@ package response
 import (
 	"errors"
 
-	"zoj/internal/common/errcode"
-	"zoj/internal/common/logger"
+	"zoj/pkg/errcode"
+	"zoj/internal/infra/logger"
 
 	"github.com/gin-gonic/gin"
 )

@@ -2,7 +2,7 @@ package dto
 
 import (
 	"time"
-	"zoj/internal/common/consts"
+	"zoj/internal/model"
 )
 
 type CreateContestReq struct {
@@ -64,19 +64,19 @@ type ContestListReq struct {
 	PageSize int `form:"page_size"`
 }
 type ContestItem struct {
-	ID             int64                `json:"id"`
-	Name           string               `json:"name"`
-	Description    string               `json:"description"`
-	CoverURL       string               `json:"coverUrl"` // 封面图 URL（空则前端回退默认图）
-	StartTime      time.Time            `json:"startTime"`
-	EndTime        time.Time            `json:"endTime"`
-	Type           string               `json:"type"`
-	Status         consts.ContestStatus `json:"status"`
-	IsRegistered   bool                 `json:"isRegistered"`
-	Rated          bool                 `json:"rated"`
-	NeedInviteCode bool                 `json:"needInviteCode"` // 是否需要邀请码（不返回真实 code）
-	Duration       int                  `json:"duration"`
-	Participants   int                  `json:"participants"`
+	ID             int64               `json:"id"`
+	Name           string              `json:"name"`
+	Description    string              `json:"description"`
+	CoverURL       string              `json:"coverUrl"` // 封面图 URL（空则前端回退默认图）
+	StartTime      time.Time           `json:"startTime"`
+	EndTime        time.Time           `json:"endTime"`
+	Type           string              `json:"type"`
+	Status         model.ContestStatus `json:"status"`
+	IsRegistered   bool                `json:"isRegistered"`
+	Rated          bool                `json:"rated"`
+	NeedInviteCode bool                `json:"needInviteCode"` // 是否需要邀请码（不返回真实 code）
+	Duration       int                 `json:"duration"`
+	Participants   int                 `json:"participants"`
 }
 
 // ContestListForm 比赛列表查询：分页 + 搜索/筛选

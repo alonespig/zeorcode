@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"zoj/internal/common/consts"
 	"zoj/internal/model"
 	"zoj/internal/repository"
 	"zoj/pkg/judge"
@@ -65,7 +64,7 @@ func newRatingTestDB(t *testing.T) *gorm.DB {
 func seedRatingContest(t *testing.T, db *gorm.DB, status int) (model.Contest, []model.Submission) {
 	t.Helper()
 	end := time.Now().Add(-2 * time.Minute)
-	contest := model.Contest{PublicID: 100, Type: consts.ContestACM, Rated: true,
+	contest := model.Contest{PublicID: 100, Type: model.ContestACM, Rated: true,
 		StartTime: end.Add(-time.Hour), EndTime: end}
 	if err := db.Create(&contest).Error; err != nil {
 		t.Fatal(err)

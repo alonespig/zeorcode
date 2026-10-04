@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"zoj/internal/common/errcode"
-	"zoj/internal/common/response"
+	"zoj/pkg/errcode"
+	"zoj/internal/http/response"
 	"zoj/internal/infra/session"
 
 	"github.com/gin-gonic/gin"

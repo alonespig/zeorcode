@@ -2,8 +2,8 @@ package main
 
 import (
 	"zoj/cmd"
-	"zoj/internal/common/config"
-	"zoj/internal/common/logger"
+	"zoj/internal/config"
+	"zoj/internal/infra/logger"
 
 	_ "zoj/pkg/remoteoj/all" // 触发各远程 OJ 实现自注册
 )

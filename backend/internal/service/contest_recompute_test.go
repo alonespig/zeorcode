@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"zoj/internal/common/consts"
+	"zoj/internal/model"
 	"zoj/internal/repository"
 	"zoj/pkg/judge"
 )
@@ -43,7 +43,7 @@ func TestBuildContestUCP_ACM(t_ *testing.T) {
 		row(judge.Accepted, 100, 20),
 		row(judge.WrongAnswer, 0, 30),
 	}
-	ucp := buildContestUCP(consts.ContestACM, 9, 1, 2, subs)
+	ucp := buildContestUCP(model.ContestACM, 9, 1, 2, subs)
 	if ucp.Status != judge.Accepted {
 		t_.Fatalf("status: want Accepted, got %d", ucp.Status)
 	}
@@ -60,7 +60,7 @@ func TestBuildContestUCP_ACM_NeverAC(t_ *testing.T) {
 		row(judge.WrongAnswer, 0, 0),
 		row(judge.TimeLimitExceeded, 0, 10),
 	}
-	ucp := buildContestUCP(consts.ContestACM, 9, 1, 2, subs)
+	ucp := buildContestUCP(model.ContestACM, 9, 1, 2, subs)
 	if ucp.Status != judge.TimeLimitExceeded {
 		t_.Fatalf("status: want last=TLE, got %d", ucp.Status)
 	}
@@ -76,7 +76,7 @@ func TestBuildContestUCP_OI_LastScore(t_ *testing.T) {
 		row(judge.WrongAnswer, 80, 10),
 		row(judge.WrongAnswer, 20, 20),
 	}
-	ucp := buildContestUCP(consts.ContestOI, 9, 1, 2, subs)
+	ucp := buildContestUCP(model.ContestOI, 9, 1, 2, subs)
 	if ucp.Score != 20 {
 		t_.Fatalf("OI score: want last=20, got %d", ucp.Score)
 	}
@@ -95,7 +95,7 @@ func TestBuildContestUCP_IOI_MaxScore(t_ *testing.T) {
 		row(judge.WrongAnswer, 80, 10),
 		row(judge.WrongAnswer, 50, 20),
 	}
-	ucp := buildContestUCP(consts.ContestIOI, 9, 1, 2, subs)
+	ucp := buildContestUCP(model.ContestIOI, 9, 1, 2, subs)
 	if ucp.Score != 80 {
 		t_.Fatalf("IOI score: want max=80, got %d", ucp.Score)
 	}

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"zoj/internal/bootstrap"
-	"zoj/internal/common/logger"
+	"zoj/internal/infra/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"

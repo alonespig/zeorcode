@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	"zoj/internal/common/errcode"
-	"zoj/internal/common/publicid"
+	"zoj/pkg/errcode"
+	"zoj/pkg/publicid"
 )
 
 const publicIDGenerateAttempts = 16

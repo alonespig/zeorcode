@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"zoj/internal/common/errcode"
+	"zoj/pkg/errcode"
 	"zoj/internal/model"
 )
 

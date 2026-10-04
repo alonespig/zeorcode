@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"zoj/internal/common/errcode"
+	"zoj/pkg/errcode"
 	"zoj/internal/dto"
 	"zoj/internal/model"
 

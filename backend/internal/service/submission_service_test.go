@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"zoj/internal/common/errcode"
-	"zoj/internal/common/publicid"
+	"zoj/pkg/errcode"
+	"zoj/pkg/publicid"
 	"zoj/internal/dto"
 	"zoj/internal/model"
 	"zoj/internal/repository"

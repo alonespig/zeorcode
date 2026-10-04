@@ -11,10 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"zoj/internal/common/consts"
-	"zoj/internal/common/logger"
 	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
+	"zoj/internal/infra/logger"
 	"zoj/internal/infra/mq"
 	"zoj/internal/model"
 	"zoj/internal/repository"
@@ -785,7 +784,7 @@ func (w *Worker) updateScoreContestStats(s model.Submission, contest model.Conte
 		} else {
 			ucp.UnAcCount++
 		}
-		if contest.Type == consts.ContestIOI {
+		if contest.Type == model.ContestIOI {
 			// IOI：分数提高才更新（记录达成时间，用于同分排序）
 			if s.Score > ucp.Score {
 				ucp.Score = s.Score
@@ -816,7 +815,7 @@ func (w *Worker) updateContestStats(s model.Submission, log *zap.SugaredLogger) 
 
 	// OI/IOI 走得分榜：本次得分已在 processSubmission 落到 s.Score，这里维护 UserContestProblem.Score
 	if contest, err := w.contestRepo.GetContestByID(context.Background(), s.ContestID); err == nil &&
-		(contest.Type == consts.ContestOI || contest.Type == consts.ContestIOI) {
+		(contest.Type == model.ContestOI || contest.Type == model.ContestIOI) {
 		if s.Status == judge.CompileError {
 			return
 		}

@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"zoj/internal/common/errcode"
+	"zoj/pkg/errcode"
 	"zoj/internal/dto"
 	"zoj/internal/judgeworker"
 	"zoj/internal/service"

@@ -3,7 +3,7 @@ package router
 import (
 	"time"
 
-	"zoj/internal/common/response"
+	"zoj/internal/http/response"
 	"zoj/internal/handler"
 	"zoj/internal/infra/cache"
 	"zoj/internal/middleware"

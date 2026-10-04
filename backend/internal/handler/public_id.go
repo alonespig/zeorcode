@@ -3,8 +3,8 @@ package handler
 import (
 	"strconv"
 
-	"zoj/internal/common/errcode"
-	"zoj/internal/common/publicid"
+	"zoj/pkg/errcode"
+	"zoj/pkg/publicid"
 
 	"github.com/gin-gonic/gin"
 )

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"zoj/internal/common/errcode"
+	"zoj/pkg/errcode"
 	"zoj/pkg/util"
 
 	"github.com/gin-gonic/gin"

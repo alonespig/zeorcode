@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"zoj/internal/common/errcode"
-	"zoj/internal/common/logger"
+	"zoj/pkg/errcode"
+	"zoj/internal/infra/logger"
 	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
 	"zoj/internal/infra/mq"

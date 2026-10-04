@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"zoj/internal/common/errcode"
+	"zoj/pkg/errcode"
 	"zoj/internal/dto"
 	"zoj/internal/service"
 

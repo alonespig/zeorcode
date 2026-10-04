@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"zoj/internal/common/errcode"
+	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )

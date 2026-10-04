@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"zoj/internal/common/logger"
+	"zoj/internal/infra/logger"
 	"zoj/internal/infra/cache"
 	"zoj/internal/infra/conn"
 	"zoj/internal/infra/mq"

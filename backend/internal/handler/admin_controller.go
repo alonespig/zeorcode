@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"zoj/internal/common/errcode"
-	"zoj/internal/common/response"
+	"zoj/pkg/errcode"
+	"zoj/internal/http/response"
 	"zoj/internal/dto"
 	"zoj/internal/service"
 	"zoj/pkg/judge"

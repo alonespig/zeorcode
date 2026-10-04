@@ -1,9 +1,53 @@
 package model
 
-import (
-	"time"
-	"zoj/internal/common/consts"
+import "time"
+
+// ContestType 比赛模式
+type ContestType int
+
+const (
+	ContestACM ContestType = 1
+	ContestOI  ContestType = 2
+	ContestIOI ContestType = 3
+	ContestCF  ContestType = 4 // Codeforces 动态分：分值随时间衰减 + 错交扣分 + 全过才得分
 )
+
+func (t ContestType) String() string {
+	switch t {
+	case ContestACM:
+		return "ACM"
+	case ContestOI:
+		return "OI"
+	case ContestIOI:
+		return "IOI"
+	case ContestCF:
+		return "CF"
+	default:
+		return ""
+	}
+}
+
+// ContestStatus 比赛状态
+type ContestStatus int
+
+const (
+	ContestNotStarted ContestStatus = 0 // 未开始
+	ContestRunning    ContestStatus = 1 // 进行中
+	ContestFinished   ContestStatus = 2 // 已结束
+)
+
+func (s ContestStatus) String() string {
+	switch s {
+	case ContestNotStarted:
+		return "未开始"
+	case ContestRunning:
+		return "进行中"
+	case ContestFinished:
+		return "已结束"
+	default:
+		return ""
+	}
+}
 
 type Contest struct {
 	ID          int64 `gorm:"primaryKey"`
@@ -12,7 +56,7 @@ type Contest struct {
 	Description string
 	// 封面图 URL：空字符串表示未设置，前端回退默认 ICPC 图
 	CoverURL  string `gorm:"column:cover_url;size:255;not null;default:''"`
-	Type      consts.ContestType
+	Type      ContestType
 	StartTime time.Time
 	EndTime   time.Time
 	Duration  int // 比赛时长，单位：分钟

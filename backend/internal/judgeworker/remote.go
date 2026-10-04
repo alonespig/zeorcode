@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"zoj/internal/common/logger"
+	"zoj/internal/infra/logger"
 	"zoj/internal/dto"
 	"zoj/internal/infra/mq"
 	"zoj/internal/model"

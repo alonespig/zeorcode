@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"zoj/internal/common/errcode"
-	"zoj/internal/common/response"
+	"zoj/pkg/errcode"
+	"zoj/internal/http/response"
 	"zoj/internal/infra/cache"
 
 	"github.com/gin-gonic/gin"

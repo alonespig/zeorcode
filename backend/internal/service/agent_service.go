@@ -13,8 +13,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"zoj/internal/common/errcode"
-	"zoj/internal/common/publicid"
+	"zoj/pkg/errcode"
+	"zoj/pkg/publicid"
 	"zoj/internal/dto"
 	"zoj/internal/infra/cache"
 	"zoj/internal/infra/llm"

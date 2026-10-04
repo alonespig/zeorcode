@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"time"
 
-	"zoj/internal/common/consts"
-	"zoj/internal/common/errcode"
 	"zoj/internal/dto"
+	"zoj/internal/model"
 	"zoj/internal/service"
+	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -236,8 +236,8 @@ func (c *ContestController) GetMyContestRank(ctx *gin.Context) (any, error) {
 }
 
 type MatchEvent struct {
-	Status consts.ContestStatus `json:"status"`
-	Now    int64                `json:"now"`
+	Status model.ContestStatus `json:"status"`
+	Now    int64               `json:"now"`
 }
 
 // SSEventStream SSE 长连接，无法套 Wrap
@@ -271,11 +271,11 @@ func (c *ContestController) SSEventStream(ctx *gin.Context) {
 			return
 		case now := <-ticker.C:
 			nowMs := now.UnixMilli()
-			status := consts.ContestFinished
+			status := model.ContestFinished
 			if nowMs < contest.StartTime {
-				status = consts.ContestNotStarted
+				status = model.ContestNotStarted
 			} else if nowMs < contest.EndTime {
-				status = consts.ContestRunning
+				status = model.ContestRunning
 			}
 			ctx.SSEvent("contest", MatchEvent{Status: status, Now: nowMs})
 			flusher.Flush()

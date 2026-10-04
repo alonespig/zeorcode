@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"zoj/internal/common/errcode"
+	"zoj/pkg/errcode"
 	"zoj/internal/infra/cache"
 	"zoj/internal/infra/mail"
 	"zoj/internal/repository"

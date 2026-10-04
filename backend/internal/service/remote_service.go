@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"zoj/internal/common/errcode"
-	"zoj/internal/common/logger"
+	"zoj/pkg/errcode"
+	"zoj/internal/infra/logger"
 	"zoj/internal/dto"
 	"zoj/internal/model"
 	"zoj/internal/repository"
