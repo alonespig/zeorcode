@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 	"zoj/internal/repository"
 	"zoj/pkg/errcode"
 	"zoj/pkg/judge"
-	"zoj/pkg/util"
 
 	"gorm.io/gorm"
 )
@@ -131,7 +131,7 @@ func (s *ContestService) GetContestSubmissions(ctx context.Context, contestID, u
 			Language:    sub.Language,
 			TimeUsed:    sub.TimeUsed,
 			MemoryUsed:  sub.MemoryUsed,
-			CreatedAt:   util.FormatDurationHHMMSS(sub.CreatedAt, contest.StartTime),
+			CreatedAt:   formatDurationHHMMSS(sub.CreatedAt, contest.StartTime),
 		})
 	}
 	return resp, nil
@@ -173,4 +173,22 @@ func (s *ContestService) RecomputeUserProblem(ctx context.Context, userID, probl
 	}
 	_, _ = s.cache.Incr(ctx, cache.UserRankGen())
 	return nil
+}
+
+// formatDurationHHMMSS 将两个时间差格式化为 hh:mm:ss（负时间差取绝对值）
+func formatDurationHHMMSS(t1, t2 time.Time) string {
+	d := t2.Sub(t1)
+
+	// 处理负数情况
+	if d < 0 {
+		d = -d
+	}
+
+	totalSeconds := int(d.Seconds())
+
+	hours := totalSeconds / 3600
+	minutes := (totalSeconds % 3600) / 60
+	seconds := totalSeconds % 60
+
+	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }

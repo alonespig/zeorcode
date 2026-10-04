@@ -15,7 +15,6 @@ import (
 	"zoj/internal/model"
 	"zoj/internal/repository"
 	"zoj/pkg/errcode"
-	"zoj/pkg/util"
 
 	"gorm.io/gorm"
 )
@@ -168,7 +167,7 @@ func (u *UserService) CreateUser(ctx context.Context, req CreateUserParams) erro
 		return err
 	}
 
-	hash, err := util.HashPassword(req.Password)
+	hash, err := hashPassword(req.Password)
 	if err != nil {
 		return err
 	}
@@ -200,7 +199,7 @@ func (u *UserService) ResetPassword(ctx context.Context, email, code, newPasswor
 	if err != nil {
 		return errcode.ErrUserNotFound.WithMsg("该邮箱未注册")
 	}
-	hash, err := util.HashPassword(newPassword)
+	hash, err := hashPassword(newPassword)
 	if err != nil {
 		return err
 	}
@@ -224,10 +223,10 @@ func (u *UserService) ChangePassword(ctx context.Context, userID int64, currentP
 	if err != nil {
 		return errcode.ErrUserNotFound
 	}
-	if !util.CheckPassword(currentPassword, user.Password) {
+	if !checkPassword(currentPassword, user.Password) {
 		return errcode.ErrWrongPassword.WithMsg("当前密码错误")
 	}
-	hash, err := util.HashPassword(newPassword)
+	hash, err := hashPassword(newPassword)
 	if err != nil {
 		return errcode.ErrInternal.Wrap(err)
 	}
@@ -549,7 +548,7 @@ func (u *UserService) Login(ctx context.Context, name, password string) (*LoginR
 	if err != nil {
 		return nil, "", errcode.ErrUserNotFound
 	}
-	if !util.CheckPassword(password, user.Password) {
+	if !checkPassword(password, user.Password) {
 		return nil, "", errcode.ErrWrongPassword
 	}
 	if user.Status == model.UserStatusBanned {
@@ -751,7 +750,7 @@ func (u *UserService) BatchCreateUsers(ctx context.Context, req *BatchCreateUser
 
 	users := make([]*model.User, 0, len(req.Users))
 	for _, item := range req.Users {
-		hash, err := util.HashPassword(item.Password)
+		hash, err := hashPassword(item.Password)
 		if err != nil {
 			return nil, errcode.ErrInternal.Wrap(err)
 		}

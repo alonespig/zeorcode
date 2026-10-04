@@ -12,7 +12,6 @@ import (
 	"zoj/internal/model"
 	"zoj/internal/repository"
 	"zoj/pkg/errcode"
-	"zoj/pkg/util"
 
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
@@ -375,7 +374,7 @@ func prepareNewStudentAccount(row *studentImportRow) error {
 	case !usernamePattern.MatchString(row.Username):
 		return importRowError(row.Line, "学号作为用户名时只能包含字母、数字和下划线，长度为 2-20 位")
 	}
-	hash, err := util.HashPassword(row.StudentNo)
+	hash, err := hashPassword(row.StudentNo)
 	if err != nil {
 		return errcode.ErrInternal.WithMsg(fmt.Sprintf("第 %d 行密码处理失败", row.Line)).Wrap(err)
 	}

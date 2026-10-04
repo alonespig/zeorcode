@@ -5,8 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"zoj/pkg/util"
-
 	"github.com/xuri/excelize/v2"
 )
 
@@ -172,7 +170,7 @@ func TestPrepareNewStudentAccountUsesStudentNumberAsPassword(t *testing.T) {
 	if err := prepareNewStudentAccount(row); err != nil {
 		t.Fatalf("prepareNewStudentAccount() error = %v", err)
 	}
-	if !util.CheckPassword(row.StudentNo, row.PasswordHash) {
+	if !checkPassword(row.StudentNo, row.PasswordHash) {
 		t.Fatal("password hash does not match student number")
 	}
 }
