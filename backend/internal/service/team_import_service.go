@@ -9,10 +9,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/dto"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 	"zoj/pkg/util"
 
 	"github.com/xuri/excelize/v2"
@@ -61,7 +60,7 @@ func (s *TeamService) ImportStudents(
 	teamID, actorID int64,
 	isSiteAdmin bool,
 	reader io.Reader,
-) (*dto.TeamStudentImportResp, error) {
+) (*StudentImportResult, error) {
 	if err := s.requireManageAccess(ctx, teamID, actorID, isSiteAdmin); err != nil {
 		return nil, err
 	}
@@ -78,7 +77,7 @@ func (s *TeamService) ImportStudentsManual(
 	teamID, actorID int64,
 	isSiteAdmin bool,
 	text string,
-) (*dto.TeamStudentImportResp, error) {
+) (*StudentImportResult, error) {
 	if err := s.requireManageAccess(ctx, teamID, actorID, isSiteAdmin); err != nil {
 		return nil, err
 	}
@@ -94,7 +93,7 @@ func (s *TeamService) importStudentRows(
 	teamID, actorID int64,
 	isSiteAdmin bool,
 	rows []studentImportRow,
-) (*dto.TeamStudentImportResp, error) {
+) (*StudentImportResult, error) {
 	// 密码哈希较耗时，先在事务外完成，避免长时间占用数据库连接和锁。
 	usernames := importUsernames(rows)
 	knownUsers, err := s.userRepo.FindByUsernames(ctx, usernames)
@@ -111,7 +110,7 @@ func (s *TeamService) importStudentRows(
 		}
 	}
 
-	result := &dto.TeamStudentImportResp{Total: len(rows)}
+	result := &StudentImportResult{Total: len(rows)}
 	err = s.repo.Transaction(ctx, func(tx *gorm.DB) error {
 		teamRepo := repository.NewTeamRepo(tx)
 		userRepo := repository.NewUserRepo(tx)

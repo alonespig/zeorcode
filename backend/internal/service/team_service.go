@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/dto"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 
 	"gorm.io/gorm"
 )
@@ -22,7 +22,87 @@ func NewTeamService(repo *repository.TeamRepo, userRepo *repository.UserRepo) *T
 	return &TeamService{repo: repo, userRepo: userRepo}
 }
 
-const teamTimeLayout = "2006-01-02 15:04:05"
+// ===== 查询 / 命令输入 =====
+
+// TeamListParams 团队列表查询。Mine=1 只返回我加入的，Visibility 不传时返回全部权限类型。
+type TeamListParams struct {
+	Page       int
+	PageSize   int
+	Keyword    string
+	Mine       int
+	Visibility *int
+}
+
+// SaveTeamParams 新建/编辑团队。
+type SaveTeamParams struct {
+	Name        string
+	CoverURL    string
+	Description string
+	Visibility  int
+	InviteCode  string
+}
+
+// ===== 结果 =====
+
+// TeamListItem 列表项。列表不返回简介，简介只在详情页展示。
+type TeamListItem struct {
+	ID          int64
+	Name        string
+	CoverURL    string
+	Visibility  int
+	MemberCount int
+	Owner       string
+	OwnerAvatar string
+	MyRole      *int
+	CreatedAt   time.Time
+}
+
+type TeamListResult struct {
+	Total int64
+	List  []TeamListItem
+}
+
+// TeamDetail 团队详情。
+type TeamDetail struct {
+	ID            int64
+	Name          string
+	CoverURL      string
+	Description   string
+	Visibility    int
+	MemberCount   int
+	HomeworkCount int
+	Owner         string
+	OwnerUID      int64
+	MyRole        *int
+	CanManage     bool
+	InviteCode    string
+	CreatedAt     time.Time
+}
+
+// TeamMemberItem 成员项。UID 是对外用户号，不暴露内部主键。
+type TeamMemberItem struct {
+	UID       int64
+	Username  string
+	StudentNo string
+	RealName  string
+	Gender    int
+	Avatar    string
+	Role      int
+	JoinedAt  time.Time
+}
+
+type TeamMemberListResult struct {
+	Total int
+	List  []TeamMemberItem
+}
+
+// StudentImportResult 学生名单导入结果。
+type StudentImportResult struct {
+	Total          int
+	CreatedUsers   int
+	AddedMembers   int
+	SkippedMembers int
+}
 
 // Access 取调用方在某团队中的权限视图。userID 为 0 表示未登录。
 func (s *TeamService) Access(ctx context.Context, teamID, userID int64, isSiteAdmin bool) (TeamAccess, error) {
@@ -43,20 +123,20 @@ func (s *TeamService) Access(ctx context.Context, teamID, userID int64, isSiteAd
 }
 
 // List 团队分页列表。未登录也能看（列表本身不含团队内部内容）。
-func (s *TeamService) List(ctx context.Context, form *dto.TeamListReq, userID int64) (*dto.TeamListResp, error) {
-	if form.Visibility != nil && *form.Visibility != model.TeamPublic && *form.Visibility != model.TeamInviteOnly {
+func (s *TeamService) List(ctx context.Context, params TeamListParams, userID int64) (*TeamListResult, error) {
+	if params.Visibility != nil && *params.Visibility != model.TeamPublic && *params.Visibility != model.TeamInviteOnly {
 		return nil, errcode.ErrInvalidParams.WithMsg("团队权限筛选值无效")
 	}
 	q := &repository.TeamQuery{
-		Page:       form.Page,
-		PageSize:   form.PageSize,
-		Keyword:    form.Keyword,
-		Visibility: form.Visibility,
+		Page:       params.Page,
+		PageSize:   params.PageSize,
+		Keyword:    params.Keyword,
+		Visibility: params.Visibility,
 	}
-	if form.Mine == 1 {
+	if params.Mine == 1 {
 		if userID == 0 {
 			// 未登录时「我加入的」必然为空，直接返回，不必查库
-			return &dto.TeamListResp{Total: 0, List: []dto.TeamItemResp{}}, nil
+			return &TeamListResult{Total: 0, List: []TeamListItem{}}, nil
 		}
 		q.MemberOf = userID
 	}
@@ -65,7 +145,7 @@ func (s *TeamService) List(ctx context.Context, form *dto.TeamListReq, userID in
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.TeamListResp{Total: int(total), List: make([]dto.TeamItemResp, 0, len(teams))}
+	resp := &TeamListResult{Total: total, List: make([]TeamListItem, 0, len(teams))}
 	if len(teams) == 0 {
 		return resp, nil
 	}
@@ -95,7 +175,7 @@ func (s *TeamService) List(ctx context.Context, form *dto.TeamListReq, userID in
 
 	for _, t := range teams {
 		owner := owners[t.OwnerID]
-		item := dto.TeamItemResp{
+		item := TeamListItem{
 			ID:          t.PublicID,
 			Name:        t.Name,
 			CoverURL:    t.CoverURL,
@@ -103,7 +183,7 @@ func (s *TeamService) List(ctx context.Context, form *dto.TeamListReq, userID in
 			MemberCount: countByTeam[t.ID],
 			Owner:       owner.Name,
 			OwnerAvatar: owner.Avatar,
-			CreatedAt:   t.CreatedAt.Format(teamTimeLayout),
+			CreatedAt:   t.CreatedAt,
 		}
 		if role, ok := roles[t.ID]; ok {
 			item.MyRole = &role
@@ -115,7 +195,7 @@ func (s *TeamService) List(ctx context.Context, form *dto.TeamListReq, userID in
 
 // Detail 团队详情。名称/简介/成员数对任何人可见（含非公开团队的非成员），
 // 这样别人知道团队存在、也知道它是干什么的；内部内容另由各自接口鉴权。
-func (s *TeamService) Detail(ctx context.Context, id, userID int64, isSiteAdmin bool) (*dto.TeamDetailResp, error) {
+func (s *TeamService) Detail(ctx context.Context, id, userID int64, isSiteAdmin bool) (*TeamDetail, error) {
 	team, err := s.getTeam(ctx, id)
 	if err != nil {
 		return nil, err
@@ -142,7 +222,7 @@ func (s *TeamService) Detail(ctx context.Context, id, userID int64, isSiteAdmin 
 		return nil, err
 	}
 
-	resp := &dto.TeamDetailResp{
+	resp := &TeamDetail{
 		ID:            team.PublicID,
 		Name:          team.Name,
 		CoverURL:      team.CoverURL,
@@ -152,7 +232,7 @@ func (s *TeamService) Detail(ctx context.Context, id, userID int64, isSiteAdmin 
 		HomeworkCount: int(hwCount),
 		Owner:         owners[team.OwnerID].Name,
 		CanManage:     access.CanManage(),
-		CreatedAt:     team.CreatedAt.Format(teamTimeLayout),
+		CreatedAt:     team.CreatedAt,
 	}
 	if access.CanManage() {
 		resp.InviteCode = team.InviteCode
@@ -168,11 +248,11 @@ func (s *TeamService) Detail(ctx context.Context, id, userID int64, isSiteAdmin 
 }
 
 // Create 建团队，创建者自动成为所有者。
-func (s *TeamService) Create(ctx context.Context, req *dto.SaveTeamReq, ownerID int64) (int64, error) {
-	if strings.TrimSpace(req.Name) == "" {
+func (s *TeamService) Create(ctx context.Context, params SaveTeamParams, ownerID int64) (int64, error) {
+	if strings.TrimSpace(params.Name) == "" {
 		return 0, errcode.ErrInvalidParams.WithMsg("团队名称不能为空")
 	}
-	if err := validateTeamVisibility(req); err != nil {
+	if err := validateTeamVisibility(params); err != nil {
 		return 0, err
 	}
 	publicID, err := newUniquePublicID(ctx, s.repo.PublicIDExists)
@@ -181,11 +261,11 @@ func (s *TeamService) Create(ctx context.Context, req *dto.SaveTeamReq, ownerID 
 	}
 	team := &model.Team{
 		PublicID:    publicID,
-		Name:        strings.TrimSpace(req.Name),
-		CoverURL:    strings.TrimSpace(req.CoverURL),
-		Description: req.Description,
-		Visibility:  req.Visibility,
-		InviteCode:  strings.TrimSpace(req.InviteCode),
+		Name:        strings.TrimSpace(params.Name),
+		CoverURL:    strings.TrimSpace(params.CoverURL),
+		Description: params.Description,
+		Visibility:  params.Visibility,
+		InviteCode:  strings.TrimSpace(params.InviteCode),
 		OwnerID:     ownerID,
 	}
 	if err := s.repo.CreateWithOwner(ctx, team); err != nil {
@@ -195,11 +275,11 @@ func (s *TeamService) Create(ctx context.Context, req *dto.SaveTeamReq, ownerID 
 }
 
 // Update 改团队信息，所有者和团队管理员可用。
-func (s *TeamService) Update(ctx context.Context, id int64, req *dto.SaveTeamReq, userID int64, isSiteAdmin bool) error {
-	if strings.TrimSpace(req.Name) == "" {
+func (s *TeamService) Update(ctx context.Context, id int64, params SaveTeamParams, userID int64, isSiteAdmin bool) error {
+	if strings.TrimSpace(params.Name) == "" {
 		return errcode.ErrInvalidParams.WithMsg("团队名称不能为空")
 	}
-	if err := validateTeamVisibility(req); err != nil {
+	if err := validateTeamVisibility(params); err != nil {
 		return err
 	}
 	if _, err := s.getTeam(ctx, id); err != nil {
@@ -214,11 +294,11 @@ func (s *TeamService) Update(ctx context.Context, id int64, req *dto.SaveTeamReq
 	}
 	team := &model.Team{
 		ID:          id,
-		Name:        strings.TrimSpace(req.Name),
-		CoverURL:    strings.TrimSpace(req.CoverURL),
-		Description: req.Description,
-		Visibility:  req.Visibility,
-		InviteCode:  strings.TrimSpace(req.InviteCode),
+		Name:        strings.TrimSpace(params.Name),
+		CoverURL:    strings.TrimSpace(params.CoverURL),
+		Description: params.Description,
+		Visibility:  params.Visibility,
+		InviteCode:  strings.TrimSpace(params.InviteCode),
 	}
 	if err := s.repo.Update(ctx, team); err != nil {
 		return errcode.ErrDatabase.Wrap(err)
@@ -287,7 +367,7 @@ func (s *TeamService) Quit(ctx context.Context, id, userID int64) error {
 }
 
 // ListMembers 成员列表，仅团队成员可见。
-func (s *TeamService) ListMembers(ctx context.Context, id, userID int64, isSiteAdmin bool) (*dto.TeamMemberListResp, error) {
+func (s *TeamService) ListMembers(ctx context.Context, id, userID int64, isSiteAdmin bool) (*TeamMemberListResult, error) {
 	if _, err := s.getTeam(ctx, id); err != nil {
 		return nil, err
 	}
@@ -303,7 +383,7 @@ func (s *TeamService) ListMembers(ctx context.Context, id, userID int64, isSiteA
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	resp := &dto.TeamMemberListResp{Total: len(members), List: make([]dto.TeamMemberItem, 0, len(members))}
+	resp := &TeamMemberListResult{Total: len(members), List: make([]TeamMemberItem, 0, len(members))}
 	if len(members) == 0 {
 		return resp, nil
 	}
@@ -323,7 +403,7 @@ func (s *TeamService) ListMembers(ctx context.Context, id, userID int64, isSiteA
 
 	for _, m := range members {
 		u := userByID[m.UserID]
-		resp.List = append(resp.List, dto.TeamMemberItem{
+		resp.List = append(resp.List, TeamMemberItem{
 			UID:       u.UID, // 对外用户号，不暴露内部主键
 			Username:  u.Username,
 			StudentNo: studentNoValue(u.StudentNo),
@@ -331,7 +411,7 @@ func (s *TeamService) ListMembers(ctx context.Context, id, userID int64, isSiteA
 			Gender:    u.Gender,
 			Avatar:    u.Avatar,
 			Role:      m.Role,
-			JoinedAt:  m.JoinedAt.Format(teamTimeLayout),
+			JoinedAt:  m.JoinedAt,
 		})
 	}
 	return resp, nil
@@ -457,8 +537,8 @@ func (s *TeamService) ownerProfiles(ctx context.Context, teams []model.Team) (ma
 	return profiles, nil
 }
 
-func validateTeamVisibility(req *dto.SaveTeamReq) error {
-	if req.Visibility == model.TeamInviteOnly && strings.TrimSpace(req.InviteCode) == "" {
+func validateTeamVisibility(params SaveTeamParams) error {
+	if params.Visibility == model.TeamInviteOnly && strings.TrimSpace(params.InviteCode) == "" {
 		return errcode.ErrInvalidParams.WithMsg("非公开团队必须设置邀请码")
 	}
 	return nil

@@ -7,13 +7,15 @@ import (
 	"strconv"
 	"strings"
 
-	"zoj/pkg/errcode"
+	"zoj/internal/http/dto"
 	"zoj/internal/http/response"
-	"zoj/internal/dto"
 	"zoj/internal/service"
+	"zoj/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
+
+const teamTimeLayout = "2006-01-02 15:04:05"
 
 // TeamController 团队与成员接口
 type TeamController struct {
@@ -30,7 +32,17 @@ func (t *TeamController) List(c *gin.Context) (any, error) {
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return t.teamSrv.List(c.Request.Context(), &req, optionalCurrentUserID(c))
+	resp, err := t.teamSrv.List(c.Request.Context(), service.TeamListParams{
+		Page:       req.Page,
+		PageSize:   req.PageSize,
+		Keyword:    req.Keyword,
+		Mine:       req.Mine,
+		Visibility: req.Visibility,
+	}, optionalCurrentUserID(c))
+	if err != nil {
+		return nil, err
+	}
+	return toTeamListResp(resp), nil
 }
 
 // Detail GET /api/team/:id
@@ -39,7 +51,11 @@ func (t *TeamController) Detail(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return t.teamSrv.Detail(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c))
+	resp, err := t.teamSrv.Detail(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c))
+	if err != nil {
+		return nil, err
+	}
+	return toTeamDetailResp(resp), nil
 }
 
 // Create POST /api/team
@@ -52,7 +68,7 @@ func (t *TeamController) Create(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	id, err := t.teamSrv.Create(c.Request.Context(), &req, userID)
+	id, err := t.teamSrv.Create(c.Request.Context(), toSaveTeamParams(req), userID)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +89,7 @@ func (t *TeamController) Update(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := t.teamSrv.Update(c.Request.Context(), id, &req, userID, role == 1); err != nil {
+	if err := t.teamSrv.Update(c.Request.Context(), id, toSaveTeamParams(req), userID, role == 1); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -136,7 +152,11 @@ func (t *TeamController) ListMembers(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return t.teamSrv.ListMembers(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c))
+	resp, err := t.teamSrv.ListMembers(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c))
+	if err != nil {
+		return nil, err
+	}
+	return toTeamMemberListResp(resp), nil
 }
 
 const maxStudentImportFileSize = 5 << 20
@@ -192,7 +212,11 @@ func (t *TeamController) ImportStudents(c *gin.Context) (any, error) {
 	}
 	defer file.Close()
 
-	return t.teamSrv.ImportStudents(c.Request.Context(), id, actorID, role == 1, file)
+	resp, err := t.teamSrv.ImportStudents(c.Request.Context(), id, actorID, role == 1, file)
+	if err != nil {
+		return nil, err
+	}
+	return toStudentImportResp(resp), nil
 }
 
 // ImportStudentsManual POST /api/team/:id/member/import/manual，手动粘贴学生名单。
@@ -209,7 +233,11 @@ func (t *TeamController) ImportStudentsManual(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	return t.teamSrv.ImportStudentsManual(c.Request.Context(), id, actorID, role == 1, req.Text)
+	resp, err := t.teamSrv.ImportStudentsManual(c.Request.Context(), id, actorID, role == 1, req.Text)
+	if err != nil {
+		return nil, err
+	}
+	return toStudentImportResp(resp), nil
 }
 
 // SetMemberRole PUT /api/team/:id/member/:uid/role 设置/取消团队管理员（:uid 为对外用户号）
@@ -270,4 +298,77 @@ func parseUIDParam(c *gin.Context) (int64, error) {
 		return 0, errcode.ErrInvalidParams.WithMsg("非法用户号")
 	}
 	return uid, nil
+}
+
+func toSaveTeamParams(req dto.SaveTeamReq) service.SaveTeamParams {
+	return service.SaveTeamParams{
+		Name:        req.Name,
+		CoverURL:    req.CoverURL,
+		Description: req.Description,
+		Visibility:  req.Visibility,
+		InviteCode:  req.InviteCode,
+	}
+}
+
+func toTeamListResp(r *service.TeamListResult) *dto.TeamListResp {
+	items := make([]dto.TeamItemResp, 0, len(r.List))
+	for _, it := range r.List {
+		item := dto.TeamItemResp{
+			ID:          it.ID,
+			Name:        it.Name,
+			CoverURL:    it.CoverURL,
+			Visibility:  it.Visibility,
+			MemberCount: it.MemberCount,
+			Owner:       it.Owner,
+			OwnerAvatar: it.OwnerAvatar,
+			MyRole:      it.MyRole,
+			CreatedAt:   it.CreatedAt.Format(teamTimeLayout),
+		}
+		items = append(items, item)
+	}
+	return &dto.TeamListResp{Total: int(r.Total), List: items}
+}
+
+func toTeamDetailResp(r *service.TeamDetail) *dto.TeamDetailResp {
+	return &dto.TeamDetailResp{
+		ID:            r.ID,
+		Name:          r.Name,
+		CoverURL:      r.CoverURL,
+		Description:   r.Description,
+		Visibility:    r.Visibility,
+		MemberCount:   r.MemberCount,
+		HomeworkCount: r.HomeworkCount,
+		Owner:         r.Owner,
+		OwnerUID:      r.OwnerUID,
+		MyRole:        r.MyRole,
+		CanManage:     r.CanManage,
+		InviteCode:    r.InviteCode,
+		CreatedAt:     r.CreatedAt.Format(teamTimeLayout),
+	}
+}
+
+func toTeamMemberListResp(r *service.TeamMemberListResult) *dto.TeamMemberListResp {
+	items := make([]dto.TeamMemberItem, 0, len(r.List))
+	for _, it := range r.List {
+		items = append(items, dto.TeamMemberItem{
+			UID:       it.UID,
+			Username:  it.Username,
+			StudentNo: it.StudentNo,
+			RealName:  it.RealName,
+			Gender:    it.Gender,
+			Avatar:    it.Avatar,
+			Role:      it.Role,
+			JoinedAt:  it.JoinedAt.Format(teamTimeLayout),
+		})
+	}
+	return &dto.TeamMemberListResp{Total: r.Total, List: items}
+}
+
+func toStudentImportResp(r *service.StudentImportResult) *dto.TeamStudentImportResp {
+	return &dto.TeamStudentImportResp{
+		Total:          r.Total,
+		CreatedUsers:   r.CreatedUsers,
+		AddedMembers:   r.AddedMembers,
+		SkippedMembers: r.SkippedMembers,
+	}
 }
