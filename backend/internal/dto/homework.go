@@ -146,22 +146,23 @@ type HomeworkSubmissionListResp struct {
 // HomeworkSubmissionDetailResp 作业提交弹窗详情。
 // 源代码只通过作业专用接口返回，权限为提交本人或团队管理者。
 type HomeworkSubmissionDetailResp struct {
-	ID          int64                  `json:"id"` // 对外提交编号
-	UID         int64                  `json:"uid"`
-	Username    string                 `json:"username"`
-	StudentNo   string                 `json:"studentNo"`
-	RealName    string                 `json:"realName"`
-	Avatar      string                 `json:"avatar"`
-	ProblemID   string                 `json:"problemId"`
-	ProblemName string                 `json:"problemName"`
-	OJ          string                 `json:"oj"`
-	Status      int                    `json:"status"`
-	Score       int                    `json:"score"`
-	Language    string                 `json:"language"`
-	Code        string                 `json:"code"`
-	TimeUsed    int64                  `json:"timeUsed"`
-	MemoryUsed  int64                  `json:"memoryUsed"`
-	CaseResults []SubmissionCaseResult `json:"caseResults"`
-	InWindow    bool                   `json:"inWindow"`
-	CreatedAt   string                 `json:"createdAt"`
+	ID            int64                  `json:"id"` // 对外提交编号
+	UID           int64                  `json:"uid"`
+	Username      string                 `json:"username"`
+	StudentNo     string                 `json:"studentNo"`
+	RealName      string                 `json:"realName"`
+	Avatar        string                 `json:"avatar"`
+	ProblemID     string                 `json:"problemId"`
+	ProblemName   string                 `json:"problemName"`
+	OJ            string                 `json:"oj"`
+	Status        int                    `json:"status"`
+	Score         int                    `json:"score"`
+	Language      string                 `json:"language"`
+	Code          string                 `json:"code"`
+	CompileOutput string                 `json:"compileOutput"`
+	TimeUsed      int64                  `json:"timeUsed"`
+	MemoryUsed    int64                  `json:"memoryUsed"`
+	CaseResults   []SubmissionCaseResult `json:"caseResults"`
+	InWindow      bool                   `json:"inWindow"`
+	CreatedAt     string                 `json:"createdAt"`
 }

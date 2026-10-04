@@ -5,9 +5,11 @@ import {
   JUDGE_STATUS_CLASS,
   JUDGE_STATUS_TEXT,
   PendingCode,
+  JUDGE_STATUS,
 } from "@/constants/index";
 import { formatMemory, formatTime } from "@/utils/format";
 import CodeViewer from "@/components/CodeViewer.vue";
+import SubmissionCompileOutput from "@/components/submission/SubmissionCompileOutput.vue";
 
 const visible = defineModel({ type: Boolean, default: false });
 const props = defineProps({
@@ -26,7 +28,7 @@ const statusText = computed(() => JUDGE_STATUS_TEXT[props.submission.status] || 
 const statusClass = computed(() => JUDGE_STATUS_CLASS[props.submission.status] || "text-gray-500");
 const caseResults = computed(() => props.submission.caseResults || []);
 const passedCaseCount = computed(() => caseResults.value.filter(({ status }) => status === AcceptedCode).length);
-const emptyCaseText = computed(() => props.submission.status === PendingCode
+const emptyCaseText = computed(() => [PendingCode, JUDGE_STATUS.JUDGING].includes(props.submission.status)
   ? "正在评测，测试点结果将在评测完成后显示"
   : "暂无测试点信息");
 const memberName = computed(() => {
@@ -95,7 +97,9 @@ const memberInitial = computed(() => memberName.value.slice(0, 1).toUpperCase())
           </dl>
         </section>
 
-        <section class="mt-5" aria-label="测试点">
+        <SubmissionCompileOutput v-if="submission.status === JUDGE_STATUS.COMPILE_ERROR"
+          class="mt-5" :output="submission.compileOutput" />
+        <section v-else class="mt-5" aria-label="测试点">
           <div class="mb-2 flex items-center justify-between border-b border-gray-200 pb-2">
             <h3 class="text-[15px] font-semibold text-gray-700">测试点</h3>
             <span v-if="caseResults.length" class="text-xs tabular-nums text-gray-500">
@@ -127,10 +131,6 @@ const memberInitial = computed(() => memberName.value.slice(0, 1).toUpperCase())
         </section>
 
         <section class="mt-5" aria-label="提交代码">
-          <div class="mb-2 flex items-center justify-between">
-            <h3 class="text-[15px] font-semibold text-gray-700">源代码</h3>
-            <span class="text-xs text-gray-400">只读</span>
-          </div>
           <div v-if="submission.code" class="max-h-[55vh] overflow-auto rounded">
             <CodeViewer :code="submission.code" :language="submission.language" />
           </div>
