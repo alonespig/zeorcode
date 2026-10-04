@@ -1,4 +1,4 @@
-package dispatchrelay
+package dispatch
 
 import (
 	"context"

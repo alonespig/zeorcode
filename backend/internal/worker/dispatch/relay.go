@@ -1,5 +1,5 @@
-// Package dispatchrelay 把数据库 Outbox 中的提交版本可靠投递到判题队列。
-package dispatchrelay
+// Package dispatch 把数据库 Outbox 中的提交版本可靠投递到判题队列。
+package dispatch
 
 import (
 	"context"

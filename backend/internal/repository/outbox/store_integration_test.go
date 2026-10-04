@@ -1,6 +1,6 @@
 //go:build integration
 
-package outboxstore
+package outbox
 
 import (
 	"context"

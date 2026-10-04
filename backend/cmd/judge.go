@@ -16,8 +16,8 @@ import (
 	"zoj/internal/infra/redis"
 	"zoj/internal/judgeworker"
 	"zoj/internal/repository"
-	"zoj/internal/submission/adapter/outboxstore"
-	"zoj/internal/submission/application/dispatchrelay"
+	"zoj/internal/repository/outbox"
+	"zoj/internal/worker/dispatch"
 	"zoj/pkg/judge"
 
 	"github.com/spf13/cobra"
@@ -62,11 +62,11 @@ var judgeCmd = &cobra.Command{
 		}
 		queue := mq.New(rdb)
 		w := judgeworker.NewWorker(db, pool, repos, judgeConcurrency, queue, cache.NewCache(rdb))
-		relay, err := dispatchrelay.New(
-			outboxstore.New(db),
+		relay, err := dispatch.New(
+			outbox.New(db),
 			queue,
 			dispatchRelayOwner(),
-			dispatchrelay.DefaultConfig(),
+			dispatch.DefaultConfig(),
 		)
 		if err != nil {
 			logger.Fatalw("create submission outbox relay failed", "err", err)

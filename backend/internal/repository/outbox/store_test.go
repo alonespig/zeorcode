@@ -1,4 +1,4 @@
-package outboxstore
+package outbox
 
 import (
 	"strings"

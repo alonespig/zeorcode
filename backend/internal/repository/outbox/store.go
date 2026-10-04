@@ -1,5 +1,5 @@
-// Package outboxstore 提供 Submission Outbox 的 GORM 租约适配器。
-package outboxstore
+// Package outbox 提供 Submission Outbox 的 GORM 租约适配器。
+package outbox
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"zoj/internal/model"
-	"zoj/internal/submission/application/dispatchrelay"
+	"zoj/internal/worker/dispatch"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -21,7 +21,7 @@ func New(db *gorm.DB) *Store {
 	return &Store{db: db}
 }
 
-var _ dispatchrelay.Store = (*Store)(nil)
+var _ dispatch.Store = (*Store)(nil)
 
 // Claim 在短事务中锁定一个有界批次。Processing 记录把 available_at 推进到租约结束时间，
 // 因此同一个 (status, available_at) 索引也能用于回收过期租约。
@@ -30,7 +30,7 @@ func (s *Store) Claim(
 	owner string,
 	now, leaseUntil time.Time,
 	limit int,
-) ([]dispatchrelay.Item, error) {
+) ([]dispatch.Item, error) {
 	if s == nil || s.db == nil {
 		return nil, fmt.Errorf("claim submission outbox: store is not initialized")
 	}
@@ -38,7 +38,7 @@ func (s *Store) Claim(
 		return nil, fmt.Errorf("claim submission outbox: invalid lease arguments")
 	}
 
-	var items []dispatchrelay.Item
+	var items []dispatch.Item
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var rows []model.SubmissionOutbox
 		if err := claimRowsQuery(tx, now, limit, &rows).Error; err != nil {
@@ -68,9 +68,9 @@ func (s *Store) Claim(
 			return fmt.Errorf("claimed %d submission outboxes but updated %d", len(rows), updated.RowsAffected)
 		}
 
-		items = make([]dispatchrelay.Item, 0, len(rows))
+		items = make([]dispatch.Item, 0, len(rows))
 		for _, row := range rows {
-			items = append(items, dispatchrelay.Item{
+			items = append(items, dispatch.Item{
 				OutboxID:     row.ID,
 				SubmissionID: row.SubmissionID,
 				Version:      row.SubmissionVersion,
