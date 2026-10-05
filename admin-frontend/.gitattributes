@@ -1,0 +1,12 @@
+# 前端源码统一使用 LF，避免不同操作系统产生整文件换行差异。
+* text=auto eol=lf
+
+# 明确标记二进制资源，禁止 Git 修改其内容。
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
