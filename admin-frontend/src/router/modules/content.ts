@@ -24,6 +24,26 @@ export default {
       meta: { title: "题单管理" }
     },
     {
+      path: "/content/problemsets/create",
+      name: "AdminProblemSetsCreate",
+      component: () => import("@/views/content/problemsets/create.vue"),
+      meta: {
+        title: "新建题单",
+        showLink: false,
+        activePath: "/content/problemsets"
+      }
+    },
+    {
+      path: "/content/problemsets/:id/edit",
+      name: "AdminProblemSetsEdit",
+      component: () => import("@/views/content/problemsets/edit.vue"),
+      meta: {
+        title: "编辑题单",
+        showLink: false,
+        activePath: "/content/problemsets"
+      }
+    },
+    {
       path: "/content/contests",
       name: "AdminContests",
       component: () => import("@/views/content/contests/index.vue"),
