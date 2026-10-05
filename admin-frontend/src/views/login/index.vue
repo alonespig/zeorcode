@@ -71,7 +71,7 @@ async function submit() {
     const redirect =
       typeof route.query.redirect === "string"
         ? route.query.redirect
-        : "/welcome";
+        : "/dashboard";
     await router.replace(redirect);
     message("登录成功", { type: "success" });
   } catch (error) {

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 defineOptions({
-  name: "Welcome"
+  name: "AdminPostReview"
 });
 </script>
 
 <template>
-  <h1>Pure-Admin-Thin（非国际化版本）</h1>
+  <el-empty description="帖子审核" />
 </template>

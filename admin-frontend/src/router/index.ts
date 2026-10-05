@@ -97,13 +97,14 @@ router.beforeEach(async (to, from) => {
   if (!userStore.initialized) await userStore.restoreSession();
 
   if (to.path === "/login") {
-    return userStore.isAdmin ? "/welcome" : true;
+    return userStore.isAdmin ? "/dashboard" : true;
   }
 
   if (!userStore.authenticated) {
     return {
       path: "/login",
-      query: to.fullPath === "/welcome" ? undefined : { redirect: to.fullPath }
+      query:
+        to.fullPath === "/dashboard" ? undefined : { redirect: to.fullPath }
     };
   }
 
