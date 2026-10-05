@@ -17,13 +17,35 @@ import type {
 const SUCCESS_CODE = 200;
 const AUTH_FAILURE_CODES = new Set([20001, 20002, 20003]);
 
+/** blob 响应统一处理：Content-Type 为 application/json 时按业务错误解析，正常文件原样返回 */
+async function handleBlobResponse(
+  response: PureHttpResponse
+): Promise<PureHttpResponse> {
+  const data = response.data as Blob;
+  if (!data || !data.type || !data.type.includes("application/json")) {
+    return response;
+  }
+
+  let result: { code?: number; msg?: string } = {};
+  try {
+    result = JSON.parse(await data.text()) as { code?: number; msg?: string };
+  } catch {
+    // 无法解析为 JSON 时按通用错误处理
+  }
+
+  if (result.code !== undefined && AUTH_FAILURE_CODES.has(result.code)) {
+    notifyAuthExpired();
+  }
+  message(result.msg || "请求失败", { type: "error" });
+  return Promise.reject(result);
+}
+
 const defaultConfig: AxiosRequestConfig = {
   baseURL: import.meta.env.VITE_API_BASE_URL || "/api",
   timeout: 10000,
   withCredentials: true,
   headers: {
     Accept: "application/json, text/plain, */*",
-    "Content-Type": "application/json",
     "X-Requested-With": "XMLHttpRequest"
   },
   paramsSerializer: {
@@ -68,7 +90,9 @@ class PureHttp {
           PureHttp.initConfig.beforeResponseCallback(response);
           return response.data;
         }
-        if (config.responseType === "blob") return response;
+        if (config.responseType === "blob") {
+          return handleBlobResponse(response);
+        }
 
         const result = response.data as {
           code?: number;
