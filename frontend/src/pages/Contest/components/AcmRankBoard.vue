@@ -63,7 +63,7 @@
 </template>
 
 <script setup>
-import { PendingCode, AcceptedCode, WrongAnswerCode } from '@/constants/index'
+import { PendingCode, AcceptedCode } from '@/constants/index'
 import UserName from '@/components/UserName.vue'
 
 defineProps({
@@ -75,7 +75,7 @@ defineProps({
 const getStatus = (status, first) => {
   if (first === 1) return 'first'
   if (status === AcceptedCode) return 'ac'
-  if (status === WrongAnswerCode) return 'wa'
+  if (status !== PendingCode) return 'wa'
   return ''
 }
 </script>
