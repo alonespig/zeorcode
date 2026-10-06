@@ -83,6 +83,7 @@ type RankCell struct {
 	ProblemID string `json:"problemId"` // 对外题号
 	Score     int    `json:"score"`
 	Solved    bool   `json:"solved"` // 是否拿到满分
+	Submitted bool   `json:"submitted"`
 }
 
 // HomeworkRankRow 排行榜一行
@@ -93,6 +94,7 @@ type HomeworkRankRow struct {
 	StudentNo   string     `json:"studentNo"`
 	RealName    string     `json:"realName"`
 	Avatar      string     `json:"avatar"`
+	Gender      int        `json:"gender"` // 1 男 / 2 女
 	TotalScore  int        `json:"totalScore"`
 	SolvedCount int        `json:"solvedCount"`
 	Cells       []RankCell `json:"cells"`

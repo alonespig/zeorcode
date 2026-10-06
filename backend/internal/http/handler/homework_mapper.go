@@ -67,7 +67,12 @@ func toHomeworkRankResp(r *service.HomeworkRank) *dto.HomeworkRankResp {
 	for _, row := range r.List {
 		cells := make([]dto.RankCell, 0, len(row.Cells))
 		for _, c := range row.Cells {
-			cells = append(cells, dto.RankCell{ProblemID: c.ProblemID, Score: c.Score, Solved: c.Solved})
+			cells = append(cells, dto.RankCell{
+				ProblemID: c.ProblemID,
+				Score:     c.Score,
+				Solved:    c.Solved,
+				Submitted: c.Submitted,
+			})
 		}
 		rows = append(rows, dto.HomeworkRankRow{
 			Rank:        row.Rank,
@@ -76,6 +81,7 @@ func toHomeworkRankResp(r *service.HomeworkRank) *dto.HomeworkRankResp {
 			StudentNo:   row.StudentNo,
 			RealName:    row.RealName,
 			Avatar:      row.Avatar,
+			Gender:      row.Gender,
 			TotalScore:  row.TotalScore,
 			SolvedCount: row.SolvedCount,
 			Cells:       cells,

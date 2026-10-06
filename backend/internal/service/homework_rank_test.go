@@ -23,8 +23,8 @@ func TestBuildHomeworkRankRowsIncludesMembersWithoutSubmissions(t *testing.T) {
 	studentNo2 := "20269999"
 	studentNo3 := "20260000" // 更小，用来证明 0 分时有提交者仍排在未提交者前面
 	users := []model.User{
-		{ID: 1, UID: 10000001, Username: "alice", StudentNo: &studentNo1, RealName: "张一"},
-		{ID: 2, UID: 10000002, Username: "bob", StudentNo: &studentNo2, RealName: "张二"},
+		{ID: 1, UID: 10000001, Username: "alice", StudentNo: &studentNo1, RealName: "张一", Gender: 1},
+		{ID: 2, UID: 10000002, Username: "bob", StudentNo: &studentNo2, RealName: "张二", Gender: 2},
 		{ID: 3, UID: 10000003, Username: "carol", StudentNo: &studentNo3, RealName: "张三"},
 	}
 	best := []repository.HomeworkBestScore{
@@ -41,14 +41,23 @@ func TestBuildHomeworkRankRowsIncludesMembersWithoutSubmissions(t *testing.T) {
 	if rows[0].UID != 10000001 || rows[0].TotalScore != 100 || rows[0].SolvedCount != 1 {
 		t.Fatalf("first row = %+v", rows[0])
 	}
+	if rows[0].Gender != 1 || rows[1].Gender != 2 {
+		t.Fatalf("genders = [%d, %d], want [1, 2]", rows[0].Gender, rows[1].Gender)
+	}
 	if rows[1].UID != 10000002 || rows[1].TotalScore != 0 {
 		t.Fatalf("second row = %+v; submitted zero-score member should precede non-submitter", rows[1])
+	}
+	if !rows[1].Cells[0].Submitted || rows[1].Cells[0].Score != 0 {
+		t.Fatalf("zero-score submitted cell = %+v, want submitted zero score", rows[1].Cells[0])
 	}
 	if rows[2].UID != 10000003 || rows[2].TotalScore != 0 || rows[2].SolvedCount != 0 {
 		t.Fatalf("non-submitter row = %+v", rows[2])
 	}
 	if len(rows[2].Cells) != 2 || rows[2].Cells[0].Score != 0 || rows[2].Cells[1].Score != 0 {
 		t.Fatalf("non-submitter cells = %+v, want two zero-score cells", rows[2].Cells)
+	}
+	if rows[2].Cells[0].Submitted || rows[2].Cells[1].Submitted {
+		t.Fatalf("non-submitter cells = %+v, want submitted=false", rows[2].Cells)
 	}
 	for i, row := range rows {
 		if row.Rank != i+1 {

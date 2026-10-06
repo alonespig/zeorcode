@@ -85,7 +85,7 @@ onMounted(loadList);
 <template>
   <div class="f-panel">
     <div class="submissions-toolbar">
-      <h2 class="text-sm font-medium text-gray-700">提交列表</h2>
+      <h2 class="text-base font-semibold text-gray-800">提交列表</h2>
       <div class="submissions-filters">
         <el-select v-model="filterProblemId" placeholder="全部题目" aria-label="筛选题目" clearable filterable
           class="submissions-problem-filter" @change="handleFilterChange">
@@ -102,7 +102,7 @@ onMounted(loadList);
     </div>
 
     <el-table v-loading="listLoading" :data="list" style="width: 100%">
-      <el-table-column prop="id" label="提交号" min-width="90" align="center" />
+      <!-- <el-table-column prop="id" label="提交号" min-width="90" align="center" /> -->
       <el-table-column v-if="canSeeAll" label="成员" min-width="190">
         <template #default="{ row }">
           <div class="flex min-w-0 items-center gap-2.5">
@@ -121,9 +121,15 @@ onMounted(loadList);
       </el-table-column>
       <el-table-column label="题号" min-width="100" align="center">
         <template #default="{ row }">
-          <router-link class="text-blue-500 hover:underline"
+          <span class="font-medium text-gray-700">{{ row.problemId }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="题目" min-width="240">
+        <template #default="{ row }">
+          <router-link class="block truncate font-medium text-blue-500 hover:text-blue-400"
+            :title="row.problemName || row.problemId"
             :to="{ name: 'HomeworkProblemDetail', params: { id: route.params.id, hid: route.params.hid, problemId: row.problemId } }">
-            {{ row.problemId }}
+            {{ row.problemName || '题目名称未知' }}
           </router-link>
         </template>
       </el-table-column>
@@ -148,7 +154,7 @@ onMounted(loadList);
       </el-table-column>
       <el-table-column label="提交时间" min-width="170" align="center">
         <template #default="{ row }">
-          <span class="tabular-nums text-gray-500">{{ row.createdAt }}</span>
+          <span class="tabular-nums text-gray-800">{{ row.createdAt }}</span>
           <el-tooltip v-if="!row.inWindow" content="时间窗外提交，不计入排行榜" placement="top">
             <el-icon class="ml-1 align-middle text-gray-400" :size="13"><InfoFilled /></el-icon>
           </el-tooltip>

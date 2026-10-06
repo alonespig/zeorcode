@@ -91,6 +91,7 @@ type RankCell struct {
 	ProblemID string
 	Score     int
 	Solved    bool
+	Submitted bool
 }
 
 // HomeworkRankRow 排行榜一行。
@@ -101,6 +102,7 @@ type HomeworkRankRow struct {
 	StudentNo   string
 	RealName    string
 	Avatar      string
+	Gender      int
 	TotalScore  int
 	SolvedCount int
 	Cells       []RankCell

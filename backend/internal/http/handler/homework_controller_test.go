@@ -23,3 +23,21 @@ func TestSafeSpreadsheetCell(t *testing.T) {
 		})
 	}
 }
+
+func TestHomeworkRankGenderLabel(t *testing.T) {
+	tests := []struct {
+		gender int
+		want   string
+	}{
+		{gender: 1, want: "男"},
+		{gender: 2, want: "女"},
+		{gender: 0, want: "未设置"},
+		{gender: 3, want: "未设置"},
+	}
+
+	for _, tt := range tests {
+		if got := homeworkRankGenderLabel(tt.gender); got != tt.want {
+			t.Fatalf("homeworkRankGenderLabel(%d) = %q, want %q", tt.gender, got, tt.want)
+		}
+	}
+}

@@ -223,13 +223,17 @@ func (h *HomeworkController) ExportRank(c *gin.Context) {
 	var buf bytes.Buffer
 	buf.WriteString("\xEF\xBB\xBF") // UTF-8 BOM，Excel 打开中文不乱码
 	w := csv.NewWriter(&buf)
-	header := []string{"名次", "学号", "姓名", "总分", "已通过"}
+	header := []string{"名次", "学号", "姓名", "性别", "总分", "已通过"}
 	header = append(header, rank.ProblemIDs...)
 	_ = w.Write(header)
 	for _, row := range rank.List {
-		record := []string{strconv.Itoa(row.Rank), safeSpreadsheetCell(row.StudentNo), safeSpreadsheetCell(row.RealName), strconv.Itoa(row.TotalScore), strconv.Itoa(row.SolvedCount)}
+		record := []string{strconv.Itoa(row.Rank), safeSpreadsheetCell(row.StudentNo), safeSpreadsheetCell(row.RealName), homeworkRankGenderLabel(row.Gender), strconv.Itoa(row.TotalScore), strconv.Itoa(row.SolvedCount)}
 		for _, cell := range row.Cells {
-			record = append(record, strconv.Itoa(cell.Score))
+			if cell.Submitted {
+				record = append(record, strconv.Itoa(cell.Score))
+			} else {
+				record = append(record, "")
+			}
 		}
 		_ = w.Write(record)
 	}
@@ -238,6 +242,17 @@ func (h *HomeworkController) ExportRank(c *gin.Context) {
 	c.Header("Content-Type", "text/csv; charset=utf-8")
 	c.Header("Content-Disposition", "attachment; filename=rank.csv")
 	c.Data(200, "text/csv; charset=utf-8", buf.Bytes())
+}
+
+func homeworkRankGenderLabel(gender int) string {
+	switch gender {
+	case 1:
+		return "男"
+	case 2:
+		return "女"
+	default:
+		return "未设置"
+	}
 }
 
 func safeSpreadsheetCell(value string) string {

@@ -5,12 +5,12 @@
       <el-button size="small" :disabled="!rank.list?.length" @click="exportCsv">导出 CSV</el-button>
     </div>
 
-    <div v-if="rank.list?.length" class="overflow-x-auto p-5">
+    <div v-if="rank.list?.length" class="overflow-x-auto">
       <!-- 用 data-table 类对齐项目原生表格/el-table 的表头风格 -->
-      <table class="data-table w-full min-w-[640px]">
+      <table class="data-table rank-table w-full min-w-[640px]">
         <thead>
           <tr>
-            <th class="w-16">名次</th>
+            <th class="w-16">#</th>
             <th class="left">成员</th>
             <th class="w-20">总分</th>
             <th class="w-20">已通过</th>
@@ -20,21 +20,38 @@
         <tbody>
           <tr v-for="row in rank.list" :key="row.uid" :class="{ 'is-me': isMe(row) }">
             <td class="font-semibold" :class="row.rank <= 3 ? 'text-amber-600' : 'text-gray-600'">
-              #{{ row.rank }}
+              {{ row.rank }}
             </td>
             <td class="left">
               <div class="flex items-center gap-2">
-                <el-avatar :size="24" :src="row.avatar || undefined" />
-                <span class="font-medium text-gray-800">{{ row.realName || row.username }}</span>
-                <span class="text-xs text-gray-400">{{ row.studentNo || '暂无学号' }}</span>
+                <el-avatar :size="30" :src="row.avatar || undefined" />
+                <span class="font-medium text-gray-900">
+                  {{ row.realName || row.username }}
+                </span>
+                <el-tooltip v-if="row.gender === 1" content="男" placement="top">
+                  <el-icon class="gender-icon gender-icon--male" aria-label="男">
+                    <Male />
+                  </el-icon>
+                </el-tooltip>
+                <el-tooltip v-else-if="row.gender === 2" content="女" placement="top">
+                  <el-icon class="gender-icon gender-icon--female" aria-label="女">
+                    <Female />
+                  </el-icon>
+                </el-tooltip>
+                <span class="text-[14px] text-gray-700">
+                  {{ row.studentNo || '' }}
+                </span>
                 <el-tag v-if="isMe(row)" size="small">本人</el-tag>
               </div>
             </td>
-            <td class="font-bold tabular-nums text-gray-800">{{ row.totalScore }}</td>
-            <td class="tabular-nums text-gray-600">{{ row.solvedCount }}</td>
+            <td class="font-medium tabular-nums"
+              :class="row.totalScore > 0 ? 'text-green-600' : 'text-red-500'">
+              {{ row.totalScore }}
+            </td>
+            <td class="font-medium text-black">{{ row.solvedCount }}</td>
             <td v-for="cell in row.cells" :key="cell.problemId" class="tabular-nums font-medium"
               :class="cellClass(cell)">
-              {{ cell.score > 0 ? cell.score : '—' }}
+              {{ cell.submitted ? cell.score : '' }}
             </td>
           </tr>
         </tbody>
@@ -48,6 +65,7 @@
 import { ref, inject, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
+import { Female, Male } from "@element-plus/icons-vue";
 import { downloadHomeworkRank, getHomeworkRank } from "@/api/team";
 import { useUserStore } from "@/stores/user";
 
@@ -57,8 +75,11 @@ const userStore = useUserStore();
 const rank = ref({ list: [], problemIds: [], startTime: "", endTime: "", totalScore: 0 });
 
 const isMe = (row) => userStore.user?.id === row.uid;
-const cellClass = (cell) =>
-  cell.solved ? "text-emerald-600" : cell.score > 0 ? "text-amber-600" : "text-gray-300";
+const cellClass = (cell) => {
+  if (!cell.submitted) return "";
+  if (cell.solved) return "text-emerald-600";
+  return cell.score > 0 ? "text-amber-600" : "text-red-500";
+};
 
 const loadRank = async () => {
   try {
@@ -101,5 +122,22 @@ onMounted(loadRank);
 :deep(.data-table tbody tr.is-me),
 :deep(.data-table tbody tr.is-me:nth-child(even)) {
   background-color: #eff6ff;
+}
+
+.gender-icon {
+  flex: none;
+  font-size: 15px;
+}
+
+.gender-icon--male {
+  color: #409eff;
+}
+
+.gender-icon--female {
+  color: #f56c9c;
+}
+
+.rank-table {
+  --table-cell-padding-y: 16px;
 }
 </style>

@@ -137,6 +137,7 @@ func buildHomeworkRankRows(
 			StudentNo:   studentNoValue(user.StudentNo),
 			RealName:    user.RealName,
 			Avatar:      user.Avatar,
+			Gender:      user.Gender,
 			TotalScore:  a.total,
 			SolvedCount: a.solved,
 			Cells:       make([]RankCell, 0, len(refs)),
@@ -146,11 +147,12 @@ func buildHomeworkRankRows(
 			if !exists {
 				continue
 			}
-			score := a.scores[ref.ProblemID]
+			score, submitted := a.scores[ref.ProblemID]
 			row.Cells = append(row.Cells, RankCell{
 				ProblemID: display,
 				Score:     score,
 				Solved:    score >= model.HomeworkProblemFullScore,
+				Submitted: submitted,
 			})
 		}
 		entries = append(entries, homeworkRankEntry{
