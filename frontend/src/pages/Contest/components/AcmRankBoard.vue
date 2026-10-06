@@ -1,8 +1,9 @@
 <template>
   <div class="py-2">
     <el-scrollbar>
-      <table :style="{ width: `${520 + problems.length * 80}px` }" class="font-[Arial,'Noto_Sans_SC',sans-serif] table-fixed border-collapse border
-        bg-white text-[13px] text-gray-800 tabular-nums
+      <table :style="{ width: `${520 + problems.length * 80}px` }" class="table-fixed border-collapse border
+        bg-white text-[13px] text-gray-700 tabular-nums
+        font-normal
         [&_th]:px-2 [&_th]:py-2 [&_th]:text-center
         [&_td]:px-2 [&_td]:py-2 [&_td]:text-center
         [&_th]:border [&_th]:border-gray-200

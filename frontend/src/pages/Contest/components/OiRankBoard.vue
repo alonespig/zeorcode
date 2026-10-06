@@ -55,7 +55,7 @@
 
             <td class="td-problem font-[Arial,'Noto_Sans_SC',sans-serif]" :class="cellClass(problem)"
               v-for="problem in item.problems" :key="problem.label">
-              <div class="tracking-wider">{{ problem?.score === 0 ? '' : problem?.score }}</div>
+              <div class="tracking-wider">{{ problem?.score == null ? '' : problem.score }}</div>
               <!-- CF：分数下面显示 AC 时间 -->
               <div v-if="isCF && problem?.acTime" class="text-[10px] font-medium text-gray-500">
                 {{ problem.acTime }}

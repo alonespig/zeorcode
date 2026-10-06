@@ -457,8 +457,8 @@ func (s *ContestService) GetContestRank(ctx context.Context, contestID, userID i
 			for _, problem := range contestProblems {
 				cell := ContestProblemStatus{Label: problem.Label}
 				if !frozen {
-					score := 0
 					if ucp, ok := recordMap[user.UserID][problem.ProblemID]; ok {
+						score := 0
 						cell.Status = ucp.Status
 						if isCF {
 							accepted := ucp.Status == judge.Accepted && ucp.AcTime != nil
@@ -482,9 +482,9 @@ func (s *ContestService) GetContestRank(ctx context.Context, contestID, userID i
 								last = *ucp.AcTime
 							}
 						}
+						cell.Score = &score
+						item.TotalScore += score
 					}
-					cell.Score = &score
-					item.TotalScore += score
 				}
 				item.Problems = append(item.Problems, cell)
 			}
