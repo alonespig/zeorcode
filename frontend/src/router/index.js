@@ -108,7 +108,7 @@ const router = createRouter({
 });
 
 const SITE_TITLE = 'ZeorCode'
-const whiteList = ['/login', '/404']
+const whiteList = ['/login']
 
 router.beforeEach((to, from, next) => {
   NProgress.start()
@@ -122,7 +122,10 @@ router.beforeEach((to, from, next) => {
     next()
     return
   }
-  if (!userStore.isLogin && to.meta.requiresAuth) {
+  if (
+    !userStore.isLogin &&
+    (!userStore.postLogoutAccess || to.meta.requiresAuth || to.meta.requiresAdmin)
+  ) {
     next({ path: '/login', query: { redirect: to.fullPath } })
     return
   }

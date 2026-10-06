@@ -2,8 +2,11 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import request from "@/utils/request";
 
+const POST_LOGOUT_ACCESS_KEY = "post_logout_access";
+
 export const useUserStore = defineStore("user",()=>{
   const user = ref(null)
+  const postLogoutAccess = ref(sessionStorage.getItem(POST_LOGOUT_ACCESS_KEY) === '1')
   const isLogin = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.role === 1 || false)
 
@@ -13,6 +16,8 @@ export const useUserStore = defineStore("user",()=>{
       user.value = { ...user.value, avatar: data.avatar }
     }
     localStorage.setItem('user', JSON.stringify(user.value))
+    postLogoutAccess.value = false
+    sessionStorage.removeItem(POST_LOGOUT_ACCESS_KEY)
   }
 
   const loadFromStorage = () => {
@@ -51,6 +56,8 @@ export const useUserStore = defineStore("user",()=>{
   const logout = async () => {
     await request({ url: '/logout', method: 'post' })
     localLogout()
+    postLogoutAccess.value = true
+    sessionStorage.setItem(POST_LOGOUT_ACCESS_KEY, '1')
   }
 
   // promptLogin 未登录时跳转登录页（带回跳地址），替代原来的登录弹窗
@@ -68,6 +75,7 @@ export const useUserStore = defineStore("user",()=>{
     user,
     isAdmin,
     isLogin,
+    postLogoutAccess,
     setLogin,
     loadFromStorage,
     restoreSession,
