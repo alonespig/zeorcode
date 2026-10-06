@@ -219,5 +219,5 @@ const saveManage = async () => {
   }
 };
 
-const openCreateHomework = () => router.push(`/team/${team.value.id}/homework?create=1`);
+const openCreateHomework = () => router.push({ name: "HomeworkCreate", params: { id: team.value.id } });
 </script>

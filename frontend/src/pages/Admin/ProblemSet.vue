@@ -73,11 +73,6 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="描述">
-          <!-- 用项目的 MdEditor 包装组件（全局自动注册），已处理图片上传与 mdHeadingId -->
-          <MdEditor v-model="form.description" height="260px" editor-id="problemset-admin-editor" />
-        </el-form-item>
-
         <el-form-item label="可见性">
           <el-radio-group v-model="form.visibility">
             <el-radio :value="0">公开</el-radio>
@@ -130,6 +125,11 @@
             </table>
             <el-empty v-else description="还没有添加题目" :image-size="60" />
           </div>
+        </el-form-item>
+
+        <el-form-item label="描述">
+          <!-- 用项目的 MdEditor 包装组件（全局自动注册），已处理图片上传与 mdHeadingId -->
+          <MdEditor v-model="form.description" height="260px" editor-id="problemset-admin-editor" />
         </el-form-item>
       </el-form>
 

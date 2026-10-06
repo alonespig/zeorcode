@@ -26,6 +26,18 @@ export const teamRoutes = {
           component: () => import("@/pages/Team/tabs/HomeworkList.vue"),
         },
         {
+          path: "homework/create",
+          name: "HomeworkCreate",
+          meta: { title: "布置作业", module: "TeamHomework", requiresAuth: true },
+          component: () => import("@/pages/Team/homework/HomeworkEditor.vue"),
+        },
+        {
+          path: "homework/:hid/edit",
+          name: "HomeworkEdit",
+          meta: { title: "编辑作业", module: "TeamHomework", requiresAuth: true },
+          component: () => import("@/pages/Team/homework/HomeworkEditor.vue"),
+        },
+        {
           path: "member",
           name: "TeamMembers",
           meta: { title: "团队成员", module: "TeamMembers" },

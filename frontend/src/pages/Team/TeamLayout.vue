@@ -26,6 +26,11 @@ const tabs = computed(() => {
   return items;
 });
 
+const isTabActive = (tab) => {
+  if (tab.name === "TeamHomework") return route.meta.module === "TeamHomework";
+  return route.name === tab.name;
+};
+
 const shortDate = (date) => (date ? date.slice(0, 10) : "-");
 
 const setAgentVisible = (visible) => {
@@ -106,7 +111,7 @@ onBeforeUnmount(() => {
       <div class="flex items-center gap-6 border-t border-gray-100 px-6">
         <router-link v-for="tab in tabs" :key="tab.name" :to="tab.to"
           class="flex items-center gap-1.5 border-b-2 border-transparent py-3 text-[15px] font-medium text-gray-700 hover:text-blue-500"
-          exact-active-class="border-blue-500! text-blue-500! font-medium">
+          :class="{ 'border-blue-500! text-blue-500! font-medium': isTabActive(tab) }">
           {{ tab.label }}
         </router-link>
         <button v-if="userStore.isAdmin" type="button" class="team-agent-trigger"
