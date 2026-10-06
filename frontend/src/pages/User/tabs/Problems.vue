@@ -1,7 +1,20 @@
 <template>
   <div class="px-6 py-5">
-    <!-- 已解决 -->
+    <!-- 近七天通过数 -->
     <section>
+      <h3 class="mb-3 text-base flex gap-1 items-center font-semibold text-blue-500">
+        <el-icon>
+          <DataLine />
+        </el-icon>
+        近七天通过数
+      </h3>
+      <div class="rounded-lg border border-gray-100 bg-white px-2 pt-2">
+        <PassCountChart :dates="dates" :counts="counts" />
+      </div>
+    </section>
+
+    <!-- 已解决 -->
+    <section class="mt-7">
       <h3 class="mb-3 text-sm font-semibold text-gray-700">
         <span class="flex items-center text-base gap-1 text-blue-500">
           <el-icon>
@@ -48,18 +61,6 @@
       </div>
     </section>
 
-    <!-- 近七天通过数 -->
-    <section class="mt-7">
-      <h3 class="mb-3 text-base flex gap-1 items-center font-semibold text-blue-500">
-        <el-icon>
-          <DataLine />
-        </el-icon>
-        近七天通过数
-      </h3>
-      <div class="rounded-lg border border-gray-100 bg-white px-2 pt-2">
-        <PassCountChart :dates="dates" :counts="counts" />
-      </div>
-    </section>
   </div>
 </template>
 

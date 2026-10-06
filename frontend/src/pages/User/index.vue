@@ -1,62 +1,68 @@
 <template>
-  <div class="mx-auto max-w-[1200px] pt-17 pb-6">
+  <div class="mx-auto max-w-[1200px] pt-5 pb-6">
 
-    <!-- 资料头（头像居中） -->
-    <div class="relative flex flex-col items-center gap-2 rounded border border-gray-200 bg-white px-6 pt-20 pb-7 text-center">
-      <el-button v-if="isSelf" class="!absolute !top-4 !right-4" size="small" @click="openEdit">编辑资料</el-button>
+    <!-- 个人资料卡 -->
+    <div class="overflow-hidden rounded border border-gray-200 bg-white">
+      <div class="relative flex flex-col gap-6 px-7 py-9 lg:flex-row lg:items-center">
+        <el-button v-if="isSelf" class="!absolute !top-4 !right-4" size="small" @click="openEdit">编辑资料</el-button>
 
-      <el-avatar :size="125" :src="user?.avatar" class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-[0_0_0_3px_#fff,0_0_0_4px_#e6e9ee]">
-        {{ user?.name?.charAt(0)?.toUpperCase() }}
-      </el-avatar>
+        <div class="flex min-w-0 items-center gap-5 pr-18">
+          <el-avatar :size="96" :src="user?.avatar" class="shrink-0 shadow-[0_0_0_3px_#fff,0_0_0_4px_#e6e9ee]">
+            {{ user?.name?.charAt(0)?.toUpperCase() }}
+          </el-avatar>
 
-      <div class="text-[22px] font-semibold leading-tight" :style="{ color: nameColor }">{{ user?.name }}</div>
-      <div class="text-[12.5px] font-medium" :style="{ color: ratingColor }">
-        {{ tierName }}<span v-if="rating > 0"> · {{ rating }}</span>
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="truncate text-[24px] font-semibold leading-tight" :style="{ color: nameColor }">{{ user?.name }}</span>
+              <span class="text-[12.5px] font-medium" :style="{ color: ratingColor }">{{ tierName }}</span>
+            </div>
+            <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-gray-700">
+              <span>UID: {{ user?.id || route.params.id }}</span>
+              <span>加入于 {{ user?.createdAt }}</span>
+            </div>
+            <div v-if="user?.signature" class="mt-2 truncate text-[13px] text-gray-500">{{ user.signature }}</div>
+            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-gray-400">
+              <span v-if="user?.school">🎓 {{ user.school }}</span>
+              <span v-if="isSelf && user?.email" class="inline-flex items-center gap-1">
+                <span class="iconfont icon-xinfengtianchong"></span>{{ user.email }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid w-full grid-cols-4 divide-x divide-gray-100 lg:ml-auto lg:w-[430px] lg:shrink-0">
+          <div class="px-3 text-center">
+            <div class="text-[22px] font-semibold tabular-nums" :style="{ color: ratingColor }">{{ rating > 0 ? rating : '—' }}</div>
+            <div class="mt-1 text-[16px] text-gray-700">Rating</div>
+          </div>
+          <div class="px-3 text-center">
+            <div class="text-[22px] font-semibold tabular-nums text-gray-800">{{ solved }}</div>
+            <div class="mt-1 text-[16px] text-gray-700">已解决</div>
+          </div>
+          <div class="px-3 text-center">
+            <div class="text-[22px] font-semibold tabular-nums text-amber-600">{{ attempted }}</div>
+            <div class="mt-1 text-[16px] text-gray-700">尝试中</div>
+          </div>
+          <div class="px-3 text-center">
+            <div class="text-[22px] font-semibold tabular-nums text-gray-800">{{ passRate }}</div>
+            <div class="mt-1 text-[16px] text-gray-700">通过率</div>
+          </div>
+        </div>
       </div>
-      <div v-if="user?.signature" class="text-[13px] text-gray-500">{{ user.signature }}</div>
 
-      <div class="mt-0.5 flex flex-wrap justify-center gap-5 text-[12.5px] text-gray-400">
-        <span v-if="user?.school" class="inline-flex items-center gap-1">🎓 {{ user.school }}</span>
-        <span class="inline-flex items-center gap-1">
-          <span class="iconfont icon-weibiaoti-1-13"></span>加入于 {{ user?.createdAt }}
-        </span>
-        <span v-if="isSelf" class="inline-flex items-center gap-1">
-          <span class="iconfont icon-xinfengtianchong"></span>{{ user?.email }}
-        </span>
-      </div>
-
-      <div class="mt-2 flex divide-x divide-gray-100 [&>div]:px-7">
-        <div>
-          <div class="text-[23px] font-semibold tabular-nums text-gray-800">{{ solved }}</div>
-          <div class="mt-0.5 text-[12.5px] text-gray-500">已解决</div>
-        </div>
-        <div>
-          <div class="text-[23px] font-semibold tabular-nums text-amber-600">{{ attempted }}</div>
-          <div class="mt-0.5 text-[12.5px] text-gray-500">尝试中</div>
-        </div>
-        <div>
-          <div class="text-[23px] font-semibold tabular-nums text-gray-800">{{ passRate }}</div>
-          <div class="mt-0.5 text-[12.5px] text-gray-500">通过率</div>
-        </div>
-        <div>
-          <div class="text-[23px] font-semibold tabular-nums" :style="{ color: ratingColor }">{{ rating > 0 ? rating : '—'
-          }}</div>
-          <div class="mt-0.5 text-[12.5px] text-gray-500">Rating</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- tab 栏 + 内容（子路由） -->
-    <div class="mt-4 pt-2 overflow-hidden rounded border border-gray-200 bg-white">
-      <div class="flex gap-2.5 border-b border-gray-200 px-2.5">
+      <div class="flex gap-2.5 border-t border-gray-200 bg-gray-50 px-3">
         <span v-for="t in tabs" :key="t.name" @click="go(t.name)"
-          class="-mb-px cursor-pointer border-b-2 px-2 py-1.5 text-[15px] transition-colors"
+          class="-mb-px cursor-pointer border-b-2 px-3 py-2.5 text-[14px] transition-colors"
           :class="route.name === t.name
             ? 'border-blue-500 font-medium text-blue-500'
             : 'border-transparent text-gray-600 hover:text-blue-500'">
           {{ t.label }}
         </span>
       </div>
+    </div>
+
+    <!-- 内容（子路由） -->
+    <div class="mt-4 overflow-hidden rounded border border-gray-200 bg-white">
       <router-view />
     </div>
 

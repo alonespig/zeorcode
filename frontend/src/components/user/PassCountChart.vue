@@ -84,20 +84,24 @@ const renderChart = () => {
         type: 'line',
         data: props.counts,
 
-        smooth: true,
+        // 使用直线连接每天的数据，形成标准折线图
+        smooth: false,
 
         // ✅ 关键：细线
         lineStyle: {
           width: 2,
-          color: '#5470C6'
+          color: '#409EFF'
         },
 
-        // ✅ 点变小
+        // 空心圆点
         symbol: 'circle',
-        symbolSize: 5,
+        symbolSize: 8,
+        showSymbol: true,
 
         itemStyle: {
-          color: '#5470C6'
+          color: '#fff',
+          borderColor: '#409EFF',
+          borderWidth: 2
         },
 
         // ✅ 去掉大面积阴影（之前丑的原因之一）
@@ -105,7 +109,13 @@ const renderChart = () => {
 
         // ✅ hover 高亮
         emphasis: {
-          focus: 'series'
+          focus: 'series',
+          scale: 1.25,
+          itemStyle: {
+            color: '#fff',
+            borderColor: '#409EFF',
+            borderWidth: 2
+          }
         }
       }
     ]
