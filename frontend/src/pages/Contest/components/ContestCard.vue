@@ -147,13 +147,16 @@ const countdown = computed(() => {
 });
 
 function fmtCountdown(ms) {
-  if (!ms || ms <= 0) return "00:00";
+  if (!ms || ms <= 0) return "00:00:00";
   const s = Math.floor(ms / 1000);
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
   const m = Math.floor((s % 3600) / 60);
+  const second = s % 60;
   const pad = (n) => String(n).padStart(2, "0");
-  return d > 0 ? `${d}天${pad(h)}:${pad(m)}` : `${pad(h)}:${pad(m)}`;
+  return d > 0
+    ? `${d}天${pad(h)}:${pad(m)}:${pad(second)}`
+    : `${pad(h)}:${pad(m)}:${pad(second)}`;
 }
 </script>
 
