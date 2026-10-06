@@ -195,7 +195,7 @@ onMounted(() => {
         <PureTable
           border
           adaptive
-          table-layout="auto"
+          table-layout="fixed"
           align-whole="center"
           :loading="loading"
           :size="size"
@@ -214,20 +214,16 @@ onMounted(() => {
             </el-tag>
           </template>
           <template #title="{ row }">
-            <div class="flex flex-col items-start">
+            <div class="min-w-0 overflow-hidden text-left">
               <el-link
                 type="primary"
                 :underline="false"
+                class="max-w-full"
+                :title="row.title"
                 @click="openDetail(row)"
               >
-                {{ row.title }}
+                <span class="block truncate">{{ row.title }}</span>
               </el-link>
-              <span
-                class="mt-0.5 w-full truncate text-xs text-gray-400"
-                :title="row.summary"
-              >
-                {{ row.summary || "—" }}
-              </span>
             </div>
           </template>
           <template #author="{ row }">
@@ -241,32 +237,34 @@ onMounted(() => {
             <span v-else class="text-gray-400">—</span>
           </template>
           <template #operation="{ row }">
-            <el-button
-              link
-              size="small"
-              type="primary"
-              @click="openDetail(row)"
-            >
-              查看
-            </el-button>
-            <el-button
-              link
-              size="small"
-              type="success"
-              :loading="row._busy"
-              @click="approve(row)"
-            >
-              通过
-            </el-button>
-            <el-button
-              link
-              size="small"
-              type="danger"
-              :loading="row._busy"
-              @click="reject(row)"
-            >
-              拒绝
-            </el-button>
+            <div class="flex items-center justify-center whitespace-nowrap">
+              <el-button
+                link
+                size="small"
+                type="primary"
+                @click="openDetail(row)"
+              >
+                查看
+              </el-button>
+              <el-button
+                link
+                size="small"
+                type="success"
+                :loading="row._busy"
+                @click="approve(row)"
+              >
+                通过
+              </el-button>
+              <el-button
+                link
+                size="small"
+                type="danger"
+                :loading="row._busy"
+                @click="reject(row)"
+              >
+                拒绝
+              </el-button>
+            </div>
           </template>
         </PureTable>
       </template>
