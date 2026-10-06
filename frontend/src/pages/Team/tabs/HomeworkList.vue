@@ -1,7 +1,7 @@
 <template>
   <div class="f-panel">
     <div class="flex items-center justify-between border-b border-gray-100 px-6 py-3.5">
-      <span class="text-sm text-gray-500">共 {{ total }} 个作业</span>
+      <span class="text-base font-semibold text-gray-800">作业列表</span>
       <el-button v-if="team.canManage" type="primary" :icon="Plus" @click="openCreate">布置作业</el-button>
     </div>
 

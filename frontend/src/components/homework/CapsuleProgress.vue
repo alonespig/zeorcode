@@ -106,7 +106,7 @@ const displayText = computed(() => `${normalizedValue.value} / ${normalizedMax.v
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: inherit;
-  background: #bfdbfe;
+  background: #22c55e;
   transition: width 220ms ease;
 }
 
@@ -116,7 +116,7 @@ const displayText = computed(() => `${normalizedValue.value} / ${normalizedMax.v
 }
 
 .capsule-progress--complete .capsule-progress__fill {
-  background: #bbebcb;
+  background: #16a34a;
 }
 
 .capsule-progress--complete .capsule-progress__value {
