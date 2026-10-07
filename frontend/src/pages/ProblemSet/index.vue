@@ -14,6 +14,9 @@
             class="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[11px] text-white">{{
               selectedTags.length }}</span>
         </el-button>
+        <el-button v-if="userStore.isAdmin" type="primary" :icon="Plus" @click="goCreateProblemSet">
+          创建题单
+        </el-button>
         <el-button v-if="q || selectedTags.length" type="info" plain :icon="Refresh" @click="handleReset">重置</el-button>
       </div>
     </div>
@@ -30,14 +33,15 @@
     </div>
 
     <el-table :data="list" style="width: 100%">
-      <el-table-column prop="id" label="#" width="90" align="center" />
-
       <el-table-column label="题单" min-width="260">
         <template #default="{ row }">
           <router-link class="font-medium text-blue-500 hover:text-blue-400"
             :to="{ name: 'ProblemSetIntro', params: { id: row.id } }">
             {{ row.title }}
           </router-link>
+          <el-tag v-if="row.published === 0" class="ml-2" type="info" size="small" effect="plain">
+            草稿
+          </el-tag>
           <!-- 非公开题单在标题右边挂一把锁，替代单独的「可见性」列 -->
           <el-tooltip v-if="row.visibility === 1" content="需要邀请码" placement="top">
             <el-icon class="ml-1.5 align-middle text-gray-400" :size="14">
@@ -136,13 +140,15 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Search, Refresh, Lock } from "@element-plus/icons-vue";
+import { Search, Refresh, Lock, Plus } from "@element-plus/icons-vue";
 import { getProblemSetList } from "@/api/problemset";
 import { getTags } from "@/api/problems";
+import { useUserStore } from "@/stores/user";
 import { tagStyle, TAG_FONT_SIZE } from "@/utils/tag";
 
 const route = useRoute();
 const router = useRouter();
+const userStore = useUserStore();
 
 const list = ref([]);
 const total = ref(0);
@@ -175,6 +181,7 @@ const buildQuery = () => {
 
 const applyFilter = () => router.push({ query: buildQuery() });
 const pageChange = () => router.push({ query: { ...route.query, page: page.value } });
+const goCreateProblemSet = () => router.push({ name: "ProblemSetCreate" });
 
 // 点「重置」：清空搜索词与标签筛选，回到第 1 页
 const handleReset = () => {

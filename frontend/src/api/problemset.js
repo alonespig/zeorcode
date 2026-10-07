@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 // ===== 前台 =====
 
-// 题单列表（只含已发布）。params: { page, pageSize, q, tags, visibility }
+// 题单列表（管理员可见草稿，其他用户只含已发布）。params: { page, pageSize, q, tags, visibility }
 export const getProblemSetList = (params) => {
   return request({ url: '/problemset', method: 'get', params })
 }

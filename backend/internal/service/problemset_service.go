@@ -29,7 +29,7 @@ func NewProblemSetService(
 	return &ProblemSetService{repo: repo, problemRepo: problemRepo, subRepo: subRepo, userRepo: userRepo}
 }
 
-// List 题单分页列表。includeDraft 仅后台传 true。
+// List 题单分页列表。includeDraft 仅管理员视图传 true。
 // userID 为 nil（未登录）时不查做题状态，SolvedCount 留空，前端不渲染进度。
 func (s *ProblemSetService) List(ctx context.Context, form ProblemSetListParams, userID *int64, includeDraft bool) (*ProblemSetList, error) {
 	sets, total, err := s.repo.List(ctx, &repository.ProblemSetQuery{

@@ -16,7 +16,7 @@ func NewProblemSetRepo(db *gorm.DB) *ProblemSetRepo {
 	return &ProblemSetRepo{db: db}
 }
 
-// ProblemSetQuery 题单列表查询条件。IncludeDraft 只在后台列表为 true。
+// ProblemSetQuery 题单列表查询条件。IncludeDraft 只在管理员视图为 true。
 type ProblemSetQuery struct {
 	Page         int
 	PageSize     int

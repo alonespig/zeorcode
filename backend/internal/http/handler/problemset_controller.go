@@ -17,13 +17,13 @@ func NewProblemSetController(setSrv *service.ProblemSetService) *ProblemSetContr
 	return &ProblemSetController{setSrv: setSrv}
 }
 
-// List GET /api/problemset 前台题单列表（只含已发布）
+// List GET /api/problemset 前台题单列表。管理员可见草稿，其他用户只见已发布题单。
 func (p *ProblemSetController) List(c *gin.Context) (any, error) {
 	var req dto.ProblemSetListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	resp, err := p.setSrv.List(c.Request.Context(), toProblemSetListParams(req), optionalUserIDPtr(c), false)
+	resp, err := p.setSrv.List(c.Request.Context(), toProblemSetListParams(req), optionalUserIDPtr(c), isAdminFromCtx(c))
 	if err != nil {
 		return nil, err
 	}

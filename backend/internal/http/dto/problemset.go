@@ -25,7 +25,7 @@ type ProblemSetItemResp struct {
 	// SolvedCount 当前用户在本题单内已通过的题数；未登录时为 nil，前端不渲染进度
 	SolvedCount *int   `json:"solvedCount,omitempty"`
 	Visibility  int    `json:"visibility"` // 0 公开 / 1 需邀请码
-	Published   int    `json:"published"`  // 0 草稿 / 1 已发布（仅后台列表会出现 0）
+	Published   int    `json:"published"`  // 0 草稿 / 1 已发布（仅管理员视图会出现 0）
 	Author      string `json:"author"`
 	UpdatedAt   string `json:"updatedAt"`
 }

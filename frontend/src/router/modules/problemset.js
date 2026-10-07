@@ -9,6 +9,12 @@ export const problemSetRoutes = {
       component: () => import("@/pages/ProblemSet/index.vue"),
     },
     {
+      path: "create",
+      name: "ProblemSetCreate",
+      meta: { title: "创建题单", requiresAdmin: true },
+      component: () => import("@/pages/ProblemSet/Create.vue"),
+    },
+    {
       // 未登录也能看，只是不展示做题进度，所以不加 requiresAuth
       path: ":id",
       component: () => import("@/pages/ProblemSet/Detail.vue"),
