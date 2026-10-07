@@ -18,6 +18,36 @@ export default {
       meta: { title: "题目管理" }
     },
     {
+      path: "/content/problems/create",
+      name: "AdminProblemsCreate",
+      component: () => import("@/views/content/problems/create.vue"),
+      meta: {
+        title: "新建题目",
+        showLink: false,
+        activePath: "/content/problems"
+      }
+    },
+    {
+      path: "/content/problems/:id/edit",
+      name: "AdminProblemsEdit",
+      component: () => import("@/views/content/problems/edit.vue"),
+      meta: {
+        title: "编辑题目",
+        showLink: false,
+        activePath: "/content/problems"
+      }
+    },
+    {
+      path: "/content/problems/:id/testdata",
+      name: "AdminProblemTestData",
+      component: () => import("@/views/content/problems/testdata.vue"),
+      meta: {
+        title: "测试数据",
+        showLink: false,
+        activePath: "/content/problems"
+      }
+    },
+    {
       path: "/content/problemsets",
       name: "AdminProblemSets",
       component: () => import("@/views/content/problemsets/index.vue"),
