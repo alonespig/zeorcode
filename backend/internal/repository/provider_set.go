@@ -17,4 +17,5 @@ var RepoSet = wire.NewSet(
 	NewHomeworkRepo,
 	NewAgentRepo,
 	NewLanguageRepo,
+	NewDashboardRepo,
 )

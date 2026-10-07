@@ -20,11 +20,21 @@ const maxAdminUserImportFileSize = 5 << 20
 
 // AdminController 后台管理接口
 type AdminController struct {
-	userSrv *service.UserService
+	userSrv      *service.UserService
+	dashboardSrv *service.DashboardService
 }
 
-func NewAdminController(userSrv *service.UserService) *AdminController {
-	return &AdminController{userSrv: userSrv}
+func NewAdminController(userSrv *service.UserService, dashboardSrv *service.DashboardService) *AdminController {
+	return &AdminController{userSrv: userSrv, dashboardSrv: dashboardSrv}
+}
+
+// Dashboard GET /api/admin/dashboard 后台工作台聚合数据。
+func (a *AdminController) Dashboard(c *gin.Context) (any, error) {
+	result, err := a.dashboardSrv.Overview(c.Request.Context())
+	if err != nil {
+		return nil, err
+	}
+	return toDashboardOverviewResp(result), nil
 }
 
 // ListUsers GET /api/admin/users?page=&pageSize=
