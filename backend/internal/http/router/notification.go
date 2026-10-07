@@ -19,6 +19,7 @@ func (h *HttpServer) initNotificationRouter(r *gin.Engine) {
 
 	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired())
 	{
+		admin.GET("/notifications", response.Wrap(h.notificationController.BroadcastHistory))
 		admin.POST("/notifications", response.Wrap(h.notificationController.Broadcast))
 	}
 }

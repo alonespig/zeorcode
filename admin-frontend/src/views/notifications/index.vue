@@ -1,19 +1,58 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { onMounted, reactive, ref } from "vue";
 import { ElMessageBox, type FormInstance, type FormRules } from "element-plus";
+import type { PaginationProps } from "@pureadmin/table";
 import { message } from "@/utils/message";
-import { broadcastNotification } from "@/api/admin/notifications";
+import {
+  broadcastNotification,
+  getBroadcastHistory,
+  type BroadcastHistoryItem
+} from "@/api/admin/notifications";
 
 defineOptions({ name: "AdminNotifications" });
 
 const formRef = ref<FormInstance>();
 const submitting = ref(false);
+const historyLoading = ref(false);
+const history = ref<BroadcastHistoryItem[]>([]);
 const form = reactive({ title: "", content: "", link: "" });
+const pagination = reactive<PaginationProps>({
+  pageSize: 10,
+  currentPage: 1,
+  total: 0,
+  pageSizes: [10, 20, 50],
+  layout: "total, sizes, prev, pager, next"
+});
 
 const rules: FormRules = {
   title: [{ required: true, message: "请输入通知标题", trigger: "blur" }],
   content: [{ required: true, message: "请输入通知内容", trigger: "blur" }]
 };
+
+async function loadHistory() {
+  historyLoading.value = true;
+  try {
+    const response = await getBroadcastHistory({
+      page: pagination.currentPage,
+      pageSize: pagination.pageSize
+    });
+    history.value = response.data?.list || [];
+    pagination.total = response.data?.total || 0;
+  } finally {
+    historyLoading.value = false;
+  }
+}
+
+function onCurrentChange(page: number) {
+  pagination.currentPage = page;
+  loadHistory();
+}
+
+function onSizeChange(size: number) {
+  pagination.pageSize = size;
+  pagination.currentPage = 1;
+  loadHistory();
+}
 
 async function submit() {
   const valid = await formRef.value?.validate().catch(() => false);
@@ -46,12 +85,16 @@ async function submit() {
     form.content = "";
     form.link = "";
     formRef.value?.clearValidate();
+    pagination.currentPage = 1;
+    await loadHistory();
   } catch {
     // 错误信息已由 http 拦截器统一提示
   } finally {
     submitting.value = false;
   }
 }
+
+onMounted(loadHistory);
 </script>
 
 <template>
@@ -115,6 +158,61 @@ async function submit() {
         />
       </aside>
     </div>
+
+    <section class="history-panel">
+      <header>
+        <div>
+          <h3>发布历史</h3>
+          <p>记录每次全站广播的内容、发布人和接收人数。</p>
+        </div>
+        <el-button @click="loadHistory">刷新</el-button>
+      </header>
+      <el-table
+        v-loading="historyLoading"
+        :data="history"
+        empty-text="暂无广播记录"
+      >
+        <el-table-column
+          prop="title"
+          label="标题"
+          min-width="170"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          prop="content"
+          label="内容"
+          min-width="260"
+          show-overflow-tooltip
+        />
+        <el-table-column label="发布人" width="150">
+          <template #default="{ row }"
+            >{{ row.actorName || "未知管理员"
+            }}<small>#{{ row.actorID || "—" }}</small></template
+          >
+        </el-table-column>
+        <el-table-column
+          prop="recipientCount"
+          label="接收人数"
+          width="110"
+          align="center"
+        />
+        <el-table-column label="跳转链接" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.link || "—" }}</template>
+        </el-table-column>
+        <el-table-column
+          prop="createdAt"
+          label="发布时间"
+          width="175"
+          align="center"
+        />
+      </el-table>
+      <el-pagination
+        v-bind="pagination"
+        class="history-pagination"
+        @size-change="onSizeChange"
+        @current-change="onCurrentChange"
+      />
+    </section>
   </div>
 </template>
 
@@ -183,6 +281,42 @@ async function submit() {
   line-height: 1.7;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.history-panel {
+  margin-top: 28px;
+  border: 1px solid var(--el-border-color-lighter);
+}
+
+.history-panel > header {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.history-panel h3,
+.history-panel p {
+  margin: 0;
+}
+
+.history-panel p {
+  margin-top: 5px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.history-panel small {
+  margin-left: 6px;
+  color: var(--el-text-color-placeholder);
+}
+
+.history-pagination {
+  justify-content: flex-end;
+  padding: 14px 16px;
+  border-top: 1px solid var(--el-border-color-lighter);
 }
 
 @media (max-width: 900px) {

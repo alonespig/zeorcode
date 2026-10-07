@@ -212,6 +212,19 @@ INSERT INTO `languages` (`id`, `name`, `status`, `sort`, `created_at`, `updated_
   (1, 'c++', 1, 1, NOW(3), NOW(3)),
   (2, 'java', 1, 2, NOW(3), NOW(3)),
   (3, 'python', 1, 3, NOW(3), NOW(3));
+DROP TABLE IF EXISTS `system_broadcasts`;
+CREATE TABLE `system_broadcasts` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `actor_id` bigint NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `content` varchar(2000) NOT NULL,
+  `link` varchar(255) NOT NULL DEFAULT '',
+  `recipient_count` int NOT NULL DEFAULT '0',
+  `created_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_system_broadcasts_actor_id` (`actor_id`),
+  KEY `idx_system_broadcasts_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 DROP TABLE IF EXISTS `notifications`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;

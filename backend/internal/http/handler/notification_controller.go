@@ -75,9 +75,34 @@ func (n *NotificationController) Broadcast(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
+	actorID, _, err := requireCurrentUser(c)
+	if err != nil {
+		return nil, err
+	}
 	return nil, n.srv.Broadcast(c.Request.Context(), service.BroadcastParams{
-		Title: req.Title, Content: req.Content, Link: req.Link,
+		ActorID: actorID, Title: req.Title, Content: req.Content, Link: req.Link,
 	})
+}
+
+func (n *NotificationController) BroadcastHistory(c *gin.Context) (any, error) {
+	var req dto.PageForm
+	if err := c.ShouldBindQuery(&req); err != nil {
+		return nil, errcode.ErrInvalidParams.Wrap(err)
+	}
+	result, err := n.srv.BroadcastHistory(c.Request.Context(), req.Page, req.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]dto.BroadcastHistoryItem, 0, len(result.List))
+	for _, item := range result.List {
+		items = append(items, dto.BroadcastHistoryItem{
+			ID: item.ID, ActorID: item.ActorID, ActorName: item.ActorName,
+			Title: item.Title, Content: item.Content, Link: item.Link,
+			RecipientCount: item.RecipientCount,
+			CreatedAt:      item.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	return &dto.BroadcastHistoryResp{Total: result.Total, List: items}, nil
 }
 
 func toNotificationListResp(resp *service.NotificationList) *dto.NotificationListResp {
