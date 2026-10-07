@@ -15,6 +15,10 @@ func contestProblemAccessPolicy(contest *model.Contest, registered, isAdmin bool
 	if now.Before(contest.StartTime) {
 		return errcode.ErrContestNotStart
 	}
+	// 公开比赛结束后作为历史内容开放，不再要求查看者报名。
+	if !now.Before(contestEndTime(*contest)) && contest.InviteCode == "" {
+		return nil
+	}
 	if !registered {
 		return errcode.ErrContestNotRegistered
 	}
@@ -46,9 +50,12 @@ func (s *ContestService) authorizeContestProblemAccess(
 	if isAdmin {
 		return contest, nil
 	}
-	registered, err := s.repo.ExistByID(ctx, contestID, userID)
-	if err != nil {
-		return nil, errcode.ErrDatabase.Wrap(err)
+	registered := false
+	if userID > 0 {
+		registered, err = s.repo.ExistByID(ctx, contestID, userID)
+		if err != nil {
+			return nil, errcode.ErrDatabase.Wrap(err)
+		}
 	}
 	if err := contestProblemAccessPolicy(contest, registered, false, time.Now()); err != nil {
 		return nil, err

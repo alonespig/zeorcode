@@ -52,17 +52,11 @@
     <!-- tab（单独一张卡片） -->
     <div class="f-panel mt-4">
       <div class="flex items-center gap-6 px-6">
-        <template v-for="t in tabs" :key="t.to">
-          <router-link v-if="!t.locked" :to="t.to"
-            class="flex items-center gap-1.5 border-b-2 border-transparent py-3 text-sm text-gray-600 hover:text-blue-500"
-            active-class="border-blue-500! text-blue-500! font-medium">
-            <span class="iconfont" :class="t.icon"></span>{{ t.name }}
-          </router-link>
-          <span v-else class="flex cursor-not-allowed items-center gap-1.5 py-3 text-sm text-gray-300"
-            title="报名后可查看">
-            <span class="iconfont" :class="t.icon"></span>{{ t.name }}
-          </span>
-        </template>
+        <router-link v-for="t in tabs" :key="t.to" :to="t.to"
+          class="flex items-center gap-1.5 border-b-2 border-transparent py-3 text-sm text-gray-600 hover:text-blue-500"
+          active-class="border-blue-500! text-blue-500! font-medium">
+          <span class="iconfont" :class="t.icon"></span>{{ t.name }}
+        </router-link>
         <el-button v-if="userStore.isAdmin" size="small" class="ml-auto" @click="goEdit">编辑</el-button>
       </div>
     </div>
@@ -84,7 +78,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Lock, Trophy } from "@element-plus/icons-vue";
@@ -143,11 +137,12 @@ const fmtTooltip = (val) => {
   return dayjs(t).format("MM-DD HH:mm");
 };
 
-// 报名/已结束/管理员可看全部 tab；否则只放开「简介」
+// 管理员始终可看全部；进行中的比赛需已报名；已结束的公开赛对所有人开放。
 const allowAll = computed(() =>
   userStore.isAdmin ||
-  status.value === CONTEST_STATUS.ENDED ||
-  (status.value === CONTEST_STATUS.RUNNING && contestData.value?.isRegistered)
+  ((status.value === CONTEST_STATUS.RUNNING || status.value === CONTEST_STATUS.ENDED) &&
+    contestData.value?.isRegistered) ||
+  (status.value === CONTEST_STATUS.ENDED && !contestData.value?.needInviteCode)
 );
 
 // 未报名且比赛未结束（非管理员）→ 简介页顶部给报名提示
@@ -170,7 +165,13 @@ const tabs = computed(() => {
   if (userStore.isAdmin) {
     items.push({ name: "重判", to: `${base}/rejudge`, icon: "icon-fuwuqi", always: true });
   }
-  return items.map((it) => ({ ...it, locked: !it.always && !allowAll.value }));
+  return allowAll.value ? items : items.filter((it) => it.always);
+});
+
+// 未获访问权限时，即使直接输入子路由地址，也统一回到比赛简介。
+watch([contestData, allowAll, () => route.name], () => {
+  if (!contestData.value || allowAll.value || route.name === "ContestDescription") return;
+  router.replace({ name: "ContestDescription", params: { id: route.params.id } });
 });
 
 const goEdit = () => router.push({ name: "EditContest", params: { id: route.params.id } });

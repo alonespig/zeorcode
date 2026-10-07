@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"zoj/pkg/errcode"
 	"zoj/internal/model"
+	"zoj/pkg/errcode"
 )
 
 func requireAppErrorCode(t *testing.T, err error, want errcode.Code) {
@@ -49,6 +49,20 @@ func TestContestProblemAccessPolicy(t *testing.T) {
 		{
 			name:       "已报名用户可查看已结束比赛题目",
 			contest:    model.Contest{StartTime: now.Add(-2 * time.Hour), EndTime: now.Add(-time.Hour)},
+			registered: true,
+		},
+		{
+			name:    "未报名用户可查看已结束公开赛题目",
+			contest: model.Contest{StartTime: now.Add(-2 * time.Hour), EndTime: now.Add(-time.Hour)},
+		},
+		{
+			name:     "未报名用户不能查看已结束非公开赛题目",
+			contest:  model.Contest{StartTime: now.Add(-2 * time.Hour), EndTime: now.Add(-time.Hour), InviteCode: "secret"},
+			wantCode: errcode.ContestNotRegistered,
+		},
+		{
+			name:       "已报名用户可查看已结束非公开赛题目",
+			contest:    model.Contest{StartTime: now.Add(-2 * time.Hour), EndTime: now.Add(-time.Hour), InviteCode: "secret"},
 			registered: true,
 		},
 	}

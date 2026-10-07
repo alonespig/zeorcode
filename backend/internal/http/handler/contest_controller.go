@@ -134,14 +134,8 @@ func (c *ContestController) GetContestProblemList(ctx *gin.Context) (any, error)
 	if err != nil {
 		return nil, err
 	}
-	userIDStr, exists := ctx.Get("userID")
-	if !exists {
-		return nil, errcode.ErrUnauthorized
-	}
-	userID, ok := userIDStr.(int64)
-	if !ok {
-		return nil, errcode.ErrInvalidParams.WithMsg("用户ID类型错误")
-	}
+	userIDVal, _ := ctx.Get("userID")
+	userID, _ := userIDVal.(int64)
 	roleVal, _ := ctx.Get("role")
 	role, _ := roleVal.(int)
 	resp, err := c.contestSrv.GetContestProblemList(ctx.Request.Context(), contestID, userID, role == 1)
@@ -156,14 +150,8 @@ func (c *ContestController) GetContestProblem(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	userIDVal, exists := ctx.Get("userID")
-	if !exists {
-		return nil, errcode.ErrUnauthorized
-	}
-	userID, ok := userIDVal.(int64)
-	if !ok {
-		return nil, errcode.ErrInvalidParams.WithMsg("用户ID类型错误")
-	}
+	userIDVal, _ := ctx.Get("userID")
+	userID, _ := userIDVal.(int64)
 	roleVal, _ := ctx.Get("role")
 	role, _ := roleVal.(int)
 	resp, err := c.contestSrv.GetContestProblemDetail(

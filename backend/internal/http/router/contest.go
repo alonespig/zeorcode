@@ -10,23 +10,23 @@ import (
 // ==================== Contest ====================
 
 func (h *HttpServer) initContestRouter(r *gin.Engine) {
-	// 公开浏览：可匿名（列表 / 简介 / 排名 / 倒计时）。登录后自动带上 isRegistered / isSelf
+	// 公开浏览：可匿名。题目接口仍由 Service 按比赛状态、公开性和报名状态鉴权。
 	contestPub := r.Group("/api/contest", middleware.JWTAuthOptional(h.auth))
 	{
 		contestPub.GET("", response.Wrap(h.contestController.List))
 		contestPub.GET("/:id", response.Wrap(h.contestController.GetContestDetail))
 		contestPub.GET("/:id/desc", response.Wrap(h.contestController.GetContestDesc))
+		contestPub.GET("/:id/problem", response.Wrap(h.contestController.GetContestProblemList))
+		contestPub.GET("/:id/problem/:problemID", response.Wrap(h.contestController.GetContestProblem))
 		contestPub.GET("/:id/rank", response.Wrap(h.contestController.GetContestRank))
 		contestPub.GET("/:id/myrank", response.Wrap(h.contestController.GetMyContestRank))
 		contestPub.GET("/:id/sse", h.contestController.SSEventStream)
 	}
 
-	// 需登录：报名 / 做题 / 提交 / 我的提交
+	// 需登录：报名 / 提交 / 我的提交
 	contest := r.Group("/api/contest", middleware.JWTAuth(h.auth))
 	{
 		contest.POST("/join", response.Wrap(h.contestController.JoinContest))
-		contest.GET("/:id/problem", response.Wrap(h.contestController.GetContestProblemList))
-		contest.GET("/:id/problem/:problemID", response.Wrap(h.contestController.GetContestProblem))
 		contest.POST("/submit", response.Wrap(h.contestController.Submit))
 		contest.GET("/:id/submission", response.Wrap(h.contestController.GetContestSubmissions))
 		contest.GET("/:id/submit-info", response.Wrap(h.contestController.GetContestSubmitInfo))
