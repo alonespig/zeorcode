@@ -64,6 +64,47 @@ func toProblemSetDetailResp(r *service.ProblemSetDetail) *dto.ProblemSetDetailRe
 	}
 }
 
+func toProblemSetRankParams(req dto.ProblemSetRankReq) service.ProblemSetRankParams {
+	return service.ProblemSetRankParams{Page: req.Page, PageSize: req.PageSize}
+}
+
+func toProblemSetRankItemResp(item service.ProblemSetRankItem) dto.ProblemSetRankItemResp {
+	cells := make([]dto.ProblemSetRankCellResp, 0, len(item.Cells))
+	for _, cell := range item.Cells {
+		cells = append(cells, dto.ProblemSetRankCellResp{ProblemID: cell.ProblemID, Status: cell.Status})
+	}
+	return dto.ProblemSetRankItemResp{
+		Rank:           item.Rank,
+		ID:             item.ID,
+		Username:       item.Username,
+		Avatar:         item.Avatar,
+		Gender:         item.Gender,
+		SolvedCount:    item.SolvedCount,
+		AttemptedCount: item.AttemptedCount,
+		IsSelf:         item.IsSelf,
+		Cells:          cells,
+	}
+}
+
+func toProblemSetRankResp(r *service.ProblemSetRank) *dto.ProblemSetRankResp {
+	items := make([]dto.ProblemSetRankItemResp, 0, len(r.List))
+	for _, item := range r.List {
+		items = append(items, toProblemSetRankItemResp(item))
+	}
+	problemIDs := append([]string(nil), r.ProblemIDs...)
+	if problemIDs == nil {
+		problemIDs = []string{}
+	}
+	resp := &dto.ProblemSetRankResp{
+		Total: r.Total, ProblemCount: r.ProblemCount, ProblemIDs: problemIDs, List: items,
+	}
+	if r.Mine != nil {
+		mine := toProblemSetRankItemResp(*r.Mine)
+		resp.Mine = &mine
+	}
+	return resp
+}
+
 func toSaveProblemSetParams(req dto.SaveProblemSetReq) service.SaveProblemSetParams {
 	return service.SaveProblemSetParams{
 		Title:       req.Title,

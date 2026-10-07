@@ -17,6 +17,7 @@ func (h *HttpServer) initProblemSetRouter(r *gin.Engine) {
 	{
 		pub.GET("/problemset", middleware.JWTAuthOptional(h.auth), response.Wrap(h.problemSetController.List))
 		pub.GET("/problemset/:id", middleware.JWTAuthOptional(h.auth), response.Wrap(h.problemSetController.Detail))
+		pub.GET("/problemset/:id/rank", middleware.JWTAuthOptional(h.auth), response.Wrap(h.problemSetController.Rank))
 		// 解锁要记到当前用户名下，必须登录
 		pub.POST("/problemset/:id/unlock", middleware.JWTAuth(h.auth),
 			middleware.RateLimit(h.cache, "problemset-unlock", 10, time.Minute),

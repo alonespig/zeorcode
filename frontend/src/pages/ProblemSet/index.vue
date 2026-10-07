@@ -35,7 +35,7 @@
       <el-table-column label="题单" min-width="260">
         <template #default="{ row }">
           <router-link class="font-medium text-blue-500 hover:text-blue-400"
-            :to="{ name: 'ProblemSetDetail', params: { id: row.id } }">
+            :to="{ name: 'ProblemSetIntro', params: { id: row.id } }">
             {{ row.title }}
           </router-link>
           <!-- 非公开题单在标题右边挂一把锁，替代单独的「可见性」列 -->

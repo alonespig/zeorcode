@@ -40,6 +40,25 @@ type ProblemSetProblemRef struct {
 	Sort         int   `gorm:"column:sort"`
 }
 
+// ProblemSetRankRecord 是题单排行榜的聚合查询结果。
+type ProblemSetRankRecord struct {
+	RankIndex      int    `gorm:"column:rank_index"`
+	UserID         int64  `gorm:"column:user_id"`
+	UID            int64  `gorm:"column:uid"`
+	Username       string `gorm:"column:username"`
+	Avatar         string `gorm:"column:avatar"`
+	Gender         int    `gorm:"column:gender"`
+	SolvedCount    int    `gorm:"column:solved_count"`
+	AttemptedCount int    `gorm:"column:attempted_count"`
+}
+
+// ProblemSetRankStatusRecord 是排行榜用户在题单单题上的全局做题状态。
+type ProblemSetRankStatusRecord struct {
+	UserID    int64 `gorm:"column:user_id"`
+	ProblemID int64 `gorm:"column:problem_id"`
+	Status    int   `gorm:"column:status"`
+}
+
 func (r *ProblemSetRepo) List(ctx context.Context, q *ProblemSetQuery) ([]model.ProblemSet, int64, error) {
 	var sets []model.ProblemSet
 	var total int64
@@ -110,6 +129,68 @@ func (r *ProblemSetRepo) ProblemRefsBySetIDs(ctx context.Context, setIDs []int64
 		Order("problem_set_id ASC, sort ASC").
 		Find(&refs).Error
 	return refs, err
+}
+
+// ListRank 按全局 user_problems 状态统计题单排行榜。只有至少尝试过一道题的用户进入榜单，
+// 同通过数使用相同名次，再按内部用户 ID 保证分页顺序稳定。
+func (r *ProblemSetRepo) ListRank(ctx context.Context, setID int64, page, pageSize int) ([]ProblemSetRankRecord, int64, error) {
+	stats := r.problemSetRankStatsQuery(ctx, setID)
+	var total int64
+	if err := r.db.WithContext(ctx).Table("(?) AS stats", stats).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var rows []ProblemSetRankRecord
+	err := r.problemSetRankQuery(ctx, setID).
+		Order("stats.solved_count DESC, users.id ASC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Scan(&rows).Error
+	return rows, total, err
+}
+
+// GetUserRank 返回指定用户在完整榜单中的名次；没有做题记录时返回 nil。
+func (r *ProblemSetRepo) GetUserRank(ctx context.Context, setID, userID int64) (*ProblemSetRankRecord, error) {
+	ranked := r.problemSetRankQuery(ctx, setID)
+	var row ProblemSetRankRecord
+	err := r.db.WithContext(ctx).Table("(?) AS ranked", ranked).
+		Where("ranked.user_id = ?", userID).
+		Take(&row).Error
+	if err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
+// RankStatuses 返回一页榜单用户在题单各题上的全局状态。
+func (r *ProblemSetRepo) RankStatuses(ctx context.Context, setID int64, userIDs []int64) ([]ProblemSetRankStatusRecord, error) {
+	if len(userIDs) == 0 {
+		return []ProblemSetRankStatusRecord{}, nil
+	}
+	var rows []ProblemSetRankStatusRecord
+	err := r.db.WithContext(ctx).Table("user_problems AS up").
+		Select("up.user_id, up.problem_id, up.status").
+		Joins("JOIN problem_set_problems AS psp ON psp.problem_id = up.problem_id").
+		Where("psp.problem_set_id = ? AND up.user_id IN ? AND up.status <> ?", setID, userIDs, model.UserProblemUntried).
+		Scan(&rows).Error
+	return rows, err
+}
+
+func (r *ProblemSetRepo) problemSetRankStatsQuery(ctx context.Context, setID int64) *gorm.DB {
+	return r.db.WithContext(ctx).Table("user_problems AS up").
+		Select("up.user_id, COUNT(DISTINCT CASE WHEN up.status = ? THEN up.problem_id END) AS solved_count, COUNT(DISTINCT up.problem_id) AS attempted_count", model.UserProblemSolved).
+		Joins("JOIN problem_set_problems AS psp ON psp.problem_id = up.problem_id").
+		Where("psp.problem_set_id = ? AND up.status <> ?", setID, model.UserProblemUntried).
+		Group("up.user_id")
+}
+
+func (r *ProblemSetRepo) problemSetRankQuery(ctx context.Context, setID int64) *gorm.DB {
+	stats := r.problemSetRankStatsQuery(ctx, setID)
+	return r.db.WithContext(ctx).Table("(?) AS stats", stats).
+		Select("DENSE_RANK() OVER (ORDER BY stats.solved_count DESC) AS rank_index, " +
+			"users.id AS user_id, users.uid, users.username, users.avatar, users.gender, " +
+			"stats.solved_count, stats.attempted_count").
+		Joins("JOIN users ON users.id = stats.user_id")
 }
 
 // TagsBySetIDs 批量取多个题单的标签（复用题目那套 tags 表）。

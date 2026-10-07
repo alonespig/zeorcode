@@ -11,6 +11,11 @@ type ProblemSetListReq struct {
 	Visibility *int   `form:"visibility"` // 0 公开 / 1 需邀请码；不传=全部
 }
 
+type ProblemSetRankReq struct {
+	Page     int `form:"page" binding:"required,min=1"`
+	PageSize int `form:"pageSize" binding:"required,min=1,max=100"`
+}
+
 // ProblemSetItemResp 列表项。列表不返回描述，描述只在详情页展示。
 type ProblemSetItemResp struct {
 	ID           int64     `json:"id"`
@@ -57,6 +62,31 @@ type ProblemSetDetailResp struct {
 	Author       string                  `json:"author"`
 	UpdatedAt    string                  `json:"updatedAt"`
 	Problems     []ProblemSetProblemResp `json:"problems"`
+}
+
+type ProblemSetRankItemResp struct {
+	Rank           int                      `json:"rank"`
+	ID             int64                    `json:"id"`
+	Username       string                   `json:"username"`
+	Avatar         string                   `json:"avatar"`
+	Gender         int                      `json:"gender"`
+	SolvedCount    int                      `json:"solvedCount"`
+	AttemptedCount int                      `json:"attemptedCount"`
+	IsSelf         bool                     `json:"isSelf"`
+	Cells          []ProblemSetRankCellResp `json:"cells"`
+}
+
+type ProblemSetRankCellResp struct {
+	ProblemID string `json:"problemId"`
+	Status    *int   `json:"status"`
+}
+
+type ProblemSetRankResp struct {
+	Total        int64                    `json:"total"`
+	ProblemCount int                      `json:"problemCount"`
+	ProblemIDs   []string                 `json:"problemIds"`
+	List         []ProblemSetRankItemResp `json:"list"`
+	Mine         *ProblemSetRankItemResp  `json:"mine,omitempty"`
 }
 
 // UnlockProblemSetReq 提交邀请码解锁

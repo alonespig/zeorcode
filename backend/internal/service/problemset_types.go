@@ -13,6 +13,12 @@ type ProblemSetListParams struct {
 	Visibility *int
 }
 
+// ProblemSetRankParams 题单排行榜分页查询。
+type ProblemSetRankParams struct {
+	Page     int
+	PageSize int
+}
+
 // SaveProblemSetParams 新建/编辑题单。Problems 的数组顺序即展示顺序。
 type SaveProblemSetParams struct {
 	Title       string
@@ -69,4 +75,31 @@ type ProblemSetDetail struct {
 	Author       string
 	UpdatedAt    time.Time
 	Problems     []ProblemSetProblem
+}
+
+// ProblemSetRankItem 题单排行榜一行。通过数取自用户在公共题库中的全局做题状态。
+type ProblemSetRankItem struct {
+	Rank           int
+	ID             int64
+	Username       string
+	Avatar         string
+	Gender         int
+	SolvedCount    int
+	AttemptedCount int
+	IsSelf         bool
+	Cells          []ProblemSetRankCell
+}
+
+type ProblemSetRankCell struct {
+	ProblemID string
+	Status    *int
+}
+
+// ProblemSetRank 题单排行榜。Mine 在登录用户没有任何尝试时也会返回，此时 Rank 为 0。
+type ProblemSetRank struct {
+	Total        int64
+	ProblemCount int
+	ProblemIDs   []string
+	List         []ProblemSetRankItem
+	Mine         *ProblemSetRankItem
 }

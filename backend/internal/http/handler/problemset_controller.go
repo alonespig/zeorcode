@@ -43,6 +43,23 @@ func (p *ProblemSetController) Detail(c *gin.Context) (any, error) {
 	return toProblemSetDetailResp(resp), nil
 }
 
+// Rank GET /api/problemset/:id/rank
+func (p *ProblemSetController) Rank(c *gin.Context) (any, error) {
+	id, err := p.resolveProblemSetID(c)
+	if err != nil {
+		return nil, err
+	}
+	var req dto.ProblemSetRankReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		return nil, errcode.ErrInvalidParams.Wrap(err)
+	}
+	resp, err := p.setSrv.Rank(c.Request.Context(), id, toProblemSetRankParams(req), optionalUserIDPtr(c), isAdminFromCtx(c))
+	if err != nil {
+		return nil, err
+	}
+	return toProblemSetRankResp(resp), nil
+}
+
 // Unlock POST /api/problemset/:id/unlock 提交邀请码解锁
 func (p *ProblemSetController) Unlock(c *gin.Context) (any, error) {
 	id, err := p.resolveProblemSetID(c)

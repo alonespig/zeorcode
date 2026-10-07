@@ -12,6 +12,11 @@ export const getProblemSetDetail = (id) => {
   return request({ url: `/problemset/${id}`, method: 'get' })
 }
 
+// 题单排行榜。通过数来自用户在公共题库中的全局做题状态
+export const getProblemSetRank = (id, params) => {
+  return request({ url: `/problemset/${id}/rank`, method: 'get', params })
+}
+
 // 提交邀请码解锁，成功后长期有效
 export const unlockProblemSet = (id, inviteCode) => {
   return request({ url: `/problemset/${id}/unlock`, method: 'post', data: { inviteCode } })
