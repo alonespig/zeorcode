@@ -33,7 +33,7 @@ func (c *ContestController) Create(ctx *gin.Context) (any, error) {
 }
 
 func (c *ContestController) EditContest(ctx *gin.Context) (any, error) {
-	contestID, err := c.resolveContestID(ctx)
+	contestID, err := c.resolveAdminContestID(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (c *ContestController) Update(ctx *gin.Context) (any, error) {
 	if err := ctx.ShouldBindJSON(&form); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	id, err := c.resolveContestID(ctx)
+	id, err := c.resolveAdminContestID(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +58,30 @@ func (c *ContestController) Update(ctx *gin.Context) (any, error) {
 		return nil, err
 	}
 	return toCreateContestResult(resp), nil
+}
+
+func (c *ContestController) AdminList(ctx *gin.Context) (any, error) {
+	var req dto.AdminContestListForm
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		return nil, errcode.ErrInvalidParams.Wrap(err)
+	}
+	resp, err := c.contestSrv.ListAdminContests(ctx.Request.Context(), req.Page, req.PageSize, req.Keyword, req.Type, req.Status, req.Archived)
+	if err != nil {
+		return nil, err
+	}
+	return toContestListResp(resp), nil
+}
+
+func (c *ContestController) SetArchived(ctx *gin.Context) (any, error) {
+	contestID, err := c.resolveAdminContestID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var req dto.SetContestArchivedReq
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		return nil, errcode.ErrInvalidParams.Wrap(err)
+	}
+	return nil, c.contestSrv.SetContestArchived(ctx.Request.Context(), contestID, req.Archived)
 }
 
 func (c *ContestController) List(ctx *gin.Context) (any, error) {
@@ -258,7 +282,7 @@ func (c *ContestController) GetContestRank(ctx *gin.Context) (any, error) {
 // RecomputeContest POST /api/admin/contest/:id/recompute
 // 管理员从 submissions 明细整场重算比赛榜（重判后修正、或榜单漂移时手动重建）。
 func (c *ContestController) RecomputeContest(ctx *gin.Context) (any, error) {
-	contestID, err := c.resolveContestID(ctx)
+	contestID, err := c.resolveAdminContestID(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -334,4 +358,12 @@ func (c *ContestController) resolveContestID(ctx *gin.Context) (int64, error) {
 		return 0, err
 	}
 	return c.contestSrv.ResolveID(ctx.Request.Context(), publicID)
+}
+
+func (c *ContestController) resolveAdminContestID(ctx *gin.Context) (int64, error) {
+	publicID, err := parsePublicIDParam(ctx, "id", "比赛")
+	if err != nil {
+		return 0, err
+	}
+	return c.contestSrv.ResolveAdminID(ctx.Request.Context(), publicID)
 }

@@ -17,6 +17,7 @@ export interface ContestItem {
   needInviteCode: boolean;
   duration: number;
   participants: number;
+  archived: boolean;
 }
 
 export interface ContestListResp {
@@ -30,6 +31,7 @@ export interface ContestListParams {
   keyword?: string;
   type?: number;
   status?: number;
+  archived?: boolean;
 }
 
 export interface ContestProblemInput {
@@ -80,9 +82,15 @@ export interface ContestEditInfo {
   rated: boolean;
 }
 
-export function getContestList(params: ContestListParams) {
-  return http.request<ApiResponse<ContestListResp>>("get", "/contest", {
+export function getAdminContestList(params: ContestListParams) {
+  return http.request<ApiResponse<ContestListResp>>("get", "/admin/contests", {
     params
+  });
+}
+
+export function setContestArchived(id: number, archived: boolean) {
+  return http.request<ApiResponse>("put", `/admin/contest/${id}/archive`, {
+    data: { archived }
   });
 }
 

@@ -55,7 +55,7 @@ func (r *DashboardRepo) Counts(ctx context.Context, dayStart, now time.Time) (*D
 		{model: &model.Problem{}, dest: &result.Problems},
 		{model: &model.Submission{}, where: "created_at >= ?", args: []any{dayStart}, dest: &result.TodaySubmissions},
 		{model: &model.Post{}, where: "status = ? AND review_status = ?", args: []any{0, model.PostReviewPending}, dest: &result.PendingPosts},
-		{model: &model.Contest{}, where: "start_time <= ? AND end_time > ?", args: []any{now, now}, dest: &result.RunningContests},
+		{model: &model.Contest{}, where: "archived = ? AND start_time <= ? AND end_time > ?", args: []any{false, now, now}, dest: &result.RunningContests},
 		{model: &model.Submission{}, where: "status = ?", args: []any{judge.Pending}, dest: &result.PendingJudging},
 	}
 	for _, query := range queries {

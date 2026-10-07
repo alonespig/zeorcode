@@ -77,6 +77,7 @@ type ContestItem struct {
 	NeedInviteCode bool                `json:"needInviteCode"` // 是否需要邀请码（不返回真实 code）
 	Duration       int                 `json:"duration"`
 	Participants   int                 `json:"participants"`
+	Archived       bool                `json:"archived"`
 }
 
 // ContestListForm 比赛列表查询：分页 + 搜索/筛选
@@ -85,6 +86,15 @@ type ContestListForm struct {
 	Keyword string `form:"keyword"`
 	Type    int    `form:"type"`   // 0=全部，1 ACM / 2 OI / 3 IOI
 	Status  *int   `form:"status"` // nil=全部，0 未开始 / 1 进行中 / 2 已结束
+}
+
+type AdminContestListForm struct {
+	ContestListForm
+	Archived *bool `form:"archived"`
+}
+
+type SetContestArchivedReq struct {
+	Archived bool `json:"archived"`
 }
 
 type ContestListResp struct {

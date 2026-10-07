@@ -95,7 +95,7 @@ func (s *SubmissionController) RejudgeContest(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	cid, err := s.contestSrv.ResolveID(c.Request.Context(), publicID)
+	cid, err := s.contestSrv.ResolveAdminID(c.Request.Context(), publicID)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (s *SubmissionController) RejudgeContestProblem(c *gin.Context) (any, error
 	if err != nil {
 		return nil, err
 	}
-	cid, err := s.contestSrv.ResolveID(c.Request.Context(), publicID)
+	cid, err := s.contestSrv.ResolveAdminID(c.Request.Context(), publicID)
 	if err != nil {
 		return nil, err
 	}

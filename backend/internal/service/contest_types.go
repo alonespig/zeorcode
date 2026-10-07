@@ -68,6 +68,7 @@ type ContestItem struct {
 	NeedInviteCode bool
 	Duration       int
 	Participants   int
+	Archived       bool
 }
 
 type ContestList struct {

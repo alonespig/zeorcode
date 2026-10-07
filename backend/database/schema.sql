@@ -58,8 +58,10 @@ CREATE TABLE `contests` (
   `end_time` datetime(3) DEFAULT NULL,
   `rated` tinyint(1) DEFAULT '0',
   `settled` tinyint(1) DEFAULT '0',
+  `archived` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_contests_public_id` (`public_id`)
+  UNIQUE KEY `idx_contests_public_id` (`public_id`),
+  KEY `idx_contests_archived_start_time` (`archived`,`start_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_conversations`;

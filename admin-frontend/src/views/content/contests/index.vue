@@ -8,9 +8,10 @@ import type { PaginationProps } from "@pureadmin/table";
 import { message } from "@/utils/message";
 import { PureTableBar } from "@/components/RePureTableBar";
 import {
-  getContestList,
+  getAdminContestList,
   recomputeContest,
   rejudgeContest,
+  setContestArchived,
   type ContestItem
 } from "@/api/admin/contests";
 
@@ -33,6 +34,7 @@ const loading = ref(false);
 const keyword = ref("");
 const ruleType = ref<number>();
 const status = ref<number>();
+const archived = ref<boolean>();
 const pagination = reactive<PaginationProps>({
   pageSize: 20,
   currentPage: 1,
@@ -50,7 +52,7 @@ const columns: TableColumnList = [
     showOverflowTooltip: true
   },
   { label: "赛制", prop: "type", width: 90, align: "center" },
-  { label: "状态", slot: "status", width: 100, align: "center" },
+  { label: "状态", slot: "status", width: 130, align: "center" },
   { label: "开始时间", slot: "startTime", width: 170, align: "center" },
   { label: "时长", slot: "duration", width: 100, align: "center" },
   { label: "参赛人数", prop: "participants", width: 110, align: "center" },
@@ -58,7 +60,7 @@ const columns: TableColumnList = [
   {
     label: "操作",
     slot: "operation",
-    width: 210,
+    width: 270,
     fixed: "right",
     align: "center"
   }
@@ -67,12 +69,13 @@ const columns: TableColumnList = [
 async function onSearch() {
   loading.value = true;
   try {
-    const res = await getContestList({
+    const res = await getAdminContestList({
       page: pagination.currentPage,
       pageSize: pagination.pageSize,
       keyword: keyword.value.trim() || undefined,
       type: ruleType.value,
-      status: status.value
+      status: status.value,
+      archived: archived.value
     });
     dataList.value = res.data?.list ?? [];
     pagination.total = res.data?.total ?? 0;
@@ -92,7 +95,38 @@ function resetFilter() {
   keyword.value = "";
   ruleType.value = undefined;
   status.value = undefined;
+  archived.value = undefined;
   applyFilter();
+}
+
+async function toggleArchive(row: ContestRow) {
+  const next = !row.archived;
+  if (next && row.status === 1) {
+    message("进行中的比赛不能归档", { type: "warning" });
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      next
+        ? `确认归档比赛「${row.name}」？归档后前台将无法查看和访问该比赛。`
+        : `确认恢复比赛「${row.name}」？恢复后比赛将重新在前台显示。`,
+      next ? "归档比赛" : "恢复比赛",
+      { type: next ? "warning" : "info" }
+    );
+  } catch {
+    return;
+  }
+  if (row._busy) return;
+  row._busy = true;
+  try {
+    await setContestArchived(row.id, next);
+    message(next ? "比赛已归档" : "比赛已恢复", { type: "success" });
+    await onSearch();
+  } catch {
+    // 错误信息已由 http 拦截器统一提示
+  } finally {
+    row._busy = false;
+  }
 }
 
 function onCurrentChange(page: number) {
@@ -210,6 +244,16 @@ onMounted(onSearch);
             <el-option label="进行中" :value="1" />
             <el-option label="已结束" :value="2" />
           </el-select>
+          <el-select
+            v-model="archived"
+            class="w-32"
+            clearable
+            placeholder="归档状态"
+            @change="applyFilter"
+          >
+            <el-option label="正常" :value="false" />
+            <el-option label="已归档" :value="true" />
+          </el-select>
           <el-button @click="resetFilter">重置</el-button>
         </div>
         <PureTable
@@ -228,6 +272,9 @@ onMounted(onSearch);
           <template #status="{ row }">
             <el-tag :type="STATUS_TYPES[row.status]" size="small">
               {{ STATUS_LABELS[row.status] ?? "未知" }}
+            </el-tag>
+            <el-tag v-if="row.archived" class="ml-1" size="small" type="info">
+              已归档
             </el-tag>
           </template>
           <template #startTime="{ row }">
@@ -273,6 +320,16 @@ onMounted(onSearch);
               @click="rebuildRank(row)"
             >
               重算榜单
+            </el-button>
+            <el-button
+              link
+              size="small"
+              :type="row.archived ? 'success' : 'danger'"
+              :disabled="!row.archived && row.status === 1"
+              :loading="row._busy"
+              @click="toggleArchive(row)"
+            >
+              {{ row.archived ? "恢复" : "归档" }}
             </el-button>
           </template>
         </PureTable>
