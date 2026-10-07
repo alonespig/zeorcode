@@ -39,11 +39,13 @@ func (a *AdminController) Dashboard(c *gin.Context) (any, error) {
 
 // ListUsers GET /api/admin/users?page=&pageSize=
 func (a *AdminController) ListUsers(c *gin.Context) (any, error) {
-	var req dto.PageForm
+	var req dto.AdminUserListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	resp, err := a.userSrv.ListAllUsers(c.Request.Context(), req.Page, req.PageSize)
+	resp, err := a.userSrv.ListAllUsers(c.Request.Context(), service.AdminUserListParams{
+		Page: req.Page, PageSize: req.PageSize, Keyword: req.Keyword, Role: req.Role, Status: req.Status,
+	})
 	if err != nil {
 		return nil, err
 	}

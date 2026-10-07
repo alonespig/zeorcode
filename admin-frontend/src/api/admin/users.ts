@@ -31,6 +31,9 @@ export interface AdminUserListResp {
 export interface AdminUserListParams {
   page: number;
   pageSize: number;
+  q?: string;
+  role?: number;
+  status?: number;
 }
 
 /** 封禁/解封用户请求（对应后端 dto.SetUserStatusReq） */

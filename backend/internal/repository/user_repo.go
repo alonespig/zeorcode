@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"strconv"
+	"strings"
 	"time"
 
 	"zoj/internal/model"
@@ -242,13 +244,31 @@ func (r *UserRepo) FindByUsernames(ctx context.Context, usernames []string) ([]m
 }
 
 // ListUsers 分页列出所有用户（管理员后台用）
-func (r *UserRepo) ListUsers(ctx context.Context, page, pageSize int) ([]model.User, int64, error) {
+func (r *UserRepo) ListUsers(ctx context.Context, page, pageSize int, keyword string, role, status *int) ([]model.User, int64, error) {
 	var users []model.User
 	var total int64
-	if err := r.db.WithContext(ctx).Model(&model.User{}).Count(&total).Error; err != nil {
+	db := r.db.WithContext(ctx).Model(&model.User{})
+	keyword = strings.TrimSpace(keyword)
+	if keyword != "" {
+		like := "%" + keyword + "%"
+		condition := "username LIKE ? OR student_no LIKE ? OR real_name LIKE ? OR email LIKE ?"
+		args := []any{like, like, like, like}
+		if uid, err := strconv.ParseInt(keyword, 10, 64); err == nil {
+			condition = "uid = ? OR " + condition
+			args = append([]any{uid}, args...)
+		}
+		db = db.Where(condition, args...)
+	}
+	if role != nil {
+		db = db.Where("role = ?", *role)
+	}
+	if status != nil {
+		db = db.Where("status = ?", *status)
+	}
+	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	if err := r.db.WithContext(ctx).Order("id desc").
+	if err := db.Order("id desc").
 		Offset((page - 1) * pageSize).
 		Limit(pageSize).
 		Find(&users).Error; err != nil {

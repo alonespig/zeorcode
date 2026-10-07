@@ -42,6 +42,9 @@ const currentUserId = computed(() => userStore.user?.id);
 const dataList = ref<UserRow[]>([]);
 const loading = ref(false);
 const importVisible = ref(false);
+const keyword = ref("");
+const role = ref<number>();
+const status = ref<number>();
 
 const pagination = reactive<PaginationProps>({
   pageSize: 20,
@@ -88,7 +91,10 @@ async function onSearch() {
   try {
     const res = await getAdminUserList({
       page: pagination.currentPage,
-      pageSize: pagination.pageSize
+      pageSize: pagination.pageSize,
+      q: keyword.value.trim() || undefined,
+      role: role.value,
+      status: status.value
     });
     dataList.value = res.data?.list ?? [];
     pagination.total = res.data?.total ?? 0;
@@ -97,6 +103,18 @@ async function onSearch() {
   } finally {
     loading.value = false;
   }
+}
+
+function applyFilter() {
+  pagination.currentPage = 1;
+  onSearch();
+}
+
+function resetFilter() {
+  keyword.value = "";
+  role.value = undefined;
+  status.value = undefined;
+  applyFilter();
 }
 
 function onCurrentChange(page: number) {
@@ -188,6 +206,42 @@ onMounted(onSearch);
         </el-button>
       </template>
       <template v-slot="{ size, dynamicColumns }">
+        <div class="mb-3 flex flex-wrap items-center gap-2">
+          <el-input
+            v-model="keyword"
+            class="w-64"
+            clearable
+            placeholder="用户号、用户名、学号、姓名或邮箱"
+            @keyup.enter="applyFilter"
+            @clear="applyFilter"
+          />
+          <el-select
+            v-model="role"
+            class="w-36"
+            clearable
+            placeholder="全部角色"
+            @change="applyFilter"
+          >
+            <el-option
+              v-for="option in ROLE_OPTIONS"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
+          <el-select
+            v-model="status"
+            class="w-32"
+            clearable
+            placeholder="全部状态"
+            @change="applyFilter"
+          >
+            <el-option label="正常" :value="0" />
+            <el-option label="封禁" :value="1" />
+          </el-select>
+          <el-button type="primary" @click="applyFilter">查询</el-button>
+          <el-button @click="resetFilter">重置</el-button>
+        </div>
         <PureTable
           border
           adaptive

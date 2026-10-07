@@ -174,6 +174,13 @@ type AdminUserListResp struct {
 	List  []AdminUserItem `json:"list"`
 }
 
+type AdminUserListReq struct {
+	PageForm
+	Keyword string `form:"q" binding:"max=64"`
+	Role    *int   `form:"role" binding:"omitempty,oneof=0 1"`
+	Status  *int   `form:"status" binding:"omitempty,oneof=0 1"`
+}
+
 // BatchUserItem 批量创建时单个用户的录入项
 type BatchUserItem struct {
 	Username  string `json:"username" binding:"required,min=2,max=20"`

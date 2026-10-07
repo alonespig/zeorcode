@@ -578,8 +578,8 @@ func (u *UserService) Session(ctx context.Context, userID int64) (*LoginResult, 
 }
 
 // ListAllUsers 管理员视角的用户分页列表
-func (u *UserService) ListAllUsers(ctx context.Context, page, pageSize int) (*AdminUserList, error) {
-	users, total, err := u.repo.ListUsers(ctx, page, pageSize)
+func (u *UserService) ListAllUsers(ctx context.Context, params AdminUserListParams) (*AdminUserList, error) {
+	users, total, err := u.repo.ListUsers(ctx, params.Page, params.PageSize, params.Keyword, params.Role, params.Status)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
