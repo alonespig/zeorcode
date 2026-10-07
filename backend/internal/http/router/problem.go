@@ -19,7 +19,7 @@ func (h *HttpServer) initProblemRouter(r *gin.Engine) {
 	}
 
 	// 管理员接口
-	admin := r.Group("/api", middleware.JWTAuth(h.auth), middleware.AdminRequired())
+	admin := r.Group("/api", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
 		admin.POST("/problems", response.Wrap(h.problemController.CreateProblem))
 		admin.PUT("/problems/:id", response.Wrap(h.problemController.UpdateProblem))
@@ -32,7 +32,7 @@ func (h *HttpServer) initProblemRouter(r *gin.Engine) {
 		admin.GET("/problems/:id/testdata/download", h.problemController.DownloadFiles)
 	}
 
-	tagAdmin := r.Group("/api/admin/tags", middleware.JWTAuth(h.auth), middleware.AdminRequired())
+	tagAdmin := r.Group("/api/admin/tags", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
 		tagAdmin.GET("", response.Wrap(h.problemController.GetAdminTagList))
 		tagAdmin.POST("", response.Wrap(h.problemController.CreateTag))

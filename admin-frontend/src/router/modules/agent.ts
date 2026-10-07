@@ -5,6 +5,6 @@ export default {
   meta: {
     icon: "ri/robot-2-line",
     title: "AI 助手",
-    rank: 5
+    rank: 6
   }
 } satisfies RouteConfigsTable;

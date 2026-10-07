@@ -22,10 +22,11 @@ const maxAdminUserImportFileSize = 5 << 20
 type AdminController struct {
 	userSrv      *service.UserService
 	dashboardSrv *service.DashboardService
+	auditSrv     *service.AuditService
 }
 
-func NewAdminController(userSrv *service.UserService, dashboardSrv *service.DashboardService) *AdminController {
-	return &AdminController{userSrv: userSrv, dashboardSrv: dashboardSrv}
+func NewAdminController(userSrv *service.UserService, dashboardSrv *service.DashboardService, auditSrv *service.AuditService) *AdminController {
+	return &AdminController{userSrv: userSrv, dashboardSrv: dashboardSrv, auditSrv: auditSrv}
 }
 
 // Dashboard GET /api/admin/dashboard 后台工作台聚合数据。
@@ -35,6 +36,30 @@ func (a *AdminController) Dashboard(c *gin.Context) (any, error) {
 		return nil, err
 	}
 	return toDashboardOverviewResp(result), nil
+}
+
+func (a *AdminController) AuditLogs(c *gin.Context) (any, error) {
+	var req dto.AuditLogListReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		return nil, errcode.ErrInvalidParams.Wrap(err)
+	}
+	result, err := a.auditSrv.List(c.Request.Context(), service.AuditQueryParams{
+		Page: req.Page, PageSize: req.PageSize, Keyword: req.Keyword,
+		Method: req.Method, Success: req.Success,
+	})
+	if err != nil {
+		return nil, err
+	}
+	items := make([]dto.AuditLogItemResp, 0, len(result.List))
+	for _, item := range result.List {
+		items = append(items, dto.AuditLogItemResp{
+			ID: item.ID, ActorID: item.ActorID, ActorName: item.ActorName,
+			Method: item.Method, Path: item.Path, Target: item.Target,
+			ClientIP: item.ClientIP, Success: item.Success, Code: item.Code,
+			CreatedAt: item.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	return &dto.AuditLogListResp{Total: result.Total, List: items}, nil
 }
 
 // ListUsers GET /api/admin/users?page=&pageSize=

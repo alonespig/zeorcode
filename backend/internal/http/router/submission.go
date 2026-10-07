@@ -23,7 +23,7 @@ func (h *HttpServer) initSubmissionRouter(r *gin.Engine) {
 			h.submissionController.GetSubmissionStream)
 	}
 
-	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired())
+	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
 		// 重判（超管）：单条 / 整场 / 某比赛某题
 		admin.POST("/submission/:id/rejudge", response.Wrap(h.submissionController.Rejudge))

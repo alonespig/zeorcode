@@ -8,6 +8,7 @@ import EpOdometer from "~icons/ep/odometer?raw";
 import EpUser from "~icons/ep/user?raw";
 import EpCpu from "~icons/ep/cpu?raw";
 import EpBell from "~icons/ep/bell?raw";
+import EpDocument from "~icons/ep/document?raw";
 
 // https://icon-sets.iconify.design/ri/?keyword=ri
 import RiSearchLine from "~icons/ri/search-line?raw";
@@ -22,6 +23,7 @@ const icons = [
   ["ep/user", EpUser],
   ["ep/cpu", EpCpu],
   ["ep/bell", EpBell],
+  ["ep/document", EpDocument],
   // Remix Icon: https://github.com/Remix-Design/RemixIcon
   ["ri/search-line", RiSearchLine],
   ["ri/information-line", RiInformationLine],

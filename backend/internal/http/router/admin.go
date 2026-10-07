@@ -10,9 +10,10 @@ import (
 // ==================== Admin ====================
 
 func (h *HttpServer) initAdminRouter(r *gin.Engine) {
-	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired())
+	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
 		admin.GET("/dashboard", response.Wrap(h.adminController.Dashboard))
+		admin.GET("/audit-logs", response.Wrap(h.adminController.AuditLogs))
 		admin.GET("/users", response.Wrap(h.adminController.ListUsers))
 		admin.GET("/users/import/template", h.adminController.DownloadUserImportTemplate)
 		admin.POST("/users/import", response.Wrap(h.adminController.ImportUsers))
