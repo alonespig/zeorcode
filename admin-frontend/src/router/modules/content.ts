@@ -80,6 +80,26 @@ export default {
       meta: { title: "比赛管理" }
     },
     {
+      path: "/content/contests/create",
+      name: "AdminContestsCreate",
+      component: () => import("@/views/content/contests/create.vue"),
+      meta: {
+        title: "新建比赛",
+        showLink: false,
+        activePath: "/content/contests"
+      }
+    },
+    {
+      path: "/content/contests/:id/edit",
+      name: "AdminContestsEdit",
+      component: () => import("@/views/content/contests/edit.vue"),
+      meta: {
+        title: "编辑比赛",
+        showLink: false,
+        activePath: "/content/contests"
+      }
+    },
+    {
       path: "/content/post-review",
       name: "AdminPostReview",
       component: () => import("@/views/content/post-review/index.vue"),
