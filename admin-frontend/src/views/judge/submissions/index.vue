@@ -197,7 +197,7 @@ onMounted(onSearch);
         <div class="mb-3 flex flex-wrap items-center gap-2">
           <el-input
             v-model="username"
-            class="w-44"
+            class="w-44!"
             clearable
             placeholder="用户名"
             @keyup.enter="applyFilter"
@@ -205,7 +205,7 @@ onMounted(onSearch);
           />
           <el-input
             v-model="problemID"
-            class="w-40"
+            class="w-40!"
             clearable
             placeholder="题号"
             @keyup.enter="applyFilter"
@@ -213,7 +213,7 @@ onMounted(onSearch);
           />
           <el-select
             v-model="status"
-            class="w-52"
+            class="w-52!"
             clearable
             placeholder="评测结果"
             @change="applyFilter"
@@ -225,7 +225,7 @@ onMounted(onSearch);
               :value="item.value"
             />
           </el-select>
-          <el-button @click="resetFilter">重置</el-button>
+          <el-button class="ml-auto!" @click="resetFilter">重置</el-button>
         </div>
 
         <PureTable

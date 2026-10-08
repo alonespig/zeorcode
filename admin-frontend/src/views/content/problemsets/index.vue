@@ -187,7 +187,7 @@ onMounted(() => {
         <div class="mb-3 flex flex-wrap items-center gap-2">
           <el-input
             v-model="keyword"
-            class="w-56"
+            class="w-56!"
             placeholder="标题关键字"
             clearable
             @keyup.enter="onFilterChange"
@@ -201,7 +201,7 @@ onMounted(() => {
             collapse-tags-tooltip
             clearable
             placeholder="按标签筛选"
-            class="w-64"
+            class="w-64!"
             @change="onFilterChange"
           >
             <el-option
@@ -215,13 +215,13 @@ onMounted(() => {
             v-model="visibilityFilter"
             clearable
             placeholder="可见性"
-            class="w-32"
+            class="w-32!"
             @change="onFilterChange"
           >
             <el-option label="公开" :value="0" />
             <el-option label="邀请码" :value="1" />
           </el-select>
-          <el-button @click="onReset">重置</el-button>
+          <el-button class="ml-auto!" @click="onReset">重置</el-button>
         </div>
 
         <PureTable

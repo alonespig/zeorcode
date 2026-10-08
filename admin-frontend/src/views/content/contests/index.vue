@@ -213,7 +213,7 @@ onMounted(onSearch);
         <div class="mb-3 flex flex-wrap items-center gap-2">
           <el-input
             v-model="keyword"
-            class="w-56"
+            class="w-56!"
             clearable
             placeholder="比赛名称"
             @keyup.enter="applyFilter"
@@ -221,7 +221,7 @@ onMounted(onSearch);
           />
           <el-select
             v-model="ruleType"
-            class="w-28"
+            class="w-28!"
             clearable
             placeholder="赛制"
             @change="applyFilter"
@@ -235,7 +235,7 @@ onMounted(onSearch);
           </el-select>
           <el-select
             v-model="status"
-            class="w-32"
+            class="w-32!"
             clearable
             placeholder="状态"
             @change="applyFilter"
@@ -246,7 +246,7 @@ onMounted(onSearch);
           </el-select>
           <el-select
             v-model="archived"
-            class="w-32"
+            class="w-32!"
             clearable
             placeholder="归档状态"
             @change="applyFilter"
@@ -254,7 +254,7 @@ onMounted(onSearch);
             <el-option label="正常" :value="false" />
             <el-option label="已归档" :value="true" />
           </el-select>
-          <el-button @click="resetFilter">重置</el-button>
+          <el-button class="ml-auto!" @click="resetFilter">重置</el-button>
         </div>
         <PureTable
           border

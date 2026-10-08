@@ -302,7 +302,7 @@ onMounted(() => {
             <div class="mb-2 flex flex-wrap items-center gap-2">
               <el-input
                 v-model="pidInput"
-                class="w-48"
+                class="w-48!"
                 placeholder="输入题号，如 P1001"
                 :disabled="addingPid"
                 @keyup.enter="addProblemById"

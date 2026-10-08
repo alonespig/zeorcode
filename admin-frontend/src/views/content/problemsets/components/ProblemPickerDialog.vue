@@ -116,7 +116,7 @@ function confirm() {
     <div class="mb-4 flex flex-wrap items-center gap-2">
       <el-input
         v-model="keyword"
-        class="w-64"
+        class="w-64!"
         placeholder="搜索题目名称或题号"
         clearable
         @keyup.enter="onSearch"
@@ -130,7 +130,7 @@ function confirm() {
         collapse-tags-tooltip
         clearable
         placeholder="按算法标签过滤"
-        class="w-72"
+        class="w-72!"
         @change="onSearch"
       >
         <el-option
@@ -140,7 +140,12 @@ function confirm() {
           :value="tag.id"
         />
       </el-select>
-      <el-button type="primary" :icon="Search" @click="onSearch">
+      <el-button
+        class="ml-auto!"
+        type="primary"
+        :icon="Search"
+        @click="onSearch"
+      >
         搜索
       </el-button>
     </div>

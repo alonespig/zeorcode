@@ -412,7 +412,7 @@ onMounted(initialize);
       :close-on-click-modal="false"
     >
       <div class="flex gap-2">
-        <el-select v-model="remoteForm.oj" class="w-36" placeholder="OJ">
+        <el-select v-model="remoteForm.oj" class="w-36!" placeholder="OJ">
           <el-option
             v-for="oj in remoteOJOptions"
             :key="oj"

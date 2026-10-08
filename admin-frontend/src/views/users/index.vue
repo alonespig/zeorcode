@@ -209,7 +209,7 @@ onMounted(onSearch);
         <div class="mb-3 flex flex-wrap items-center gap-2">
           <el-input
             v-model="keyword"
-            class="w-64"
+            class="w-64!"
             clearable
             placeholder="用户号、用户名、学号、姓名或邮箱"
             @keyup.enter="applyFilter"
@@ -217,7 +217,7 @@ onMounted(onSearch);
           />
           <el-select
             v-model="role"
-            class="w-36"
+            class="w-36!"
             clearable
             placeholder="全部角色"
             @change="applyFilter"
@@ -231,7 +231,7 @@ onMounted(onSearch);
           </el-select>
           <el-select
             v-model="status"
-            class="w-32"
+            class="w-32!"
             clearable
             placeholder="全部状态"
             @change="applyFilter"
@@ -239,7 +239,9 @@ onMounted(onSearch);
             <el-option label="正常" :value="0" />
             <el-option label="封禁" :value="1" />
           </el-select>
-          <el-button type="primary" @click="applyFilter">查询</el-button>
+          <el-button class="ml-auto!" type="primary" @click="applyFilter">
+            查询
+          </el-button>
           <el-button @click="resetFilter">重置</el-button>
         </div>
         <PureTable

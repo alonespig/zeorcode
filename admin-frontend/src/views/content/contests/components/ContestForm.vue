@@ -322,7 +322,7 @@ onMounted(initialize);
             <el-input
               v-if="form.requireInviteCode"
               v-model="form.inviteCode"
-              class="w-56"
+              class="w-56!"
               maxlength="32"
               placeholder="请输入邀请码"
             />
@@ -336,7 +336,7 @@ onMounted(initialize);
           <div class="flex gap-2">
             <el-input
               v-model="queryProblemID"
-              class="w-40"
+              class="w-40!"
               placeholder="输入题号"
               @keyup.enter="addByID"
             />

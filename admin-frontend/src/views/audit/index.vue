@@ -95,7 +95,7 @@ onMounted(onSearch);
       <div class="mb-3 flex flex-wrap items-center gap-2">
         <el-input
           v-model="keyword"
-          class="w-64"
+          class="w-64!"
           clearable
           placeholder="管理员、接口或操作对象"
           @keyup.enter="applyFilter"
@@ -103,7 +103,7 @@ onMounted(onSearch);
         />
         <el-select
           v-model="method"
-          class="w-32"
+          class="w-32!"
           clearable
           placeholder="请求方法"
           @change="applyFilter"
@@ -117,7 +117,7 @@ onMounted(onSearch);
         </el-select>
         <el-select
           v-model="success"
-          class="w-32"
+          class="w-32!"
           clearable
           placeholder="执行结果"
           @change="applyFilter"
@@ -125,7 +125,9 @@ onMounted(onSearch);
           <el-option label="成功" :value="true" />
           <el-option label="失败" :value="false" />
         </el-select>
-        <el-button type="primary" @click="applyFilter">查询</el-button>
+        <el-button class="ml-auto!" type="primary" @click="applyFilter">
+          查询
+        </el-button>
         <el-button @click="resetFilter">重置</el-button>
       </div>
       <PureTable

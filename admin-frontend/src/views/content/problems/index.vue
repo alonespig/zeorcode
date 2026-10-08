@@ -151,7 +151,7 @@ onMounted(() => {
         <div class="mb-3 flex flex-wrap items-center gap-2">
           <el-input
             v-model="keyword"
-            class="w-56"
+            class="w-56!"
             clearable
             placeholder="题号或题目名称"
             @keyup.enter="applyFilter"
@@ -159,7 +159,7 @@ onMounted(() => {
           />
           <el-select
             v-model="difficulty"
-            class="w-32"
+            class="w-32!"
             clearable
             placeholder="难度"
             @change="applyFilter"
@@ -170,7 +170,7 @@ onMounted(() => {
           </el-select>
           <el-select
             v-model="selectedTags"
-            class="w-64"
+            class="w-64!"
             multiple
             filterable
             clearable
@@ -186,7 +186,7 @@ onMounted(() => {
               :value="tag.id"
             />
           </el-select>
-          <el-button @click="resetFilter">重置</el-button>
+          <el-button class="ml-auto!" @click="resetFilter">重置</el-button>
         </div>
 
         <PureTable
