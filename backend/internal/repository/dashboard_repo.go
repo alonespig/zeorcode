@@ -73,10 +73,10 @@ func (r *DashboardRepo) Counts(ctx context.Context, dayStart, now time.Time) (*D
 func (r *DashboardRepo) SubmissionTrend(ctx context.Context, since time.Time) ([]DashboardDailyCount, error) {
 	var rows []DashboardDailyCount
 	err := r.db.WithContext(ctx).Model(&model.Submission{}).
-		Select("DATE(created_at) AS date, COUNT(*) AS count").
+		Select("DATE_FORMAT(created_at, '%Y-%m-%d') AS date, COUNT(*) AS count").
 		Where("created_at >= ?", since).
-		Group("DATE(created_at)").
-		Order("DATE(created_at)").
+		Group("DATE_FORMAT(created_at, '%Y-%m-%d')").
+		Order("DATE_FORMAT(created_at, '%Y-%m-%d')").
 		Scan(&rows).Error
 	return rows, err
 }

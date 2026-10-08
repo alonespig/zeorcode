@@ -1,24 +1,41 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
 import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch
+} from "vue";
+import { useRouter } from "vue-router";
+import { useResizeObserver } from "@vueuse/core";
+import echarts from "@/plugins/echarts";
+import {
+  Bell,
+  ChatDotRound,
   Collection,
   DataAnalysis,
   DocumentChecked,
   Loading,
   Postcard,
+  Refresh,
   User
 } from "@element-plus/icons-vue";
 import {
   getDashboardOverview,
   type DashboardOverview
 } from "@/api/admin/dashboard";
+import { getJudgeStatus, type JudgeNodeStatus } from "@/api/admin/judge";
 
 defineOptions({ name: "AdminDashboard" });
 
 const router = useRouter();
 const loading = ref(false);
 const overview = ref<DashboardOverview>();
+const judgeNodes = ref<JudgeNodeStatus[]>([]);
+const judgeLoading = ref(false);
+const trendChartRef = ref<HTMLDivElement>();
+let trendChart: ReturnType<typeof echarts.init> | undefined;
 
 const summaryCards = computed(() => {
   const summary = overview.value?.summary;
@@ -68,36 +85,99 @@ const summaryCards = computed(() => {
   ];
 });
 
-const maxTrendCount = computed(() =>
-  Math.max(
-    1,
-    ...(overview.value?.submissionTrend.map(item => item.count) ?? [1])
-  )
+const quickActions = [
+  {
+    title: "新建题目",
+    description: "录入题面与测试数据",
+    icon: Collection,
+    tone: "blue",
+    path: "/content/problems/create"
+  },
+  {
+    title: "创建比赛",
+    description: "配置赛制和比赛题目",
+    icon: DocumentChecked,
+    tone: "purple",
+    path: "/content/contests/create"
+  },
+  {
+    title: "发布通知",
+    description: "向全部用户发送系统消息",
+    icon: Bell,
+    tone: "orange",
+    path: "/notifications"
+  },
+  {
+    title: "AI 助手",
+    description: "通过对话完成教学任务",
+    icon: ChatDotRound,
+    tone: "green",
+    path: "/agent"
+  }
+];
+
+const onlineJudgeCount = computed(
+  () => judgeNodes.value.filter(node => node.online).length
 );
-
-const statusMap: Record<
-  number,
-  { label: string; type: "success" | "warning" | "danger" | "info" }
-> = {
-  0: { label: "等待评测", type: "info" },
-  1: { label: "Accepted", type: "success" },
-  2: { label: "Memory Limit", type: "danger" },
-  3: { label: "Time Limit", type: "danger" },
-  4: { label: "Runtime Error", type: "danger" },
-  5: { label: "Wrong Answer", type: "danger" },
-  6: { label: "Compile Error", type: "danger" },
-  7: { label: "Unknown", type: "info" },
-  8: { label: "Presentation Error", type: "warning" }
-};
-
-function statusInfo(status: number) {
-  return (
-    statusMap[status] || { label: `状态 ${status}`, type: "info" as const }
-  );
-}
 
 function shortDate(value: string) {
   return value.slice(5).replace("-", "/");
+}
+
+async function renderTrendChart() {
+  await nextTick();
+  if (!trendChartRef.value) return;
+  trendChart ||= echarts.init(trendChartRef.value);
+  const trend = overview.value?.submissionTrend ?? [];
+  trendChart.setOption(
+    {
+      animationDuration: 450,
+      grid: { left: 44, right: 24, top: 32, bottom: 36 },
+      tooltip: {
+        trigger: "axis",
+        valueFormatter: (value: number) => `${value} 次提交`
+      },
+      xAxis: {
+        type: "category",
+        boundaryGap: false,
+        data: trend.map(item => shortDate(item.date)),
+        axisTick: { show: false },
+        axisLine: { lineStyle: { color: "#dcdfe6" } },
+        axisLabel: { color: "#909399", fontSize: 11 }
+      },
+      yAxis: {
+        type: "value",
+        minInterval: 1,
+        min: 0,
+        axisLabel: { color: "#909399", fontSize: 11 },
+        splitLine: { lineStyle: { color: "#ebeef5", type: "dashed" } }
+      },
+      series: [
+        {
+          name: "提交数",
+          type: "line",
+          data: trend.map(item => item.count),
+          smooth: 0.2,
+          symbol: "emptyCircle",
+          symbolSize: 8,
+          showSymbol: true,
+          lineStyle: { width: 2, color: "#409eff" },
+          itemStyle: {
+            color: "#ffffff",
+            borderColor: "#409eff",
+            borderWidth: 2
+          },
+          label: {
+            show: true,
+            position: "top",
+            color: "#606266",
+            fontSize: 11
+          }
+        }
+      ]
+    },
+    true
+  );
 }
 
 async function loadOverview() {
@@ -110,7 +190,35 @@ async function loadOverview() {
   }
 }
 
-onMounted(loadOverview);
+async function loadJudgeStatus() {
+  if (judgeLoading.value) return;
+  judgeLoading.value = true;
+  try {
+    const response = await getJudgeStatus();
+    judgeNodes.value = response.data?.list ?? [];
+  } catch {
+    // 错误信息已由 http 拦截器统一提示
+  } finally {
+    judgeLoading.value = false;
+  }
+}
+
+async function refreshDashboard() {
+  await Promise.allSettled([loadOverview(), loadJudgeStatus()]);
+}
+
+watch(() => overview.value?.submissionTrend, renderTrendChart, { deep: true });
+useResizeObserver(trendChartRef, () => trendChart?.resize());
+
+onMounted(() => {
+  renderTrendChart();
+  refreshDashboard();
+});
+
+onBeforeUnmount(() => {
+  trendChart?.dispose();
+  trendChart = undefined;
+});
 </script>
 
 <template>
@@ -120,7 +228,7 @@ onMounted(loadOverview);
         <h2>工作台</h2>
         <p>查看平台运行概况和需要处理的事项</p>
       </div>
-      <el-button @click="loadOverview">刷新数据</el-button>
+      <el-button @click="refreshDashboard">刷新数据</el-button>
     </header>
 
     <section class="summary-grid">
@@ -141,107 +249,105 @@ onMounted(loadOverview);
       </button>
     </section>
 
-    <div class="dashboard-grid">
-      <section class="panel trend-panel">
-        <header>
-          <div>
-            <h3>近 7 天提交趋势</h3>
-            <p>按提交创建时间统计</p>
-          </div>
-        </header>
-        <div class="trend-chart">
-          <div
-            v-for="item in overview?.submissionTrend || []"
-            :key="item.date"
-            class="trend-column"
-          >
-            <span class="trend-value">{{ item.count }}</span>
-            <div class="bar-track">
-              <span
-                :style="{
-                  height: `${Math.max(3, (item.count / maxTrendCount) * 100)}%`
-                }"
-              />
-            </div>
-            <small>{{ shortDate(item.date) }}</small>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel quick-panel">
-        <header>
-          <div>
-            <h3>快捷入口</h3>
-            <p>常用后台操作</p>
-          </div>
-        </header>
-        <div class="quick-list">
-          <button
-            type="button"
-            @click="router.push('/content/problems/create')"
-          >
-            <strong>新建题目</strong><span>录入题面与测试数据</span>
-          </button>
-          <button
-            type="button"
-            @click="router.push('/content/contests/create')"
-          >
-            <strong>创建比赛</strong><span>配置赛制和比赛题目</span>
-          </button>
-          <button type="button" @click="router.push('/notifications')">
-            <strong>发布通知</strong><span>向全部用户发送系统消息</span>
-          </button>
-          <button type="button" @click="router.push('/agent')">
-            <strong>AI 助手</strong><span>通过对话完成教学任务</span>
-          </button>
-        </div>
-      </section>
-    </div>
-
-    <section class="panel recent-panel">
+    <section class="panel trend-panel">
       <header>
         <div>
-          <h3>最近提交</h3>
-          <p>平台最新的 8 条评测记录</p>
+          <h3>近 7 天提交趋势</h3>
+          <p>全站所有用户，按提交创建时间统计</p>
         </div>
-        <el-button
-          text
-          type="primary"
-          @click="router.push('/judge/submissions')"
-          >查看全部</el-button
-        >
       </header>
-      <el-table
-        :data="overview?.recentSubmissions || []"
-        empty-text="暂无提交记录"
-      >
-        <el-table-column prop="id" label="提交号" width="130" align="center" />
-        <el-table-column label="用户" min-width="150">
-          <template #default="{ row }"
-            ><strong>{{ row.username }}</strong
-            ><small class="secondary">#{{ row.userID }}</small></template
+      <div
+        ref="trendChartRef"
+        class="trend-chart"
+        role="img"
+        aria-label="近七天提交数量折线图"
+      />
+    </section>
+
+    <section class="panel quick-panel">
+      <header>
+        <div>
+          <h3>快捷入口</h3>
+          <p>常用后台操作</p>
+        </div>
+      </header>
+      <div class="quick-list">
+        <button
+          v-for="action in quickActions"
+          :key="action.path"
+          type="button"
+          @click="router.push(action.path)"
+        >
+          <span :class="['quick-icon', action.tone]">
+            <el-icon><component :is="action.icon" /></el-icon>
+          </span>
+          <span class="quick-content">
+            <strong>{{ action.title }}</strong>
+            <small>{{ action.description }}</small>
+          </span>
+          <span class="quick-arrow">›</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="panel judge-panel">
+      <header>
+        <div>
+          <h3>评测服务状态</h3>
+          <p>实时探测已配置的评测节点</p>
+        </div>
+        <div class="judge-actions">
+          <span
+            :class="[
+              'judge-summary',
+              judgeNodes.length > 0 && onlineJudgeCount === judgeNodes.length
+                ? 'healthy'
+                : 'warning'
+            ]"
           >
-        </el-table-column>
-        <el-table-column label="题目" min-width="220">
-          <template #default="{ row }"
-            ><span class="problem-id">{{ row.problemID }}</span
-            >{{ row.problemName }}</template
+            <i />{{ onlineJudgeCount }} / {{ judgeNodes.length }} 在线
+          </span>
+          <el-button text type="primary" @click="router.push('/judge/nodes')">
+            查看详情
+          </el-button>
+          <el-button
+            text
+            :icon="Refresh"
+            :loading="judgeLoading"
+            aria-label="刷新评测服务状态"
+            @click="loadJudgeStatus"
+          />
+        </div>
+      </header>
+      <div v-if="judgeNodes.length" class="judge-list">
+        <article v-for="node in judgeNodes" :key="node.url" class="judge-node">
+          <span :class="['judge-dot', node.online ? 'online' : 'offline']" />
+          <div class="judge-node-main">
+            <strong>{{ node.url }}</strong>
+            <small>{{ node.version || "版本未知" }}</small>
+          </div>
+          <span
+            v-if="node.online"
+            :class="[
+              'judge-latency',
+              node.latencyMs < 100
+                ? 'fast'
+                : node.latencyMs < 500
+                  ? 'medium'
+                  : 'slow'
+            ]"
           >
-        </el-table-column>
-        <el-table-column label="结果" width="160" align="center">
-          <template #default="{ row }"
-            ><el-tag :type="statusInfo(row.status).type" effect="plain">{{
-              statusInfo(row.status).label
-            }}</el-tag></template
-          >
-        </el-table-column>
-        <el-table-column
-          prop="createdAt"
-          label="提交时间"
-          width="175"
-          align="center"
-        />
-      </el-table>
+            {{ node.latencyMs }} ms
+          </span>
+          <el-tag v-else size="small" type="danger" effect="plain">
+            离线
+          </el-tag>
+          <p v-if="node.error" class="judge-error">{{ node.error }}</p>
+        </article>
+      </div>
+      <div v-else v-loading="judgeLoading" class="judge-empty">
+        未配置评测服务节点
+      </div>
     </section>
   </div>
 </template>
@@ -337,10 +443,7 @@ onMounted(loadOverview);
   color: #dc2626;
   background: #fef2f2;
 }
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.8fr);
-  gap: 14px;
+.trend-panel {
   margin-top: 14px;
 }
 .panel {
@@ -361,85 +464,178 @@ onMounted(loadOverview);
   font-size: 15px;
 }
 .trend-chart {
-  height: 235px;
-  display: flex;
-  align-items: stretch;
-  gap: 13px;
-  padding: 25px 25px 18px;
-}
-.trend-column {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.trend-value {
-  height: 23px;
-  color: var(--el-text-color-secondary);
-  font-size: 11px;
-}
-.bar-track {
-  width: min(34px, 65%);
-  min-height: 130px;
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-  background: var(--el-fill-color-light);
-}
-.bar-track span {
+  height: 270px;
   width: 100%;
-  display: block;
-  min-height: 3px;
-  background: var(--el-color-primary);
-  transition: height 0.3s ease;
 }
-.trend-column small {
-  margin-top: 8px;
-  color: var(--el-text-color-secondary);
-  font-size: 11px;
+.quick-panel {
+  margin-top: 14px;
 }
 .quick-list {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  background: var(--el-border-color-lighter);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 18px 18px;
 }
 .quick-list button {
-  min-height: 117px;
-  padding: 17px;
+  min-width: 0;
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--el-border-color-lighter);
   background: #fff;
   text-align: left;
+  transition: 0.16s ease;
 }
 .quick-list button:hover {
-  background: var(--el-fill-color-extra-light);
+  border-color: var(--el-color-primary-light-6);
+  background: var(--el-color-primary-light-9);
+  box-shadow: 0 4px 14px rgb(31 45 61 / 6%);
+  transform: translateY(-1px);
 }
-.quick-list strong,
-.quick-list span {
+.quick-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  flex: 0 0 40px;
+  place-items: center;
+  font-size: 19px;
+}
+.quick-icon.blue {
+  color: #2563eb;
+  background: #eff6ff;
+}
+.quick-icon.purple {
+  color: #7c3aed;
+  background: #f5f3ff;
+}
+.quick-icon.orange {
+  color: #ea580c;
+  background: #fff7ed;
+}
+.quick-icon.green {
+  color: #16a34a;
+  background: #f0fdf4;
+}
+.quick-content {
+  min-width: 0;
+  flex: 1;
+}
+.quick-content strong,
+.quick-content small {
   display: block;
 }
-.quick-list strong {
-  color: var(--el-color-primary);
+.quick-content strong {
+  color: var(--el-text-color-primary);
   font-size: 13px;
 }
-.quick-list span {
-  margin-top: 7px;
+.quick-content small {
+  margin-top: 5px;
   color: var(--el-text-color-secondary);
   font-size: 11px;
   line-height: 1.55;
 }
-.recent-panel {
+.quick-arrow {
+  color: var(--el-text-color-placeholder);
+  font-size: 21px;
+}
+.judge-panel {
   margin-top: 14px;
 }
-.secondary {
-  margin-left: 7px;
-  color: var(--el-text-color-placeholder);
-  font-weight: 400;
+.judge-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.problem-id {
-  margin-right: 9px;
-  color: var(--el-color-primary);
+.judge-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+.judge-summary i,
+.judge-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+}
+.judge-summary.healthy i,
+.judge-dot.online {
+  background: var(--el-color-success);
+  box-shadow: 0 0 0 3px var(--el-color-success-light-9);
+}
+.judge-summary.warning i,
+.judge-dot.offline {
+  background: var(--el-color-danger);
+  box-shadow: 0 0 0 3px var(--el-color-danger-light-9);
+}
+.judge-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 10px;
+  padding: 14px 18px 18px;
+}
+.judge-node {
+  min-width: 0;
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 11px;
+  padding: 12px 14px;
+  border: 1px solid var(--el-border-color-lighter);
+  background: var(--el-fill-color-extra-light);
+}
+.judge-node-main {
+  min-width: 0;
+}
+.judge-node-main strong,
+.judge-node-main small {
+  display: block;
+}
+.judge-node-main strong {
+  overflow: hidden;
+  color: var(--el-text-color-primary);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.judge-node-main small {
+  margin-top: 5px;
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+}
+.judge-latency {
+  font-size: 12px;
   font-weight: 600;
+}
+.judge-latency.fast {
+  color: var(--el-color-success);
+}
+.judge-latency.medium {
+  color: var(--el-color-warning);
+}
+.judge-latency.slow {
+  color: var(--el-color-danger);
+}
+.judge-error {
+  grid-column: 2 / 4;
+  margin: 7px 0 0;
+  overflow: hidden;
+  color: var(--el-color-danger);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.judge-empty {
+  min-height: 88px;
+  display: grid;
+  place-items: center;
+  color: var(--el-text-color-placeholder);
+  font-size: 12px;
 }
 @media (max-width: 1280px) {
   .summary-grid {
@@ -447,8 +643,8 @@ onMounted(loadOverview);
   }
 }
 @media (max-width: 900px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
+  .quick-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>
