@@ -17,7 +17,11 @@
 
       <ul class="acm-nav" :class="{ 'is-open': isNavOpen }">
         <li v-for="item in navItems" :key="item.to">
-          <RouterLink :to="item.to" active-class="nav-link-active" @click="closeNav">
+          <a v-if="item.external" :href="item.to" @click="closeNav">
+            <span :class="['iconfont', item.icon]"></span>
+            <span>{{ item.label }}</span>
+          </a>
+          <RouterLink v-else :to="item.to" active-class="nav-link-active" @click="closeNav">
             <span :class="['iconfont', item.icon]"></span>
             <span>{{ item.label }}</span>
           </RouterLink>
@@ -68,6 +72,9 @@ const isNavOpen = shallowRef(false)
 const toggleNav = () => { isNavOpen.value = !isNavOpen.value }
 const closeNav = () => { isNavOpen.value = false }
 
+const adminFrontendUrl = import.meta.env.VITE_ADMIN_FRONTEND_URL
+  || `${window.location.protocol}//${window.location.hostname}:8848/`
+
 const handleLogout = async () => {
   try {
     await userStore.logout()
@@ -108,7 +115,12 @@ const navItems = computed(() => {
     { to: '/rank', label: '排名', icon: 'icon-paixingbang' },
   ]
   if (userStore.isAdmin) {
-    items.push({ to: '/admin', label: '后台', icon: 'icon-fuwuqi' })
+    items.push({
+      to: adminFrontendUrl,
+      label: '后台',
+      icon: 'icon-fuwuqi',
+      external: true,
+    })
   }
   return items
 })

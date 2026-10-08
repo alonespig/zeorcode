@@ -10,6 +10,7 @@ import LaySidebarExtraIcon from "../lay-sidebar/components/SidebarExtraIcon.vue"
 import LaySidebarFullScreen from "../lay-sidebar/components/SidebarFullScreen.vue";
 
 import LogoutCircleRLine from "~icons/ri/logout-circle-r-line";
+import Home4Line from "~icons/ri/home-4-line";
 import Setting from "~icons/ri/settings-3-line";
 
 const menuRef = ref();
@@ -19,6 +20,7 @@ const {
   route,
   device,
   logout,
+  goFrontend,
   onPanel,
   resolvePath,
   username,
@@ -92,6 +94,14 @@ watch(
     <div class="horizontal-header-right">
       <!-- 菜单搜索 -->
       <LaySearch id="header-search" />
+      <!-- 返回主站 -->
+      <span
+        class="set-icon navbar-bg-hover"
+        title="返回主站"
+        @click="goFrontend"
+      >
+        <IconifyIconOffline :icon="Home4Line" />
+      </span>
       <!-- 全屏 -->
       <LaySidebarFullScreen id="full-screen" />
       <!-- 退出登录 -->

@@ -7,12 +7,14 @@ import LaySidebarBreadCrumb from "../lay-sidebar/components/SidebarBreadCrumb.vu
 import LaySidebarTopCollapse from "../lay-sidebar/components/SidebarTopCollapse.vue";
 
 import LogoutCircleRLine from "~icons/ri/logout-circle-r-line";
+import Home4Line from "~icons/ri/home-4-line";
 import Setting from "~icons/ri/settings-3-line";
 
 const {
   layout,
   device,
   logout,
+  goFrontend,
   onPanel,
   pureApp,
   username,
@@ -41,6 +43,14 @@ const {
     <div v-if="layout === 'vertical'" class="vertical-header-right">
       <!-- 菜单搜索 -->
       <LaySearch id="header-search" />
+      <!-- 返回主站 -->
+      <span
+        class="set-icon navbar-bg-hover"
+        title="返回主站"
+        @click="goFrontend"
+      >
+        <IconifyIconOffline :icon="Home4Line" />
+      </span>
       <!-- 全屏 -->
       <LaySidebarFullScreen id="full-screen" />
       <!-- 退出登录 -->

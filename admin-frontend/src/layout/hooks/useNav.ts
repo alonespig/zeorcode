@@ -86,6 +86,14 @@ export function useNav() {
       .catch(() => undefined);
   }
 
+  /** 返回前台站点 */
+  function goFrontend() {
+    const frontendUrl =
+      import.meta.env.VITE_FRONTEND_URL ||
+      `${window.location.protocol}//${window.location.hostname}:1001/`;
+    window.location.assign(frontendUrl);
+  }
+
   function backTopMenu() {
     router.push(getTopMenu()?.path);
   }
@@ -134,6 +142,7 @@ export function useNav() {
     device,
     layout,
     logout,
+    goFrontend,
     routers,
     $storage,
     isFullscreen,
