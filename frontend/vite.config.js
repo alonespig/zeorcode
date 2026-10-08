@@ -13,13 +13,12 @@ export default defineConfig({
   plugins: [
     vue(),
     vueDevTools(),
-    // 组件按需引入；样式由 main.js 统一引入 element-plus/dist/index.css，
-    // 这里关掉逐组件样式，避免与全量样式重复、打乱 element-theme.css 的覆盖顺序。
+    // Element Plus 组件和样式均按需引入，避免所有页面加载完整组件库 CSS。
     AutoImport({
-      resolvers: [ElementPlusResolver({ importStyle: false })],
+      resolvers: [ElementPlusResolver({ importStyle: "css" })],
     }),
     Components({
-      resolvers: [ElementPlusResolver({ importStyle: false })],
+      resolvers: [ElementPlusResolver({ importStyle: "css" })],
     }),
     tailwindcss(),
   ],

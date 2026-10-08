@@ -57,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { defineAsyncComponent, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getPostList } from '@/api/post'
 import { getUserRecent7DaysAc, userRank } from '@/api/user'
@@ -65,11 +65,15 @@ import { getProblemList } from '@/api/problems'
 import { getContestList } from '@/api/contest'
 import { CONTEST_STATUS } from '@/constants/index'
 import { useUserStore } from '@/stores/user'
-import PassCountChart from '@/components/user/PassCountChart.vue'
 import MiniUserRank from '@/components/home/MiniUserRank.vue'
 import LastProblemTable from './components/LastProblemTable.vue'
 import RecentContestList from './components/RecentContestList.vue'
 import { DataBoard, Timer, Bell } from '@element-plus/icons-vue'
+
+// 图表依赖较大，仅登录用户实际渲染该区域时再下载。
+const PassCountChart = defineAsyncComponent(
+  () => import('@/components/user/PassCountChart.vue'),
+)
 
 const datas = ref([])
 const counts = ref([])

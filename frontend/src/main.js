@@ -6,9 +6,10 @@ import router from "./router";
 import "@/styles/common.css";
 import "@/styles/assets.css"
 import "@/styles/table.css"
-// Element Plus 组件由 vite.config.js 的 ElementPlusResolver 按需引入，这里只引全量样式；
-// 中文语言包在 App.vue 的 el-config-provider 上设置。
-import 'element-plus/dist/index.css'
+// 模板中的 Element Plus 组件及样式由 ElementPlusResolver 按需引入。
+// ElMessage / ElMessageBox 由业务代码直接调用，需要在入口补充其样式。
+import 'element-plus/es/components/message/style/css'
+import 'element-plus/es/components/message-box/style/css'
 import '@/styles/element-theme.css'
 import '@/font/iconfont.css'
 import permission from '@/directives/permission'
