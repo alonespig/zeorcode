@@ -12,7 +12,6 @@ import { useResizeObserver } from "@vueuse/core";
 import echarts from "@/plugins/echarts";
 import {
   Bell,
-  ChatDotRound,
   Collection,
   DataAnalysis,
   DocumentChecked,
@@ -106,13 +105,6 @@ const quickActions = [
     icon: Bell,
     tone: "orange",
     path: "/notifications"
-  },
-  {
-    title: "AI 助手",
-    description: "通过对话完成教学任务",
-    icon: ChatDotRound,
-    tone: "green",
-    path: "/agent"
   }
 ];
 
@@ -472,7 +464,7 @@ onBeforeUnmount(() => {
 }
 .quick-list {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   padding: 14px 18px 18px;
 }
@@ -513,10 +505,6 @@ onBeforeUnmount(() => {
 .quick-icon.orange {
   color: #ea580c;
   background: #fff7ed;
-}
-.quick-icon.green {
-  color: #16a34a;
-  background: #f0fdf4;
 }
 .quick-content {
   min-width: 0;
