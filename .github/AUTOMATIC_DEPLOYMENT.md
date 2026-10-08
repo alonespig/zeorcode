@@ -1,12 +1,26 @@
 # GitHub Actions 自动部署
 
-当代码推送到 `main` 后，`deploy.yml` 会测试后端、按目标架构构建 Linux 后端和 Vue 前端，并通过 SSH 更新生产服务器。生产服务器必须先完成首次安装，确保以下服务和路径已经存在：
+当代码推送到 `main` 后，`deploy.yml` 会测试后端、按目标架构构建 Linux 后端、主站前端和管理后台，并通过 SSH 更新生产服务器。管理后台构建到主站的 `/admin/` 子路径，发布后对应 `/var/www/zoj/admin/`。生产服务器必须先完成首次安装，确保以下服务和路径已经存在：
 
 - `zoj-http.service`
 - `zoj-judge.service`
 - Nginx 和 `/var/www/zoj`
 - `/opt/zoj/backend/zoj`
 - `/opt/zoj/releases`
+
+Nginx 应让主站和管理后台使用各自的 SPA 入口，并保持 `/api/` 继续反向代理到后端：
+
+```nginx
+location ^~ /admin/ {
+    try_files $uri $uri/ /admin/index.html;
+}
+
+location / {
+    try_files $uri $uri/ /index.html;
+}
+```
+
+管理后台使用 Hash 路由，但显式配置 `/admin/` 入口可以保证后台首页和静态资源始终由正确目录提供。
 
 ## 1. 创建专用 SSH 密钥
 
@@ -20,7 +34,7 @@ ssh-keygen -t ed25519 -C "zeorcode-github-actions" -f zeorcode-github-actions
 
 ## 2. 安装服务器发布脚本
 
-把仓库中的 `ops/zeorcode-deploy` 复制到服务器，然后执行：
+把仓库中的最新 `ops/zeorcode-deploy` 复制到服务器，然后执行：
 
 ```bash
 sudo install -o root -g root -m 0755 zeorcode-deploy /usr/local/sbin/zeorcode-deploy
@@ -76,4 +90,4 @@ git push origin main
 
 如果 `backend/database` 有变化，自动发布会停止。先备份数据库并在服务器手动执行、验证相应迁移，再从 Actions 页面手动运行工作流。手动运行用于确认迁移已经完成，不会再次拦截数据库变更。
 
-发布失败时，服务器脚本会恢复上一个后端二进制和前端文件。生产配置、`uploads`、`ojdata` 和 `runtime` 不会被发布流程覆盖。
+发布包会把管理后台放在主站发布目录的 `admin/` 子目录。发布失败时，服务器脚本会同时恢复上一个后端二进制、主站和管理后台。生产配置、`uploads`、`ojdata` 和 `runtime` 不会被发布流程覆盖。

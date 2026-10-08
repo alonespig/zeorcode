@@ -71,10 +71,22 @@ jobs:
           npm ci
           npm run build
 
+      - name: Set up pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.34.5 --activate
+
+      - name: Build admin frontend
+        working-directory: admin-frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
       - name: Package release
         run: |
-          mkdir -p release/zoj/frontend release/zoj/database
+          mkdir -p release/zoj/frontend/admin release/zoj/database
           cp -a frontend/dist/. release/zoj/frontend/
+          cp -a admin-frontend/dist/. release/zoj/frontend/admin/
           cp -a backend/database/. release/zoj/database/
           tar -czf "release/zeorcode-${GITHUB_SHA}-${GITHUB_RUN_ATTEMPT}.tar.gz" -C release zoj
 
