@@ -31,7 +31,7 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
       // 本地跨域代理 https://cn.vitejs.dev/config/server-options.html#server-proxy
       proxy: {
         "/api": {
-          target: VITE_API_PROXY_TARGET || "http://localhost:1001",
+          target: VITE_API_PROXY_TARGET || "http://localhost:9090",
           changeOrigin: true
         }
       },
