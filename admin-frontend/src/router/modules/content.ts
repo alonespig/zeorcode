@@ -106,6 +106,16 @@ export default {
       meta: { title: "帖子审核" }
     },
     {
+      path: "/content/post-review/:id",
+      name: "AdminPostReviewDetail",
+      component: () => import("@/views/content/post-review/detail.vue"),
+      meta: {
+        title: "帖子详情",
+        showLink: false,
+        activePath: "/content/post-review"
+      }
+    },
+    {
       path: "/content/tags",
       name: "AdminTags",
       component: () => import("@/views/content/tags/index.vue"),

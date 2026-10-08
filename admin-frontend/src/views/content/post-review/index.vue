@@ -1,39 +1,20 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { ElMessageBox } from "element-plus";
 import type { PaginationProps } from "@pureadmin/table";
 import { message } from "@/utils/message";
 import { PureTableBar } from "@/components/RePureTableBar";
-import {
-  getPendingPosts,
-  getPostDetail,
-  reviewPost,
-  type PostDetailResp,
-  type PostItem
-} from "@/api/admin/posts";
+import { getPendingPosts, reviewPost, type PostItem } from "@/api/admin/posts";
+import { POST_CATEGORY_LABELS, POST_CATEGORY_TAG_TYPES } from "./constants";
 
 defineOptions({ name: "AdminPostReview" });
 
 /** 表格行数据，附加按行的提交中状态，用于防重复点击 */
 type PostRow = PostItem & { _busy?: boolean };
 
-/** 分类中文名与标签样式（对齐旧前端 categoryTitleMap / categoryStyleMap） */
-const CATEGORY_LABELS: Record<string, string> = {
-  blog: "博客",
-  announcement: "通知",
-  solution: "题解",
-  help: "讨论"
-};
-const CATEGORY_TAG_TYPES: Record<
-  string,
-  "primary" | "success" | "info" | "warning" | "danger"
-> = {
-  blog: "primary",
-  announcement: "danger",
-  solution: "warning",
-  help: "info"
-};
-
+const route = useRoute();
+const router = useRouter();
 const dataList = ref<PostRow[]>([]);
 const loading = ref(false);
 
@@ -60,13 +41,6 @@ const columns: TableColumnList = [
     align: "center"
   }
 ];
-
-// 详情弹窗
-const dialogVisible = ref(false);
-const detailLoading = ref(false);
-const detail = ref<PostDetailResp | null>(null);
-// 请求序号：快速切换/关闭后使过期请求失效，避免旧结果覆盖当前详情
-const detailSeq = ref(0);
 
 async function onSearch() {
   loading.value = true;
@@ -95,29 +69,15 @@ function onSizeChange(size: number) {
   onSearch();
 }
 
-async function openDetail(row: PostRow) {
-  const seq = ++detailSeq.value;
-  dialogVisible.value = true;
-  detail.value = null;
-  detailLoading.value = true;
-  try {
-    const res = await getPostDetail(row.id);
-    if (seq !== detailSeq.value) return;
-    detail.value = res.data ?? null;
-  } catch {
-    if (seq !== detailSeq.value) return;
-    // 加载失败：错误已统一提示，关闭弹窗
-    dialogVisible.value = false;
-  } finally {
-    if (seq === detailSeq.value) detailLoading.value = false;
-  }
-}
-
-function onDialogClosed() {
-  // 使进行中的请求失效，并复位 loading
-  detailSeq.value += 1;
-  detail.value = null;
-  detailLoading.value = false;
+function openDetail(row: PostRow) {
+  router.push({
+    name: "AdminPostReviewDetail",
+    params: { id: String(row.id) },
+    query: {
+      page: String(pagination.currentPage),
+      pageSize: String(pagination.pageSize)
+    }
+  });
 }
 
 /** 操作成功后从审核队列移除；当前页最后一条回退页码并等待刷新完成 */
@@ -176,6 +136,10 @@ async function reject(row: PostRow) {
 }
 
 onMounted(() => {
+  const page = Number(route.query.page);
+  const pageSize = Number(route.query.pageSize);
+  if (Number.isInteger(page) && page > 0) pagination.currentPage = page;
+  if (pagination.pageSizes?.includes(pageSize)) pagination.pageSize = pageSize;
   onSearch();
 });
 </script>
@@ -207,10 +171,10 @@ onMounted(() => {
         >
           <template #category="{ row }">
             <el-tag
-              :type="CATEGORY_TAG_TYPES[row.category] ?? 'info'"
+              :type="POST_CATEGORY_TAG_TYPES[row.category] ?? 'info'"
               size="small"
             >
-              {{ CATEGORY_LABELS[row.category] ?? row.category }}
+              {{ POST_CATEGORY_LABELS[row.category] ?? row.category }}
             </el-tag>
           </template>
           <template #title="{ row }">
@@ -269,62 +233,5 @@ onMounted(() => {
         </PureTable>
       </template>
     </PureTableBar>
-
-    <el-dialog
-      v-model="dialogVisible"
-      title="帖子详情"
-      width="min(760px, calc(100vw - 32px))"
-      top="6vh"
-      @closed="onDialogClosed"
-    >
-      <div v-loading="detailLoading" class="min-h-40">
-        <template v-if="detail">
-          <div class="mb-3 flex items-center gap-2">
-            <span class="text-base font-medium">{{ detail.title }}</span>
-            <el-tag
-              :type="CATEGORY_TAG_TYPES[detail.category] ?? 'info'"
-              size="small"
-            >
-              {{ CATEGORY_LABELS[detail.category] ?? detail.category }}
-            </el-tag>
-          </div>
-          <el-descriptions :column="2" border size="small" class="mb-4">
-            <el-descriptions-item label="作者">
-              {{ detail.user?.username ?? "—" }}
-            </el-descriptions-item>
-            <el-descriptions-item label="提交时间">
-              {{ detail.createdAt || "—" }}
-            </el-descriptions-item>
-            <el-descriptions-item label="关联题目">
-              <template v-if="detail.problem">
-                {{ detail.problem.id }} {{ detail.problem.name }}
-              </template>
-              <template v-else>—</template>
-            </el-descriptions-item>
-            <el-descriptions-item label="数据">
-              浏览 {{ detail.viewCount }} · 点赞 {{ detail.likeCount }} · 评论
-              {{ detail.commentCount }}
-            </el-descriptions-item>
-          </el-descriptions>
-          <div v-if="detail.summary" class="mb-3 text-sm text-gray-500">
-            摘要：{{ detail.summary }}
-          </div>
-          <div class="mb-1 text-sm font-medium">正文</div>
-          <div
-            class="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded border border-gray-200 bg-gray-50 p-3 text-sm leading-6"
-          >
-            {{ detail.content }}
-          </div>
-        </template>
-        <el-empty
-          v-else-if="!detailLoading"
-          description="无数据"
-          :image-size="60"
-        />
-      </div>
-      <template #footer>
-        <el-button @click="dialogVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
