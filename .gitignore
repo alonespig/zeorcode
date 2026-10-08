@@ -34,6 +34,7 @@ coverage.html
 # 前端依赖与构建产物
 node_modules/
 dist/
+.vite/
 coverage/
 
 # 临时文件与缓存
