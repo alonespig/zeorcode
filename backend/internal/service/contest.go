@@ -192,6 +192,17 @@ func (s *ContestService) ResolveID(ctx context.Context, publicID int64) (int64, 
 	return 0, errcode.ErrDatabase.Wrap(err)
 }
 
+func (s *ContestService) ResolveAdminID(ctx context.Context, publicID int64) (int64, error) {
+	id, err := s.repo.ResolveAnyIDByPublicID(ctx, publicID)
+	if err == nil {
+		return id, nil
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return 0, errcode.ErrContestNotFound
+	}
+	return 0, errcode.ErrDatabase.Wrap(err)
+}
+
 func (s *ContestService) ResolveProblemID(ctx context.Context, displayID string) (int64, error) {
 	id, err := s.problemRepo.ResolveID(ctx, strings.TrimSpace(displayID))
 	if err != nil {
@@ -201,7 +212,16 @@ func (s *ContestService) ResolveProblemID(ctx context.Context, displayID string)
 }
 
 func (s *ContestService) ListContests(ctx context.Context, userID int64, page, pageSize int, keyword string, ctype int, status *int) (*ContestList, error) {
-	contests, total, err := s.repo.ListContests(ctx, page, pageSize, keyword, ctype, status)
+	archived := false
+	return s.listContests(ctx, userID, page, pageSize, keyword, ctype, status, &archived)
+}
+
+func (s *ContestService) ListAdminContests(ctx context.Context, page, pageSize int, keyword string, ctype int, status *int, archived *bool) (*ContestList, error) {
+	return s.listContests(ctx, 0, page, pageSize, keyword, ctype, status, archived)
+}
+
+func (s *ContestService) listContests(ctx context.Context, userID int64, page, pageSize int, keyword string, ctype int, status *int, archived *bool) (*ContestList, error) {
+	contests, total, err := s.repo.ListContests(ctx, page, pageSize, keyword, ctype, status, archived)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
@@ -268,9 +288,27 @@ func (s *ContestService) ListContests(ctx context.Context, userID int64, page, p
 			IsRegistered:   registered,
 			NeedInviteCode: c.InviteCode != "",
 			Participants:   int(count),
+			Archived:       c.Archived,
 		})
 	}
 	return resp, nil
+}
+
+func (s *ContestService) SetContestArchived(ctx context.Context, contestID int64, archived bool) error {
+	contest, err := s.getContest(ctx, contestID)
+	if err != nil {
+		return err
+	}
+	if archived && contestStatus(*contest) == model.ContestRunning {
+		return errcode.ErrInvalidParams.WithMsg("进行中的比赛不能归档")
+	}
+	if contest.Archived == archived {
+		return nil
+	}
+	if err := s.repo.SetContestArchived(ctx, contestID, archived); err != nil {
+		return errcode.ErrDatabase.Wrap(err)
+	}
+	return nil
 }
 
 func (s *ContestService) JoinContest(ctx context.Context, userID, contestID int64, inviteCode string) error {

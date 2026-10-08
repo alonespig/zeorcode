@@ -20,20 +20,57 @@ const maxAdminUserImportFileSize = 5 << 20
 
 // AdminController 后台管理接口
 type AdminController struct {
-	userSrv *service.UserService
+	userSrv      *service.UserService
+	dashboardSrv *service.DashboardService
+	auditSrv     *service.AuditService
 }
 
-func NewAdminController(userSrv *service.UserService) *AdminController {
-	return &AdminController{userSrv: userSrv}
+func NewAdminController(userSrv *service.UserService, dashboardSrv *service.DashboardService, auditSrv *service.AuditService) *AdminController {
+	return &AdminController{userSrv: userSrv, dashboardSrv: dashboardSrv, auditSrv: auditSrv}
+}
+
+// Dashboard GET /api/admin/dashboard 后台工作台聚合数据。
+func (a *AdminController) Dashboard(c *gin.Context) (any, error) {
+	result, err := a.dashboardSrv.Overview(c.Request.Context())
+	if err != nil {
+		return nil, err
+	}
+	return toDashboardOverviewResp(result), nil
+}
+
+func (a *AdminController) AuditLogs(c *gin.Context) (any, error) {
+	var req dto.AuditLogListReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		return nil, errcode.ErrInvalidParams.Wrap(err)
+	}
+	result, err := a.auditSrv.List(c.Request.Context(), service.AuditQueryParams{
+		Page: req.Page, PageSize: req.PageSize, Keyword: req.Keyword,
+		Method: req.Method, Success: req.Success,
+	})
+	if err != nil {
+		return nil, err
+	}
+	items := make([]dto.AuditLogItemResp, 0, len(result.List))
+	for _, item := range result.List {
+		items = append(items, dto.AuditLogItemResp{
+			ID: item.ID, ActorID: item.ActorID, ActorName: item.ActorName,
+			Method: item.Method, Path: item.Path, Target: item.Target,
+			ClientIP: item.ClientIP, Success: item.Success, Code: item.Code,
+			CreatedAt: item.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	return &dto.AuditLogListResp{Total: result.Total, List: items}, nil
 }
 
 // ListUsers GET /api/admin/users?page=&pageSize=
 func (a *AdminController) ListUsers(c *gin.Context) (any, error) {
-	var req dto.PageForm
+	var req dto.AdminUserListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	resp, err := a.userSrv.ListAllUsers(c.Request.Context(), req.Page, req.PageSize)
+	resp, err := a.userSrv.ListAllUsers(c.Request.Context(), service.AdminUserListParams{
+		Page: req.Page, PageSize: req.PageSize, Keyword: req.Keyword, Role: req.Role, Status: req.Status,
+	})
 	if err != nil {
 		return nil, err
 	}

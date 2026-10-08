@@ -75,6 +75,7 @@ func toContestListResp(r *service.ContestList) *dto.ContestListResp {
 			NeedInviteCode: it.NeedInviteCode,
 			Duration:       it.Duration,
 			Participants:   it.Participants,
+			Archived:       it.Archived,
 		})
 	}
 	return &dto.ContestListResp{Total: r.Total, List: items}

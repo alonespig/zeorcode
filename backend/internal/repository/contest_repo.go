@@ -87,6 +87,13 @@ func (r *ContestRepo) PublicIDExists(ctx context.Context, publicID int64) (bool,
 func (r *ContestRepo) ResolveIDByPublicID(ctx context.Context, publicID int64) (int64, error) {
 	var contest model.Contest
 	err := r.db.WithContext(ctx).Select("id").
+		Where("public_id = ? AND archived = ?", publicID, false).First(&contest).Error
+	return contest.ID, err
+}
+
+func (r *ContestRepo) ResolveAnyIDByPublicID(ctx context.Context, publicID int64) (int64, error) {
+	var contest model.Contest
+	err := r.db.WithContext(ctx).Select("id").
 		Where("public_id = ?", publicID).First(&contest).Error
 	return contest.ID, err
 }
@@ -110,7 +117,7 @@ func (r *ContestRepo) SettleTx(ctx context.Context, contestID int64,
 	})
 }
 
-func (r *ContestRepo) ListContests(ctx context.Context, page, pageSize int, keyword string, ctype int, status *int) ([]model.Contest, int64, error) {
+func (r *ContestRepo) ListContests(ctx context.Context, page, pageSize int, keyword string, ctype int, status *int, archived *bool) ([]model.Contest, int64, error) {
 	var contests []model.Contest
 	var total int64
 
@@ -124,6 +131,9 @@ func (r *ContestRepo) ListContests(ctx context.Context, page, pageSize int, keyw
 	if status != nil {
 		q = applyContestStatusFilter(q, *status, time.Now())
 	}
+	if archived != nil {
+		q = q.Where("archived = ?", *archived)
+	}
 
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -135,6 +145,12 @@ func (r *ContestRepo) ListContests(ctx context.Context, page, pageSize int, keyw
 		return nil, 0, err
 	}
 	return contests, total, nil
+}
+
+func (r *ContestRepo) SetContestArchived(ctx context.Context, contestID int64, archived bool) error {
+	return r.db.WithContext(ctx).Model(&model.Contest{}).
+		Where("id = ?", contestID).
+		Update("archived", archived).Error
 }
 
 func applyContestStatusFilter(q *gorm.DB, status int, now time.Time) *gorm.DB {

@@ -15,7 +15,7 @@ func (h *HttpServer) initLanguageRouter(r *gin.Engine) {
 		pub.GET("/languages", response.Wrap(h.languageController.List))
 	}
 
-	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired())
+	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
 		admin.GET("/languages", response.Wrap(h.languageController.AdminList))
 		admin.POST("/languages", response.Wrap(h.languageController.Create))

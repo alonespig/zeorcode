@@ -23,6 +23,14 @@ type AdminUserList struct {
 	List  []AdminUser
 }
 
+type AdminUserListParams struct {
+	Page     int
+	PageSize int
+	Keyword  string
+	Role     *int
+	Status   *int
+}
+
 // BatchUserParams 批量创建时单个用户的录入项。
 type BatchUserParams struct {
 	Username  string

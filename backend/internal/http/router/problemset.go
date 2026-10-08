@@ -25,7 +25,7 @@ func (h *HttpServer) initProblemSetRouter(r *gin.Engine) {
 	}
 
 	// 后台：仅管理员，列表含草稿
-	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired())
+	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
 		admin.GET("/problemset", response.Wrap(h.problemSetController.AdminList))
 		admin.POST("/problemset", response.Wrap(h.problemSetController.AdminCreate))

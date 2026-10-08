@@ -47,3 +47,19 @@ type BroadcastReq struct {
 	Content string `json:"content" binding:"required"`
 	Link    string `json:"link"`
 }
+
+type BroadcastHistoryItem struct {
+	ID             int64  `json:"id"`
+	ActorID        int64  `json:"actorID"`
+	ActorName      string `json:"actorName"`
+	Title          string `json:"title"`
+	Content        string `json:"content"`
+	Link           string `json:"link"`
+	RecipientCount int    `json:"recipientCount"`
+	CreatedAt      string `json:"createdAt"`
+}
+
+type BroadcastHistoryResp struct {
+	Total int64                  `json:"total"`
+	List  []BroadcastHistoryItem `json:"list"`
+}

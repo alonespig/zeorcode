@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"strings"
+	"time"
 
 	"zoj/internal/model"
 
@@ -22,11 +23,47 @@ func (r *NotificationRepo) Create(ctx context.Context, n *model.Notification) er
 }
 
 // CreateInBatches 广播扇出用，一次批量插入。
-func (r *NotificationRepo) CreateInBatches(ctx context.Context, ns []*model.Notification) error {
-	if len(ns) == 0 {
-		return nil
+func (r *NotificationRepo) CreateBroadcast(ctx context.Context, broadcast *model.SystemBroadcast, ns []*model.Notification) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(broadcast).Error; err != nil {
+			return err
+		}
+		for _, n := range ns {
+			n.SourceID = broadcast.ID
+		}
+		if len(ns) == 0 {
+			return nil
+		}
+		return tx.CreateInBatches(ns, 200).Error
+	})
+}
+
+type BroadcastHistoryRow struct {
+	ID             int64
+	ActorID        int64
+	ActorName      string
+	Title          string
+	Content        string
+	Link           string
+	RecipientCount int
+	CreatedAt      time.Time
+}
+
+func (r *NotificationRepo) ListBroadcasts(ctx context.Context, page, pageSize int) ([]BroadcastHistoryRow, int64, error) {
+	var list []BroadcastHistoryRow
+	var total int64
+	db := r.db.WithContext(ctx).Model(&model.SystemBroadcast{})
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
-	return r.db.WithContext(ctx).CreateInBatches(ns, 200).Error
+	err := r.db.WithContext(ctx).Table("system_broadcasts AS b").
+		Select("b.id, u.uid AS actor_id, u.username AS actor_name, b.title, b.content, b.link, b.recipient_count, b.created_at").
+		Joins("LEFT JOIN users AS u ON u.id = b.actor_id").
+		Order("b.id DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Scan(&list).Error
+	return list, total, err
 }
 
 // List 某用户的通知；typ 为空=全部；按 id 倒序分页。

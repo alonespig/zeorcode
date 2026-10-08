@@ -28,7 +28,7 @@ func (h *HttpServer) initPostRouter(r *gin.Engine) {
 		auth.DELETE("/comments/:cid", response.Wrap(h.postController.DeleteComment))
 	}
 
-	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired())
+	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
 		admin.GET("/posts/pending", response.Wrap(h.postController.ReviewListPending))
 		admin.PUT("/posts/:id/review", response.Wrap(h.postController.ReviewPost))

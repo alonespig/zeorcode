@@ -53,9 +53,26 @@ type UnreadCount struct {
 
 // BroadcastParams 广播系统通知的输入。
 type BroadcastParams struct {
+	ActorID int64
 	Title   string
 	Content string
 	Link    string
+}
+
+type BroadcastHistoryItem struct {
+	ID             int64
+	ActorID        int64
+	ActorName      string
+	Title          string
+	Content        string
+	Link           string
+	RecipientCount int
+	CreatedAt      time.Time
+}
+
+type BroadcastHistory struct {
+	Total int64
+	List  []BroadcastHistoryItem
 }
 
 func NewNotificationService(repo *repository.NotificationRepo, userRepo *repository.UserRepo) *NotificationService {
@@ -104,10 +121,30 @@ func (s *NotificationService) Broadcast(ctx context.Context, params BroadcastPar
 			SourceType:  "system",
 		})
 	}
-	if err := s.repo.CreateInBatches(ctx, ns); err != nil {
+	broadcast := &model.SystemBroadcast{
+		ActorID: params.ActorID, Title: params.Title, Content: params.Content,
+		Link: params.Link, RecipientCount: len(ids),
+	}
+	if err := s.repo.CreateBroadcast(ctx, broadcast, ns); err != nil {
 		return errcode.ErrDatabase.Wrap(err)
 	}
 	return nil
+}
+
+func (s *NotificationService) BroadcastHistory(ctx context.Context, page, pageSize int) (*BroadcastHistory, error) {
+	rows, total, err := s.repo.ListBroadcasts(ctx, page, pageSize)
+	if err != nil {
+		return nil, errcode.ErrDatabase.Wrap(err)
+	}
+	result := &BroadcastHistory{Total: total, List: make([]BroadcastHistoryItem, 0, len(rows))}
+	for _, row := range rows {
+		result.List = append(result.List, BroadcastHistoryItem{
+			ID: row.ID, ActorID: row.ActorID, ActorName: row.ActorName,
+			Title: row.Title, Content: row.Content, Link: row.Link,
+			RecipientCount: row.RecipientCount, CreatedAt: row.CreatedAt,
+		})
+	}
+	return result, nil
 }
 
 func (s *NotificationService) List(ctx context.Context, recipientID int64, typ string, page, pageSize int) (*NotificationList, error) {

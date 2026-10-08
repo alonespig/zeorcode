@@ -17,3 +17,14 @@ type Notification struct {
 	SourceID    int64     //
 	CreatedAt   time.Time `gorm:"autoCreateTime;index"`
 }
+
+// SystemBroadcast 记录一次管理员广播。通知扇出行通过 SourceID 关联该记录。
+type SystemBroadcast struct {
+	ID             int64     `gorm:"primaryKey"`
+	ActorID        int64     `gorm:"not null;index"`
+	Title          string    `gorm:"size:255;not null"`
+	Content        string    `gorm:"size:2000;not null"`
+	Link           string    `gorm:"size:255;not null;default:''"`
+	RecipientCount int       `gorm:"not null;default:0"`
+	CreatedAt      time.Time `gorm:"autoCreateTime;index"`
+}

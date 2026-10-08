@@ -58,8 +58,10 @@ CREATE TABLE `contests` (
   `end_time` datetime(3) DEFAULT NULL,
   `rated` tinyint(1) DEFAULT '0',
   `settled` tinyint(1) DEFAULT '0',
+  `archived` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_contests_public_id` (`public_id`)
+  UNIQUE KEY `idx_contests_public_id` (`public_id`),
+  KEY `idx_contests_archived_start_time` (`archived`,`start_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `ai_conversations`;
@@ -212,6 +214,36 @@ INSERT INTO `languages` (`id`, `name`, `status`, `sort`, `created_at`, `updated_
   (1, 'c++', 1, 1, NOW(3), NOW(3)),
   (2, 'java', 1, 2, NOW(3), NOW(3)),
   (3, 'python', 1, 3, NOW(3), NOW(3));
+DROP TABLE IF EXISTS `system_broadcasts`;
+DROP TABLE IF EXISTS `admin_audit_logs`;
+CREATE TABLE `admin_audit_logs` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `actor_id` bigint NOT NULL,
+  `method` varchar(8) NOT NULL,
+  `path` varchar(255) NOT NULL,
+  `target` varchar(255) NOT NULL DEFAULT '',
+  `client_ip` varchar(64) NOT NULL DEFAULT '',
+  `success` tinyint(1) NOT NULL DEFAULT '0',
+  `code` int NOT NULL DEFAULT '0',
+  `created_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_admin_audit_logs_actor_id` (`actor_id`),
+  KEY `idx_admin_audit_logs_path` (`path`),
+  KEY `idx_admin_audit_logs_success` (`success`),
+  KEY `idx_admin_audit_logs_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE `system_broadcasts` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `actor_id` bigint NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `content` varchar(2000) NOT NULL,
+  `link` varchar(255) NOT NULL DEFAULT '',
+  `recipient_count` int NOT NULL DEFAULT '0',
+  `created_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_system_broadcasts_actor_id` (`actor_id`),
+  KEY `idx_system_broadcasts_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 DROP TABLE IF EXISTS `notifications`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;

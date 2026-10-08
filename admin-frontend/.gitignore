@@ -1,0 +1,60 @@
+# 依赖
+node_modules/
+.pnpm-store/
+
+# 构建与分析产物
+dist/
+dist-ssr/
+report.html
+
+# 测试与覆盖率产物
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# 本地环境配置
+.env
+.env.local
+.env.*.local
+*.local
+
+# 工具缓存
+.cache/
+.vite/
+.eslintcache
+.stylelintcache
+.prettier-cache
+*.tsbuildinfo
+vite.config.*.timestamp*
+
+# 日志
+*.log
+*.pid
+*.pid.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-error.log*
+.pnpm-debug.log*
+
+# 其他包管理器的锁文件
+package-lock.json
+yarn.lock
+
+# IDE 与编辑器
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+Desktop.ini

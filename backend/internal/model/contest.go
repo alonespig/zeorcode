@@ -57,13 +57,14 @@ type Contest struct {
 	// 封面图 URL：空字符串表示未设置，前端回退默认 ICPC 图
 	CoverURL  string `gorm:"column:cover_url;size:255;not null;default:''"`
 	Type      ContestType
-	StartTime time.Time
+	StartTime time.Time `gorm:"index:idx_contests_archived_start_time,priority:2"`
 	EndTime   time.Time
 	Duration  int // 比赛时长，单位：分钟
 	// 邀请码：空字符串表示公开比赛，非空则报名需要校验
 	InviteCode string    `gorm:"size:32;not null;default:''"`
 	Rated      bool      `gorm:"default:false"` // 是否计入 rating
 	Settled    bool      `gorm:"default:false"` // rating 是否已结算（惰性结算的幂等标记）
+	Archived   bool      `gorm:"not null;default:false;index:idx_contests_archived_start_time,priority:1"`
 	CreatedAt  time.Time `gorm:"autoCreateTime"`
 }
 
