@@ -24,25 +24,29 @@ import (
 )
 
 const (
-	agentWorkflowHomework = "create_homework"
-	agentStepChooseTeam   = "choose_team"
-	agentStepChooseTags   = "choose_tags"
-	agentStepSettings     = "homework_settings"
-	agentStepShortage     = "problem_shortage"
-	agentStepConfirm      = "confirm_homework"
+	agentWorkflowHomework     = "create_homework"
+	agentStepChooseTeam       = "choose_team"
+	agentStepChooseTraining   = "choose_training_type"
+	agentStepChooseDifficulty = "choose_difficulty"
+	agentStepChooseTags       = "choose_tags"
+	agentStepSettings         = "homework_settings"
+	agentStepShortage         = "problem_shortage"
+	agentStepConfirm          = "confirm_homework"
+
+	homeworkTrainingBeginner      = "beginner"
+	homeworkTrainingAlgorithm     = "algorithm"
+	homeworkTrainingComprehensive = "comprehensive"
 )
 
 type AgentService struct {
 	repo        *repository.AgentRepo
-	problemRepo *repository.ProblemRepo
 	homeworkSrv *HomeworkService
 	cache       *cache.Cache
 	model       *llm.Client
 }
 
-func NewAgentService(repo *repository.AgentRepo, problemRepo *repository.ProblemRepo,
-	homeworkSrv *HomeworkService, c *cache.Cache, modelClient *llm.Client) *AgentService {
-	return &AgentService{repo: repo, problemRepo: problemRepo, homeworkSrv: homeworkSrv, cache: c, model: modelClient}
+func NewAgentService(repo *repository.AgentRepo, homeworkSrv *HomeworkService, c *cache.Cache, modelClient *llm.Client) *AgentService {
+	return &AgentService{repo: repo, homeworkSrv: homeworkSrv, cache: c, model: modelClient}
 }
 
 type agentConversationState struct {
@@ -58,6 +62,7 @@ type homeworkDraft struct {
 	TeamPublicID     int64                              `json:"teamPublicId"`
 	TeamName         string                             `json:"teamName"`
 	TeamDescription  string                             `json:"teamDescription,omitempty"`
+	TrainingType     string                             `json:"trainingType,omitempty"`
 	TagIDs           []int64                            `json:"tagIds"`
 	TagNames         []string                           `json:"tagNames"`
 	ProblemCount     int                                `json:"problemCount"`
@@ -75,7 +80,7 @@ type homeworkSettingsInput struct {
 	Title        string `json:"title"`
 	Description  string `json:"description"`
 	ProblemCount int    `json:"problemCount"`
-	Difficulty   int    `json:"difficulty"`
+	Difficulty   *int   `json:"difficulty,omitempty"`
 	RepeatPolicy string `json:"repeatPolicy"`
 	StartTime    string `json:"startTime"`
 	EndTime      string `json:"endTime"`
@@ -362,7 +367,7 @@ func (s *AgentService) startHomeworkWorkflow(ctx context.Context, state *agentCo
 	state.Homework = &homeworkDraft{Version: 1, RepeatPolicy: "exclude_all"}
 	if len(teams) == 1 {
 		selectAgentTeam(state.Homework, teams[0])
-		return s.askHomeworkTags(ctx, state)
+		return s.askHomeworkTrainingType(state), nil
 	}
 	requestID, err := publicid.New()
 	if err != nil {
@@ -404,19 +409,39 @@ func (s *AgentService) resumeInteraction(ctx context.Context, conversation *mode
 		for _, team := range teams {
 			if team.PublicID == teamPublicID {
 				selectAgentTeam(state.Homework, team)
-				return s.askHomeworkTags(ctx, state)
+				return s.askHomeworkTrainingType(state), nil
 			}
 		}
 		return agentReply{}, errcode.ErrPermissionDenied.WithMsg("当前账号不能管理该团队")
+	case agentStepChooseTraining:
+		var trainingType string
+		if err := json.Unmarshal(req.Value, &trainingType); err != nil || !validHomeworkTrainingType(trainingType) {
+			return agentReply{}, errcode.ErrInvalidParams.WithMsg("请选择有效的训练类型")
+		}
+		state.Homework.TrainingType = trainingType
+		state.Homework.TagIDs = nil
+		state.Homework.TagNames = nil
+		return s.askHomeworkDifficulty(state), nil
+	case agentStepChooseDifficulty:
+		difficulty, err := decodeInt(req.Value)
+		if err != nil || difficulty < 0 || difficulty > 3 {
+			return agentReply{}, errcode.ErrInvalidParams.WithMsg("请选择有效的题目难度")
+		}
+		state.Homework.Difficulty = difficulty
+		if state.Homework.TrainingType == homeworkTrainingAlgorithm {
+			return s.askHomeworkTags(ctx, state)
+		}
+		return s.askHomeworkSettings(state), nil
 	case agentStepChooseTags:
 		var tagIDs []int64
 		if err := json.Unmarshal(req.Value, &tagIDs); err != nil || len(tagIDs) == 0 {
 			return agentReply{}, errcode.ErrInvalidParams.WithMsg("请至少选择一个知识点")
 		}
-		tags, err := s.problemRepo.GetTagsList(ctx)
+		tags, err := s.repo.ListProblemTagStats(ctx, state.Homework.Difficulty, 30)
 		if err != nil {
 			return agentReply{}, errcode.ErrDatabase.Wrap(err)
 		}
+		tags = selectHomeworkPromptTags(tags, state.Homework.TeamDescription, 12)
 		allowed := make(map[int64]string, len(tags))
 		for _, tag := range tags {
 			allowed[tag.ID] = tag.Name
@@ -454,7 +479,7 @@ func (s *AgentService) resumeInteraction(ctx context.Context, conversation *mode
 		switch choice {
 		case "reduce_count":
 			if len(state.Homework.SelectedProblems) == 0 {
-				return agentReply{}, errcode.ErrInvalidParams.WithMsg("当前没有可用题目，请重新选择知识点")
+				return agentReply{}, errcode.ErrInvalidParams.WithMsg("当前没有可用题目，请调整训练类型、难度或知识点")
 			}
 			state.Homework.ProblemCount = len(state.Homework.SelectedProblems)
 			return s.buildHomeworkPreview(ctx, conversation, run, state)
@@ -463,6 +488,8 @@ func (s *AgentService) resumeInteraction(ctx context.Context, conversation *mode
 			return s.prepareHomeworkCandidates(ctx, conversation, run, state)
 		case "change_tags":
 			return s.askHomeworkTags(ctx, state)
+		case "change_preferences":
+			return s.askHomeworkTrainingType(state), nil
 		default:
 			return agentReply{}, errcode.ErrInvalidParams.WithMsg("不支持的处理方式")
 		}
@@ -471,57 +498,86 @@ func (s *AgentService) resumeInteraction(ctx context.Context, conversation *mode
 	}
 }
 
+func (s *AgentService) askHomeworkTrainingType(state *agentConversationState) agentReply {
+	requestID := newAgentRequestID()
+	state.Step = agentStepChooseTraining
+	state.PendingRequestID = requestID
+	recommended := recommendedHomeworkTrainingType(state.Homework.TeamDescription)
+	options := []AgentOption{
+		{Label: "新手入门", Value: homeworkTrainingBeginner, Description: "侧重基础语法、简单模拟和编程习惯", Recommended: recommended == homeworkTrainingBeginner},
+		{Label: "算法专项", Value: homeworkTrainingAlgorithm, Description: "围绕一个或多个算法知识点集中训练", Recommended: recommended == homeworkTrainingAlgorithm},
+		{Label: "综合练习", Value: homeworkTrainingComprehensive, Description: "不限定知识点，按难度组合一份练习", Recommended: recommended == homeworkTrainingComprehensive},
+	}
+	block := AgentBlock{Type: "single_select", RequestID: requestID, Title: "选择训练类型",
+		Description: "先确定这次作业面向的学习阶段，后面只展示相关设置。", Required: true, Options: options}
+	return agentReply{Content: fmt.Sprintf("已经选择团队“%s”。这次作业更偏向哪类训练？", state.Homework.TeamName),
+		Blocks: []AgentBlock{block}, Waiting: true}
+}
+
+func (s *AgentService) askHomeworkDifficulty(state *agentConversationState) agentReply {
+	requestID := newAgentRequestID()
+	state.Step = agentStepChooseDifficulty
+	state.PendingRequestID = requestID
+	recommended := recommendedHomeworkDifficulty(state.Homework.TrainingType)
+	options := []AgentOption{
+		{Label: "简单", Value: 1, Description: "适合入门和基础巩固", Recommended: recommended == 1},
+		{Label: "中等", Value: 2, Description: "需要综合运用知识点", Recommended: recommended == 2},
+		{Label: "困难", Value: 3, Description: "适合提高和挑战训练", Recommended: recommended == 3},
+		{Label: "不限难度", Value: 0, Description: "由系统从不同难度中组合", Recommended: recommended == 0},
+	}
+	block := AgentBlock{Type: "single_select", RequestID: requestID, Title: "选择题目难度",
+		Description: "系统会按这个难度筛选可用题目。", Required: true, Options: options}
+	return agentReply{Content: fmt.Sprintf("已确定为%s。接下来选择这次作业的整体难度。", homeworkTrainingTypeLabel(state.Homework.TrainingType)),
+		Blocks: []AgentBlock{block}, Waiting: true}
+}
+
 func (s *AgentService) askHomeworkTags(ctx context.Context, state *agentConversationState) (agentReply, error) {
-	tags, err := s.problemRepo.GetTagsList(ctx)
+	tags, err := s.repo.ListProblemTagStats(ctx, state.Homework.Difficulty, 30)
 	if err != nil {
 		return agentReply{}, errcode.ErrDatabase.Wrap(err)
 	}
 	if len(tags) == 0 {
 		return agentReply{}, errcode.ErrOperationDenied.WithMsg("题库还没有算法标签，请先在后台添加标签")
 	}
-	requestID, err := publicid.New()
-	if err != nil {
-		return agentReply{}, errcode.ErrInternal.Wrap(err)
-	}
+	tags = selectHomeworkPromptTags(tags, state.Homework.TeamDescription, 12)
+	requestID := newAgentRequestID()
 	state.Step = agentStepChooseTags
 	state.PendingRequestID = requestID
 	options := make([]AgentOption, 0, len(tags))
 	descriptionLower := strings.ToLower(state.Homework.TeamDescription)
 	for _, tag := range tags {
 		recommended := strings.Contains(descriptionLower, strings.ToLower(tag.Name))
-		description := ""
+		description := fmt.Sprintf("当前难度有 %d 道可用题", tag.ProblemCount)
 		if recommended {
-			description = "团队简介中提到了该知识点"
+			description += " · 团队简介中提到"
 		}
 		options = append(options, AgentOption{Label: tag.Name, Value: tag.ID, Description: description, Recommended: recommended})
 	}
-	block := AgentBlock{Type: "multi_select", RequestID: requestID, Title: "选择知识点",
-		Description: "结合团队简介选择本次训练内容，可同时选择多个知识点。", Required: true, Options: options}
-	content := fmt.Sprintf("已经读取团队“%s”的简介。接下来请选择本次作业需要覆盖的知识点。", state.Homework.TeamName)
+	block := AgentBlock{Type: "multi_select", RequestID: requestID, Title: "选择算法知识点",
+		Description: "这里只展示当前难度下题量较充足的知识点，可同时选择多个。", Required: true, Options: options}
+	content := "难度已经确定。再选择这次算法专项需要覆盖的知识点。"
 	return agentReply{Content: content, Blocks: []AgentBlock{block}, Waiting: true}, nil
 }
 
 func (s *AgentService) askHomeworkSettings(state *agentConversationState) agentReply {
-	requestID, err := publicid.New()
-	if err != nil {
-		requestID = time.Now().UnixNano()%90_000_000 + 10_000_000
-	}
+	requestID := newAgentRequestID()
 	state.Step = agentStepSettings
 	state.PendingRequestID = requestID
 	now := time.Now().Truncate(time.Minute).Add(time.Hour)
-	defaultTitle := strings.Join(state.Homework.TagNames, "、") + "练习"
+	defaultTitle := homeworkDefaultTitle(state.Homework)
 	payload := map[string]any{
 		"teamName":            state.Homework.TeamName,
 		"defaultTitle":        defaultTitle,
 		"defaultProblemCount": 8,
-		"defaultDifficulty":   0,
+		"trainingType":        homeworkTrainingTypeLabel(state.Homework.TrainingType),
+		"difficulty":          homeworkDifficultyLabel(state.Homework.Difficulty),
 		"defaultRepeatPolicy": "exclude_all",
 		"defaultStartTime":    now.Format(homeworkTimeLayout),
 		"defaultEndTime":      now.Add(7 * 24 * time.Hour).Format(homeworkTimeLayout),
 	}
 	block := AgentBlock{Type: "homework_settings", RequestID: requestID, Title: "完善作业设置",
 		Description: "时间精确到分钟。默认排除该团队以前作业中使用过的题目。", Required: true, Payload: payload}
-	return agentReply{Content: "知识点已经确定，再补充题目数量、难度和时间。", Blocks: []AgentBlock{block}, Waiting: true}
+	return agentReply{Content: "训练方向已经确定，再补充题目数量和作业时间。", Blocks: []AgentBlock{block}, Waiting: true}
 }
 
 func (s *AgentService) prepareHomeworkCandidates(ctx context.Context, conversation *model.AgentConversation,
@@ -550,8 +606,11 @@ func (s *AgentService) prepareHomeworkCandidates(ctx context.Context, conversati
 		options := []AgentOption{
 			{Label: fmt.Sprintf("改为 %d 题", len(candidates)), Value: "reduce_count", Disabled: len(candidates) == 0},
 			{Label: "允许使用历史作业题目", Value: "allow_history", Disabled: state.Homework.RepeatPolicy == "allow_history"},
-			{Label: "重新选择知识点", Value: "change_tags"},
 		}
+		if state.Homework.TrainingType == homeworkTrainingAlgorithm {
+			options = append(options, AgentOption{Label: "重新选择知识点", Value: "change_tags"})
+		}
+		options = append(options, AgentOption{Label: "调整训练类型和难度", Value: "change_preferences"})
 		payload := map[string]any{"requested": state.Homework.ProblemCount, "available": len(candidates),
 			"excludedHistory": state.Homework.RepeatPolicy == "exclude_all", "tagNames": state.Homework.TagNames}
 		block := AgentBlock{Type: "notice", RequestID: requestID, Title: "符合条件的题目不足",
@@ -608,7 +667,8 @@ func (s *AgentService) buildHomeworkPreview(ctx context.Context, conversation *m
 	previewPayload := map[string]any{"actionId": action.PublicID, "draftVersion": state.Homework.Version,
 		"teamId": state.Homework.TeamPublicID, "teamName": state.Homework.TeamName, "title": state.Homework.Title,
 		"description": state.Homework.Description, "startTime": state.Homework.StartTime, "endTime": state.Homework.EndTime,
-		"problemCount": len(state.Homework.SelectedProblems), "knowledgeTags": state.Homework.TagNames,
+		"problemCount": len(state.Homework.SelectedProblems), "trainingType": homeworkTrainingTypeLabel(state.Homework.TrainingType),
+		"difficulty": homeworkDifficultyLabel(state.Homework.Difficulty), "knowledgeTags": state.Homework.TagNames,
 		"repeatPolicy": state.Homework.RepeatPolicy}
 	preview := AgentBlock{Type: "action_preview", Title: "创建作业", Description: "请确认下面的信息。确认后才会真正创建作业。", Payload: previewPayload}
 	return agentReply{Content: "作业草稿已经准备好，请检查题目和时间后确认创建。", Blocks: []AgentBlock{table, preview}, Waiting: true}, nil
@@ -765,7 +825,12 @@ func applyHomeworkSettings(draft *homeworkDraft, input *homeworkSettingsInput) e
 	if input.ProblemCount < 1 || input.ProblemCount > 30 {
 		return errcode.ErrInvalidParams.WithMsg("题目数量必须在 1 到 30 之间")
 	}
-	if input.Difficulty < 0 || input.Difficulty > 3 {
+	if input.Difficulty != nil {
+		if *input.Difficulty < 0 || *input.Difficulty > 3 {
+			return errcode.ErrInvalidParams.WithMsg("难度设置无效")
+		}
+		draft.Difficulty = *input.Difficulty
+	} else if draft.Difficulty < 0 || draft.Difficulty > 3 {
 		return errcode.ErrInvalidParams.WithMsg("难度设置无效")
 	}
 	if input.RepeatPolicy != "exclude_all" && input.RepeatPolicy != "allow_history" {
@@ -785,7 +850,6 @@ func applyHomeworkSettings(draft *homeworkDraft, input *homeworkSettingsInput) e
 	draft.Title = input.Title
 	draft.Description = input.Description
 	draft.ProblemCount = input.ProblemCount
-	draft.Difficulty = input.Difficulty
 	draft.RepeatPolicy = input.RepeatPolicy
 	draft.StartTime = start.Format(homeworkTimeLayout)
 	draft.EndTime = end.Format(homeworkTimeLayout)
@@ -800,6 +864,86 @@ func parseAgentTime(raw string) (time.Time, error) {
 		}
 	}
 	return time.Time{}, errors.New("invalid time")
+}
+
+func newAgentRequestID() int64 {
+	requestID, err := publicid.New()
+	if err == nil {
+		return requestID
+	}
+	return time.Now().UnixNano()%90_000_000 + 10_000_000
+}
+
+func validHomeworkTrainingType(trainingType string) bool {
+	switch trainingType {
+	case homeworkTrainingBeginner, homeworkTrainingAlgorithm, homeworkTrainingComprehensive:
+		return true
+	default:
+		return false
+	}
+}
+
+func recommendedHomeworkTrainingType(teamDescription string) string {
+	description := strings.ToLower(teamDescription)
+	for _, keyword := range []string{"入门", "基础", "新手", "零基础", "初学", "语法"} {
+		if strings.Contains(description, keyword) {
+			return homeworkTrainingBeginner
+		}
+	}
+	for _, keyword := range []string{"算法", "竞赛", "acm", "蓝桥", "提高"} {
+		if strings.Contains(description, keyword) {
+			return homeworkTrainingAlgorithm
+		}
+	}
+	return homeworkTrainingComprehensive
+}
+
+func recommendedHomeworkDifficulty(trainingType string) int {
+	switch trainingType {
+	case homeworkTrainingBeginner:
+		return 1
+	case homeworkTrainingAlgorithm:
+		return 2
+	default:
+		return 0
+	}
+}
+
+func homeworkTrainingTypeLabel(trainingType string) string {
+	switch trainingType {
+	case homeworkTrainingBeginner:
+		return "新手入门"
+	case homeworkTrainingAlgorithm:
+		return "算法专项"
+	case homeworkTrainingComprehensive:
+		return "综合练习"
+	default:
+		return "自定义训练"
+	}
+}
+
+func homeworkDifficultyLabel(difficulty int) string {
+	return map[int]string{0: "不限难度", 1: "简单", 2: "中等", 3: "困难"}[difficulty]
+}
+
+func homeworkDefaultTitle(draft *homeworkDraft) string {
+	if len(draft.TagNames) > 0 {
+		return strings.Join(draft.TagNames, "、") + "练习"
+	}
+	return homeworkTrainingTypeLabel(draft.TrainingType) + "练习"
+}
+
+func selectHomeworkPromptTags(tags []repository.AgentProblemTagStat, teamDescription string, limit int) []repository.AgentProblemTagStat {
+	description := strings.ToLower(teamDescription)
+	sort.SliceStable(tags, func(i, j int) bool {
+		left := strings.Contains(description, strings.ToLower(tags[i].Name))
+		right := strings.Contains(description, strings.ToLower(tags[j].Name))
+		return left && !right
+	})
+	if limit > 0 && len(tags) > limit {
+		return tags[:limit]
+	}
+	return tags
 }
 
 func sortCandidates(candidates []repository.AgentProblemCandidate, selectedTagIDs []int64) {
@@ -847,6 +991,11 @@ func decodeInt64(raw json.RawMessage) (int64, error) {
 		return 0, err
 	}
 	return strconv.ParseInt(text, 10, 64)
+}
+
+func decodeInt(raw json.RawMessage) (int, error) {
+	value, err := decodeInt64(raw)
+	return int(value), err
 }
 
 func conversationTitle(content string) string {

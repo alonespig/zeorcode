@@ -4,6 +4,11 @@
       <h3>{{ block.title }}</h3>
       <p>{{ block.description }}</p>
     </header>
+    <div v-if="defaults.trainingType || defaults.difficulty" class="selection-summary">
+      <span v-if="defaults.teamName"><small>团队</small>{{ defaults.teamName }}</span>
+      <span v-if="defaults.trainingType"><small>训练类型</small>{{ defaults.trainingType }}</span>
+      <span v-if="defaults.difficulty"><small>难度</small>{{ defaults.difficulty }}</span>
+    </div>
     <el-form label-position="top" class="settings-form" @submit.prevent>
       <div class="two-columns">
         <el-form-item label="作业名称">
@@ -13,22 +18,20 @@
           <el-input-number v-model="form.problemCount" :min="1" :max="30" :disabled="disabled" controls-position="right" />
         </el-form-item>
       </div>
-      <div class="two-columns">
-        <el-form-item label="难度">
-          <el-select v-model="form.difficulty" :disabled="disabled">
-            <el-option label="不限难度" :value="0" />
-            <el-option label="入门" :value="1" />
-            <el-option label="普及" :value="2" />
-            <el-option label="提高" :value="3" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="历史作业题目">
-          <el-select v-model="form.repeatPolicy" :disabled="disabled">
-            <el-option label="排除以前使用过的题目" value="exclude_all" />
-            <el-option label="允许重复使用" value="allow_history" />
-          </el-select>
-        </el-form-item>
-      </div>
+      <el-form-item label="历史作业题目">
+        <el-select v-model="form.repeatPolicy" :disabled="disabled">
+          <el-option label="排除以前使用过的题目" value="exclude_all" />
+          <el-option label="允许重复使用" value="allow_history" />
+        </el-select>
+      </el-form-item>
+      <el-form-item v-if="defaults.defaultDifficulty !== undefined && !defaults.difficulty" label="难度">
+        <el-select v-model="form.difficulty" :disabled="disabled">
+          <el-option label="不限难度" :value="0" />
+          <el-option label="入门" :value="1" />
+          <el-option label="普及" :value="2" />
+          <el-option label="提高" :value="3" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="开始和结束时间">
         <el-date-picker
           v-model="timeRange"
@@ -63,7 +66,7 @@ const form = reactive({
   title: defaults.defaultTitle || '',
   description: '',
   problemCount: defaults.defaultProblemCount || 8,
-  difficulty: defaults.defaultDifficulty || 0,
+  difficulty: defaults.defaultDifficulty,
   repeatPolicy: defaults.defaultRepeatPolicy || 'exclude_all',
 })
 const timeRange = ref([defaults.defaultStartTime, defaults.defaultEndTime].filter(Boolean))
@@ -81,6 +84,9 @@ const submit = () => emit('submit', props.block.requestId, {
 .settings-card { margin-top: 14px; padding: 19px; border: 1px solid #dfe6f0; border-radius: 7px; background: #fbfcfe; }
 header h3 { margin: 0; color: #202c40; font-size: 15px; }
 header p { margin: 6px 0 0; color: #7c879a; font-size: 13px; }
+.selection-summary { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 15px; padding: 10px 12px; border: 1px solid #e4e9f1; border-radius: 5px; background: #fff; color: #3d495c; font-size: 12px; }
+.selection-summary span { display: flex; align-items: center; gap: 7px; }
+.selection-summary small { color: #929cad; font-size: 11px; }
 .settings-form { margin-top: 17px; }
 .two-columns { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(150px, .75fr); gap: 15px; }
 .settings-card :deep(.el-form-item) { margin-bottom: 15px; }

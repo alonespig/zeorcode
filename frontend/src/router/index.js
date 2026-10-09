@@ -85,6 +85,12 @@ const routes = [
     ],
   },
   {
+    path: "/agent",
+    name: "Agent",
+    meta: { title: "AI 助手", requiresAuth: true, requiresAdmin: true },
+    component: () => import("@/pages/Agent/index.vue"),
+  },
+  {
     path: "/login",
     name: "Login",
     meta: { title: "登录" },

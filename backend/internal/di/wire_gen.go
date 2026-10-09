@@ -73,7 +73,7 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 	homeworkController := handler.NewHomeworkController(homeworkService)
 	agentRepo := repository.NewAgentRepo(db)
 	llmClient := llm.NewClient()
-	agentService := service.NewAgentService(agentRepo, problemRepo, homeworkService, cacheCache, llmClient)
+	agentService := service.NewAgentService(agentRepo, homeworkService, cacheCache, llmClient)
 	agentController := handler.NewAgentController(agentService)
 	languageController := handler.NewLanguageController(languageService)
 	httpServer := router.NewHttpServer(problemController, contestController, submissionController, postController, userController, uploadController, adminController, remoteController, notificationController, problemSetController, teamController, homeworkController, agentController, languageController, tokenService, cacheCache, auditService)

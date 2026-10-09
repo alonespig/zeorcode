@@ -1,17 +1,14 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from "vue";
-import { useRoute } from "vue-router";
-import { Close, Lock, UserFilled, View } from "@element-plus/icons-vue";
+import { computed, provide, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { Lock, UserFilled, View } from "@element-plus/icons-vue";
 import { getTeamDetail } from "@/api/team";
 import { useUserStore } from "@/stores/user";
-import AgentView from "@/pages/Agent/AgentView.vue";
-import AgentErrorBoundary from "@/pages/Agent/components/AgentErrorBoundary.vue";
 
 const route = useRoute();
+const router = useRouter();
 const userStore = useUserStore();
 const team = ref({});
-const agentVisible = shallowRef(false);
-const agentViewKey = ref(0);
 
 // 供概览/作业/成员 tab 注入使用，避免重复请求
 provide("team", team);
@@ -33,16 +30,14 @@ const isTabActive = (tab) => {
 
 const shortDate = (date) => (date ? date.slice(0, 10) : "-");
 
-const setAgentVisible = (visible) => {
-  agentVisible.value = visible;
-};
-
-const retryAgent = () => {
-  agentViewKey.value += 1;
-};
-
-const handleEscape = (event) => {
-  if (event.key === "Escape" && agentVisible.value) setAgentVisible(false);
+const openAgent = () => {
+  router.push({
+    name: "Agent",
+    query: {
+      from: route.fullPath,
+      teamId: String(route.params.id),
+    },
+  });
 };
 
 const fetchTeam = async (teamID) => {
@@ -57,14 +52,6 @@ const fetchTeam = async (teamID) => {
 };
 
 watch(() => route.params.id, fetchTeam, { immediate: true });
-watch(agentVisible, (visible) => {
-  document.documentElement.classList.toggle("team-agent-open", visible);
-});
-onMounted(() => window.addEventListener("keydown", handleEscape));
-onBeforeUnmount(() => {
-  document.documentElement.classList.remove("team-agent-open");
-  window.removeEventListener("keydown", handleEscape);
-});
 </script>
 
 <template>
@@ -114,9 +101,7 @@ onBeforeUnmount(() => {
           :class="{ 'border-blue-500! text-blue-500! font-medium': isTabActive(tab) }">
           {{ tab.label }}
         </router-link>
-        <button v-if="userStore.isAdmin" type="button" class="team-agent-trigger"
-          :class="{ 'team-agent-trigger--active': agentVisible }" :aria-expanded="agentVisible"
-          @click="setAgentVisible(true)">
+        <button v-if="userStore.isAdmin" type="button" class="team-agent-trigger" @click="openAgent">
           AI 助手
         </button>
       </div>
@@ -126,26 +111,6 @@ onBeforeUnmount(() => {
       <router-view :key="route.params.id" />
     </div>
 
-    <div v-if="agentVisible" class="team-agent-overlay" role="presentation">
-      <section class="team-agent-dialog" role="dialog" aria-modal="true" aria-labelledby="team-agent-dialog-title">
-        <header class="team-agent-dialog__header">
-          <div class="team-agent-dialog__title">
-            <strong id="team-agent-dialog-title">AI 助手</strong>
-            <span>{{ team.name || "当前团队" }}</span>
-          </div>
-          <button type="button" class="team-agent-dialog__close" aria-label="关闭 AI 助手" @click="setAgentVisible(false)">
-            <el-icon>
-              <Close />
-            </el-icon>
-          </button>
-        </header>
-        <div class="team-agent-dialog__body">
-          <AgentErrorBoundary :key="agentViewKey" @retry="retryAgent">
-            <AgentView :key="agentViewKey" />
-          </AgentErrorBoundary>
-        </div>
-      </section>
-    </div>
   </div>
 </template>
 
@@ -233,88 +198,9 @@ onBeforeUnmount(() => {
   transition: color 150ms ease, border-color 150ms ease;
 }
 
-.team-agent-trigger:hover,
-.team-agent-trigger--active {
+.team-agent-trigger:hover {
   border-bottom-color: #3b82f6;
   color: #3b82f6;
-}
-
-.team-agent-dialog__title {
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.team-agent-dialog__title strong {
-  color: #172033;
-  font-size: 17px;
-}
-
-.team-agent-dialog__title span {
-  min-width: 0;
-  overflow: hidden;
-  color: #8a94a7;
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.team-agent-overlay {
-  position: fixed;
-  z-index: 2100;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 32px 24px;
-  background: rgba(15, 23, 42, 0.48);
-}
-
-.team-agent-dialog {
-  width: min(1180px, 100%);
-  height: calc(100dvh - 64px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.2);
-}
-
-.team-agent-dialog__header {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid #e8edf3;
-}
-
-.team-agent-dialog__close {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  border-radius: 4px;
-  color: #8a94a7;
-  font-size: 18px;
-  transition: color 150ms ease, background-color 150ms ease;
-}
-
-.team-agent-dialog__close:hover {
-  color: #334155;
-  background: #f1f5f9;
-}
-
-.team-agent-dialog__body {
-  min-height: 0;
-  flex: 1;
-  overflow: hidden;
-}
-
-:global(html.team-agent-open) {
-  overflow-y: hidden;
 }
 
 @media (max-width: 640px) {
@@ -340,12 +226,5 @@ onBeforeUnmount(() => {
     justify-content: flex-start;
   }
 
-  .team-agent-overlay {
-    padding: 12px;
-  }
-
-  .team-agent-dialog {
-    height: calc(100dvh - 24px);
-  }
 }
 </style>

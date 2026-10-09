@@ -160,6 +160,35 @@ type AgentProblemCandidate struct {
 	Tags          []model.Tag `gorm:"-" json:"tags"`
 }
 
+type AgentProblemTagStat struct {
+	ID           int64  `gorm:"column:id"`
+	Name         string `gorm:"column:name"`
+	ProblemCount int    `gorm:"column:problem_count"`
+}
+
+// ListProblemTagStats returns the tags with the largest visible problem pools.
+// It is used to keep the assistant's knowledge-point prompt focused instead of
+// sending the complete tag catalog to the browser.
+func (r *AgentRepo) ListProblemTagStats(ctx context.Context, difficulty, limit int) ([]AgentProblemTagStat, error) {
+	if limit <= 0 || limit > 30 {
+		limit = 12
+	}
+	var tags []AgentProblemTagStat
+	db := r.db.WithContext(ctx).Table("tags AS t").
+		Select("t.id, t.name, COUNT(DISTINCT p.id) AS problem_count").
+		Joins("JOIN problem_tags AS pt ON pt.tag_id = t.id").
+		Joins("JOIN problems AS p ON p.id = pt.problem_id").
+		Where("p.hidden = ?", false)
+	if difficulty > 0 {
+		db = db.Where("p.difficulty = ?", difficulty)
+	}
+	err := db.Group("t.id, t.name").
+		Order("problem_count DESC, t.name ASC").
+		Limit(limit).
+		Scan(&tags).Error
+	return tags, err
+}
+
 func (r *AgentRepo) ListProblemCandidates(ctx context.Context, tagIDs []int64, difficulty int, excludedTeamID int64, limit int) ([]AgentProblemCandidate, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 100

@@ -3,9 +3,9 @@ package service
 import (
 	"testing"
 
-	"zoj/pkg/errcode"
 	"zoj/internal/model"
 	"zoj/internal/repository"
+	"zoj/pkg/errcode"
 )
 
 func TestIsHomeworkIntent(t *testing.T) {
@@ -26,9 +26,10 @@ func TestIsHomeworkIntent(t *testing.T) {
 }
 
 func TestApplyHomeworkSettings(t *testing.T) {
+	difficulty := 2
 	draft := &homeworkDraft{}
 	err := applyHomeworkSettings(draft, &homeworkSettingsInput{
-		Title: "  指针练习  ", ProblemCount: 8, Difficulty: 2, RepeatPolicy: "exclude_all",
+		Title: "  指针练习  ", ProblemCount: 8, Difficulty: &difficulty, RepeatPolicy: "exclude_all",
 		StartTime: "2026-08-30 08:00:00", EndTime: "2026-09-06 08:00:00",
 	})
 	if err != nil {
@@ -36,6 +37,54 @@ func TestApplyHomeworkSettings(t *testing.T) {
 	}
 	if draft.Title != "指针练习" || draft.ProblemCount != 8 || draft.Difficulty != 2 {
 		t.Fatalf("unexpected draft: %+v", draft)
+	}
+}
+
+func TestApplyHomeworkSettingsKeepsSelectedDifficulty(t *testing.T) {
+	draft := &homeworkDraft{Difficulty: 3}
+	err := applyHomeworkSettings(draft, &homeworkSettingsInput{
+		Title: "提高练习", ProblemCount: 6, RepeatPolicy: "exclude_all",
+		StartTime: "2026-08-30 08:00:00", EndTime: "2026-09-06 08:00:00",
+	})
+	if err != nil {
+		t.Fatalf("applyHomeworkSettings() error = %v", err)
+	}
+	if draft.Difficulty != 3 {
+		t.Fatalf("difficulty = %d, want 3", draft.Difficulty)
+	}
+}
+
+func TestHomeworkPromptGraphBranchesByTrainingType(t *testing.T) {
+	service := &AgentService{}
+	state := &agentConversationState{Homework: &homeworkDraft{TeamName: "C 语言班", TeamDescription: "零基础入门"}}
+
+	reply := service.askHomeworkTrainingType(state)
+	if state.Step != agentStepChooseTraining || len(reply.Blocks) != 1 || len(reply.Blocks[0].Options) != 3 {
+		t.Fatalf("unexpected training prompt: state=%+v reply=%+v", state, reply)
+	}
+	if !reply.Blocks[0].Options[0].Recommended {
+		t.Fatal("beginner option should be recommended for a beginner team")
+	}
+
+	state.Homework.TrainingType = homeworkTrainingAlgorithm
+	reply = service.askHomeworkDifficulty(state)
+	if state.Step != agentStepChooseDifficulty || len(reply.Blocks[0].Options) != 4 {
+		t.Fatalf("unexpected difficulty prompt: state=%+v reply=%+v", state, reply)
+	}
+	if !reply.Blocks[0].Options[1].Recommended {
+		t.Fatal("medium difficulty should be recommended for algorithm training")
+	}
+}
+
+func TestSelectHomeworkPromptTagsKeepsTeamRecommendation(t *testing.T) {
+	tags := []repository.AgentProblemTagStat{
+		{ID: 1, Name: "二分", ProblemCount: 20},
+		{ID: 2, Name: "动态规划", ProblemCount: 5},
+		{ID: 3, Name: "搜索", ProblemCount: 10},
+	}
+	selected := selectHomeworkPromptTags(tags, "本周学习动态规划", 2)
+	if len(selected) != 2 || selected[0].ID != 2 {
+		t.Fatalf("selected tags = %+v, want recommended tag first", selected)
 	}
 }
 

@@ -4,11 +4,19 @@
       :conversations="conversations"
       :active-id="current?.id || 0"
       :loading="listLoading"
+      :return-label="returnLabel"
+      @back="$emit('back')"
       @create="handleCreate"
       @select="handleSelect"
       @archive="handleArchive"
     />
     <main class="agent-main">
+      <header class="chat-header">
+        <div class="chat-title">
+          <strong>{{ current?.title || '新对话' }}</strong>
+          <span><i></i> 教学任务助手</span>
+        </div>
+      </header>
       <MessageTimeline
         :messages="messages"
         :pending-request-id="pendingRequestId"
@@ -33,6 +41,9 @@ import ConversationSidebar from './components/ConversationSidebar.vue'
 import MessageComposer from './components/MessageComposer.vue'
 import MessageTimeline from './components/MessageTimeline.vue'
 import { useAgentConversation } from '@/composables/agent/useAgentConversation'
+
+defineProps({ returnLabel: { type: String, default: '返回' } })
+defineEmits(['back'])
 
 const {
   conversations,
@@ -89,16 +100,26 @@ onMounted(async () => {
 
 <style scoped>
 .agent-page {
-  --agent-bg: #f5f7fa;
+  --agent-bg: #fff;
   width: 100%; height: 100%; min-height: 0;
   display: flex; overflow: hidden; box-sizing: border-box;
-  color: #29354a; background: var(--agent-bg);
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  color: #202123; background: var(--agent-bg);
+  font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
 }
-.agent-main { min-width: 0; flex: 1; display: flex; flex-direction: column; background: #fff; }
+.agent-main { min-width: 0; min-height: 0; flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #fff; }
+.chat-header {
+  height: 56px; flex: 0 0 56px; display: flex; align-items: center; padding: 0 22px;
+  border-bottom: 1px solid #ececec; background: rgba(255, 255, 255, .94);
+}
+.chat-title { min-width: 0; display: flex; align-items: center; gap: 12px; }
+.chat-title strong { max-width: min(520px, 48vw); overflow: hidden; color: #2f2f2f; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.chat-title span { display: inline-flex; align-items: center; gap: 6px; color: #8b8b8b; font-size: 11px; }
+.chat-title i { width: 6px; height: 6px; border-radius: 50%; background: #10a37f; }
 @media (max-width: 760px) {
   .agent-page {
     flex-direction: column;
   }
+  .chat-header { height: 48px; flex-basis: 48px; padding: 0 14px; }
+  .chat-title span { display: none; }
 }
 </style>
