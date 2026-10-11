@@ -7,6 +7,7 @@
         :disabled="block.requestId !== pendingRequestId"
         :submitting="running"
         @submit="(requestId, value) => $emit('answer', requestId, value)"
+        @cancel="$emit('cancel')"
       />
       <HomeworkSettingsBlock
         v-else-if="block.type === 'homework_settings'"
@@ -14,6 +15,15 @@
         :disabled="block.requestId !== pendingRequestId"
         :submitting="running"
         @submit="(requestId, value) => $emit('answer', requestId, value)"
+        @cancel="$emit('cancel')"
+      />
+      <TextInputBlock
+        v-else-if="block.type === 'text_input'"
+        :block="block"
+        :disabled="block.requestId !== pendingRequestId"
+        :submitting="running"
+        @submit="(requestId, value) => $emit('answer', requestId, value)"
+        @cancel="$emit('cancel')"
       />
       <DataTableBlock v-else-if="block.type === 'data_table'" :block="block" />
       <NoticeBlock
@@ -22,6 +32,7 @@
         :disabled="block.requestId !== pendingRequestId"
         :submitting="running"
         @submit="(requestId, value) => $emit('answer', requestId, value)"
+        @cancel="$emit('cancel')"
       />
       <ActionPreviewBlock
         v-else-if="block.type === 'action_preview'"
@@ -39,6 +50,7 @@
 <script setup>
 import ChoiceBlock from './blocks/ChoiceBlock.vue'
 import HomeworkSettingsBlock from './blocks/HomeworkSettingsBlock.vue'
+import TextInputBlock from './blocks/TextInputBlock.vue'
 import DataTableBlock from './blocks/DataTableBlock.vue'
 import NoticeBlock from './blocks/NoticeBlock.vue'
 import ActionPreviewBlock from './blocks/ActionPreviewBlock.vue'
@@ -50,5 +62,5 @@ defineProps({
   pendingActionId: { type: Number, default: 0 },
   running: Boolean,
 })
-defineEmits(['answer', 'approve', 'reject'])
+defineEmits(['answer', 'approve', 'reject', 'cancel'])
 </script>

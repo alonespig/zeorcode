@@ -3,11 +3,8 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
-import MarkdownIt from 'markdown-it';
-import DOMPurify from 'dompurify'
-import mk from 'markdown-it-katex'
-import 'katex/dist/katex.min.css'
+import { computed } from 'vue'
+import { renderMarkdown } from '@/utils/markdown'
 
 const props = defineProps({
   content: {
@@ -16,23 +13,7 @@ const props = defineProps({
   }
 })
 
-const html = ref('')
-
-const md = new MarkdownIt({
-  html: true,        // 允许 HTML
-  linkify: true,     // 自动识别链接
-  typographer: true  // 美化符号
-})
-
-md.use(mk)
-
-watch(
-  () => props.content,
-  (newVal) => {
-    html.value = DOMPurify.sanitize(md.render(newVal || ''))
-  },
-  { immediate: true, }
-)
+const html = computed(() => renderMarkdown(props.content))
 </script>
 
 

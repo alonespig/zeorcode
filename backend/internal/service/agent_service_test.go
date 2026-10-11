@@ -35,8 +35,32 @@ func TestApplyHomeworkSettings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("applyHomeworkSettings() error = %v", err)
 	}
-	if draft.Title != "指针练习" || draft.ProblemCount != 8 || draft.Difficulty != 2 {
+	if draft.Title != "指针练习" || draft.Sequence != 1 || draft.ProblemCount != 8 || draft.Difficulty != 2 {
 		t.Fatalf("unexpected draft: %+v", draft)
+	}
+}
+
+func TestSelectAgentTeamUsesNextHomeworkSequence(t *testing.T) {
+	draft := &homeworkDraft{TrainingType: homeworkTrainingAlgorithm}
+	selectAgentTeam(draft, repository.AgentTeam{
+		ID: 7, PublicID: 12345678, Name: "算法班", HomeworkCount: 4,
+	})
+
+	if draft.Sequence != 5 {
+		t.Fatalf("sequence = %d, want 5", draft.Sequence)
+	}
+	if got := homeworkDefaultTitle(draft); got != "第 5 次作业 · 算法竞赛" {
+		t.Fatalf("homeworkDefaultTitle() = %q", got)
+	}
+}
+
+func TestHomeworkDefaultTitleUsesSelectedKnowledge(t *testing.T) {
+	draft := &homeworkDraft{
+		Sequence: 7, TrainingType: homeworkTrainingBeginner,
+		TagNames: []string{"输入输出与顺序结构", "条件判断与循环", "一维与二维数组"},
+	}
+	if got := homeworkDefaultTitle(draft); got != "第 7 次作业 · 输入输出与顺序结构、条件判断与循环等" {
+		t.Fatalf("homeworkDefaultTitle() = %q", got)
 	}
 }
 
@@ -59,7 +83,7 @@ func TestHomeworkPromptGraphBranchesByTrainingType(t *testing.T) {
 	state := &agentConversationState{Homework: &homeworkDraft{TeamName: "C 语言班", TeamDescription: "零基础入门"}}
 
 	reply := service.askHomeworkTrainingType(state)
-	if state.Step != agentStepChooseTraining || len(reply.Blocks) != 1 || len(reply.Blocks[0].Options) != 3 {
+	if state.Step != agentStepChooseTraining || len(reply.Blocks) != 1 || len(reply.Blocks[0].Options) != 4 {
 		t.Fatalf("unexpected training prompt: state=%+v reply=%+v", state, reply)
 	}
 	if !reply.Blocks[0].Options[0].Recommended {
@@ -73,6 +97,98 @@ func TestHomeworkPromptGraphBranchesByTrainingType(t *testing.T) {
 	}
 	if !reply.Blocks[0].Options[1].Recommended {
 		t.Fatal("medium difficulty should be recommended for algorithm training")
+	}
+}
+
+func TestHomeworkScopeOptionsSeparateDataStructuresAndCompetition(t *testing.T) {
+	dataStructure := homeworkScopeOptions(homeworkTrainingDataStructure)
+	if len(dataStructure) != 4 || dataStructure[0].Value != homeworkScopeLinearStructure {
+		t.Fatalf("unexpected data-structure scopes: %+v", dataStructure)
+	}
+	competition := homeworkScopeOptions(homeworkTrainingAlgorithm)
+	if len(competition) < 6 || competition[0].Value != homeworkScopeBasicAlgorithm {
+		t.Fatalf("unexpected competition scopes: %+v", competition)
+	}
+	if !validHomeworkScope(homeworkTrainingAlgorithm, homeworkScopeGreedyConstruct) {
+		t.Fatal("competition scopes should include greedy and construction")
+	}
+	if !tagMatchesHomeworkScope("最短路", homeworkScopeGraph) || tagMatchesHomeworkScope("背包DP", homeworkScopeGraph) {
+		t.Fatal("graph scope should contain shortest path but not knapsack DP")
+	}
+	concepts := homeworkConceptOptions(homeworkScopeGreedyConstruct)
+	if len(concepts) != 1 || concepts[0].Name != "构造思维" {
+		t.Fatalf("unexpected construction concepts: %+v", concepts)
+	}
+}
+
+func TestDecodeKnowledgeSelectionSupportsKeysAndLegacyTagIDs(t *testing.T) {
+	selection, err := decodeKnowledgeSelection([]byte(`["concept:stack","custom:单调栈",14]`))
+	if err != nil {
+		t.Fatalf("decodeKnowledgeSelection() error = %v", err)
+	}
+	if len(selection) != 3 || selection[0] != "concept:stack" || selection[1] != "custom:单调栈" || selection[2] != "tag:14" {
+		t.Fatalf("unexpected selection: %+v", selection)
+	}
+}
+
+func TestDecodeCustomKnowledgeKey(t *testing.T) {
+	if name, ok := decodeCustomKnowledgeKey("custom:  单调栈  "); !ok || name != "单调栈" {
+		t.Fatalf("decodeCustomKnowledgeKey() = %q, %v", name, ok)
+	}
+	if _, ok := decodeCustomKnowledgeKey("custom:\n"); ok {
+		t.Fatal("empty custom knowledge should be rejected")
+	}
+}
+
+func TestAutomaticHomeworkDifficulty(t *testing.T) {
+	if difficulty, automatic := automaticHomeworkDifficulty(&homeworkDraft{TrainingType: homeworkTrainingBeginner}); !automatic || difficulty != 1 {
+		t.Fatalf("beginner difficulty = %d, automatic = %v", difficulty, automatic)
+	}
+	if _, automatic := automaticHomeworkDifficulty(&homeworkDraft{TrainingType: homeworkTrainingAlgorithm}); automatic {
+		t.Fatal("algorithm training should still ask for difficulty")
+	}
+}
+
+func TestFilterHomeworkCandidatesRejectsAdvancedProblemForBeginner(t *testing.T) {
+	draft := &homeworkDraft{
+		TrainingType:  homeworkTrainingBeginner,
+		KnowledgeKeys: []string{"concept:input_output"},
+		TagNames:      []string{"输入输出与顺序结构"},
+	}
+	candidates := []repository.AgentProblemCandidate{
+		{DisplayID: "L1002", Name: "三维偏序", Difficulty: 1, Tags: []model.Tag{{Name: "差分约束"}, {Name: "网络流"}}},
+		{DisplayID: "B1001", Name: "两数求和", Difficulty: 1},
+	}
+
+	filtered := filterHomeworkCandidates(candidates, draft)
+	if len(filtered) != 1 || filtered[0].DisplayID != "B1001" {
+		t.Fatalf("unexpected beginner candidates: %+v", filtered)
+	}
+}
+
+func TestFilterHomeworkCandidatesMatchesCustomKnowledge(t *testing.T) {
+	draft := &homeworkDraft{
+		TrainingType:  homeworkTrainingDataStructure,
+		KnowledgeKeys: []string{"custom:单调栈"},
+		TagNames:      []string{"单调栈"},
+	}
+	candidates := []repository.AgentProblemCandidate{
+		{DisplayID: "A", Name: "单调栈入门"},
+		{DisplayID: "B", Name: "队列练习"},
+	}
+
+	filtered := filterHomeworkCandidates(candidates, draft)
+	if len(filtered) != 1 || filtered[0].DisplayID != "A" {
+		t.Fatalf("unexpected custom-knowledge candidates: %+v", filtered)
+	}
+}
+
+func TestRequirementExcludesTag(t *testing.T) {
+	if !requirementExcludesTag("希望是基础题，不要动态规划DP", "动态规划DP") {
+		t.Fatal("negated tag should be excluded")
+	}
+	if requirementExcludesTag("希望练习动态规划DP", "动态规划DP") {
+		t.Fatal("positive tag should not be excluded")
 	}
 }
 
@@ -92,6 +208,14 @@ func TestApplyHomeworkSettingsRejectsInvalidWindow(t *testing.T) {
 	err := applyHomeworkSettings(&homeworkDraft{}, &homeworkSettingsInput{
 		Title: "练习", ProblemCount: 5, RepeatPolicy: "exclude_all",
 		StartTime: "2026-09-06 08:00:00", EndTime: "2026-08-30 08:00:00",
+	})
+	requireAppErrorCode(t, err, errcode.InvalidParams)
+}
+
+func TestApplyHomeworkSettingsRejectsInvalidSequence(t *testing.T) {
+	err := applyHomeworkSettings(&homeworkDraft{}, &homeworkSettingsInput{
+		Title: "练习", Sequence: 1000, ProblemCount: 5, RepeatPolicy: "exclude_all",
+		StartTime: "2026-08-30 08:00:00", EndTime: "2026-09-06 08:00:00",
 	})
 	requireAppErrorCode(t, err, errcode.InvalidParams)
 }

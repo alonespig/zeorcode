@@ -7,11 +7,14 @@
         <p>{{ block.description }}</p>
       </div>
     </div>
-    <dl>
+    <dl :class="{ 'has-full-row': payload.requirements }">
       <div><dt>团队</dt><dd>{{ payload.teamName }}</dd></div>
+      <div v-if="payload.sequence"><dt>作业序号</dt><dd>第 {{ payload.sequence }} 次</dd></div>
       <div><dt>作业名称</dt><dd>{{ payload.title }}</dd></div>
       <div><dt>时间</dt><dd>{{ payload.startTime }} 至 {{ payload.endTime }}</dd></div>
+      <div><dt>训练设置</dt><dd>{{ payload.trainingType }} · {{ payload.difficulty }}</dd></div>
       <div><dt>题目</dt><dd>{{ payload.problemCount }} 题 · {{ (payload.knowledgeTags || []).join('、') }}</dd></div>
+      <div v-if="payload.requirements" class="full-row"><dt>补充要求</dt><dd>{{ payload.requirements }}</dd></div>
     </dl>
     <div class="preview-footer">
       <span v-if="disabled">此操作已处理</span>
@@ -43,6 +46,9 @@ dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 17
 dl > div { min-height: 58px; padding: 10px 13px; border-right: 1px solid #edf0f5; border-bottom: 1px solid #edf0f5; }
 dl > div:nth-child(2n) { border-right: 0; }
 dl > div:nth-last-child(-n+2) { border-bottom: 0; }
+.has-full-row > div:nth-last-child(-n+2) { border-bottom: 1px solid #edf0f5; }
+.has-full-row > div:last-child { border-bottom: 0; }
+.full-row { grid-column: 1 / -1; border-right: 0; }
 dt { color: #929cac; font-size: 11px; }
 dd { margin: 5px 0 0; color: #344158; font-size: 13px; font-weight: 600; }
 .preview-footer { min-height: 35px; display: flex; align-items: center; justify-content: flex-end; gap: 9px; margin-top: 14px; }

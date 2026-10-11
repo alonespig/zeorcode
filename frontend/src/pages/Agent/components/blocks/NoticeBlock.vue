@@ -12,6 +12,13 @@
         :disabled="disabled || submitting || option.disabled"
         @click="$emit('submit', block.requestId, option.value)"
       >{{ option.label }}</button>
+      <button
+        v-if="!disabled"
+        class="cancel-button"
+        type="button"
+        :disabled="submitting"
+        @click="$emit('cancel')"
+      >取消任务</button>
     </div>
     <span v-if="disabled" class="expired">此选项已处理</span>
   </section>
@@ -20,7 +27,7 @@
 <script setup>
 import { Warning } from '@element-plus/icons-vue'
 defineProps({ block: { type: Object, required: true }, disabled: Boolean, submitting: Boolean })
-defineEmits(['submit'])
+defineEmits(['submit', 'cancel'])
 </script>
 
 <style scoped>
@@ -32,5 +39,6 @@ p { margin: 5px 0 0; color: #8d7654; font-size: 12px; }
 button { min-height: 33px; padding: 0 13px; color: #75531f; border: 1px solid #e8d2a6; border-radius: 5px; background: #fff; font-size: 12px; }
 button:hover:not(:disabled) { border-color: #d3a653; background: #fff7e8; }
 button:disabled { opacity: .45; cursor: not-allowed; }
+.cancel-button { color: #606d82; border-color: #d8dee8; }
 .expired { display: block; margin-top: 11px; color: #a79270; font-size: 11px; }
 </style>

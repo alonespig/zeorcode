@@ -16,13 +16,15 @@
       </button>
 
       <ul class="acm-nav" :class="{ 'is-open': isNavOpen }">
-        <li v-for="item in navItems" :key="item.to">
+        <li v-for="item in navItems" :key="item.key || item.to">
           <a v-if="item.external" :href="item.to" @click="closeNav">
-            <span :class="['iconfont', item.icon]"></span>
+            <el-icon v-if="item.elementIcon"><component :is="item.elementIcon" /></el-icon>
+            <span v-else :class="['iconfont', item.icon]"></span>
             <span>{{ item.label }}</span>
           </a>
           <RouterLink v-else :to="item.to" active-class="nav-link-active" @click="closeNav">
-            <span :class="['iconfont', item.icon]"></span>
+            <el-icon v-if="item.elementIcon"><component :is="item.elementIcon" /></el-icon>
+            <span v-else :class="['iconfont', item.icon]"></span>
             <span>{{ item.label }}</span>
           </RouterLink>
         </li>
@@ -62,7 +64,7 @@ import { computed, ref, shallowRef, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getUnreadCount } from '@/api/notification'
-import { Close, Menu } from '@element-plus/icons-vue'
+import { Close, MagicStick, Menu } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -115,6 +117,13 @@ const navItems = computed(() => {
     { to: '/rank', label: '排名', icon: 'icon-paixingbang' },
   ]
   if (userStore.isAdmin) {
+    const returnPath = route.path === '/agent' ? '/home' : route.fullPath
+    items.push({
+      key: 'agent',
+      to: { name: 'Agent', query: { from: returnPath, new: '1' } },
+      label: 'AI 助手',
+      elementIcon: MagicStick,
+    })
     items.push({
       to: adminFrontendUrl,
       label: '后台',

@@ -7,17 +7,18 @@ import AgentErrorBoundary from "./components/AgentErrorBoundary.vue";
 const route = useRoute();
 const router = useRouter();
 const agentViewKey = shallowRef(0);
+const startNewConversation = computed(() => route.query.new === "1");
 
 const returnPath = computed(() => {
   const source = Array.isArray(route.query.from) ? route.query.from[0] : route.query.from;
   if (typeof source !== "string" || !source.startsWith("/") || source.startsWith("//")) {
-    return "/team";
+    return "/home";
   }
-  if (source.split("?")[0] === "/agent") return "/team";
+  if (source.split("?")[0] === "/agent") return "/home";
   return source;
 });
 
-const returnLabel = computed(() => route.query.teamId ? "返回团队" : "返回原页面");
+const returnLabel = computed(() => "返回原页面");
 
 const goBack = () => {
   router.push(returnPath.value);
@@ -25,6 +26,12 @@ const goBack = () => {
 
 const retryAgent = () => {
   agentViewKey.value += 1;
+};
+
+const consumeNewConversationFlag = () => {
+  const query = { ...route.query };
+  delete query.new;
+  router.replace({ query });
 };
 
 const pageLockClass = "agent-route-active";
@@ -41,7 +48,13 @@ onBeforeUnmount(() => {
 <template>
   <section class="agent-route">
     <AgentErrorBoundary :key="agentViewKey" @retry="retryAgent">
-      <AgentView :key="agentViewKey" :return-label="returnLabel" @back="goBack" />
+      <AgentView
+        :key="agentViewKey"
+        :return-label="returnLabel"
+        :start-new-conversation="startNewConversation"
+        @back="goBack"
+        @new-conversation-started="consumeNewConversationFlag"
+      />
     </AgentErrorBoundary>
   </section>
 </template>

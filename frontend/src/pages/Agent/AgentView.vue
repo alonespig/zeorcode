@@ -28,6 +28,7 @@
         @answer="answerInteraction"
         @approve="approveAction"
         @reject="rejectAction"
+        @cancel="cancelWorkflow"
       />
       <MessageComposer :running="running" @send="sendMessage" />
     </main>
@@ -42,8 +43,11 @@ import MessageComposer from './components/MessageComposer.vue'
 import MessageTimeline from './components/MessageTimeline.vue'
 import { useAgentConversation } from '@/composables/agent/useAgentConversation'
 
-defineProps({ returnLabel: { type: String, default: '返回' } })
-defineEmits(['back'])
+const props = defineProps({
+  returnLabel: { type: String, default: '返回' },
+  startNewConversation: Boolean,
+})
+const emit = defineEmits(['back', 'new-conversation-started'])
 
 const {
   conversations,
@@ -88,8 +92,17 @@ const handleArchive = async (id) => {
   }
 }
 
+const cancelWorkflow = () => {
+  if (!running.value) sendMessage('取消')
+}
+
 onMounted(async () => {
   try {
+    if (props.startNewConversation) {
+      await createConversation()
+      emit('new-conversation-started')
+      return
+    }
     const list = await loadConversations()
     if (list.length) await loadConversation(list[0].id)
   } catch (error) {

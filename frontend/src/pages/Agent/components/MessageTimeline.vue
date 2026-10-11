@@ -1,5 +1,5 @@
 <template>
-  <div ref="scrollElement" class="timeline">
+  <div ref="scrollElement" class="timeline" @scroll.passive="handleScroll">
     <div v-if="loading" class="timeline-loading"><span></span><span></span><span></span></div>
     <div v-else-if="!messages.length && !streamingContent" class="welcome">
       <div class="welcome-mark">Z</div>
@@ -22,6 +22,7 @@
         @answer="(requestId, value) => $emit('answer', requestId, value)"
         @approve="(actionId, version) => $emit('approve', actionId, version)"
         @reject="(actionId, version) => $emit('reject', actionId, version)"
+        @cancel="$emit('cancel')"
       />
       <MessageItem
         v-if="streamingContent"
@@ -46,16 +47,44 @@ const props = defineProps({
   loading: Boolean,
   running: Boolean,
 })
-defineEmits(['suggest', 'answer', 'approve', 'reject'])
+defineEmits(['suggest', 'answer', 'approve', 'reject', 'cancel'])
 const scrollElement = ref(null)
+const autoFollow = ref(true)
+const bottomThreshold = 72
+
+const isNearBottom = () => {
+  const element = scrollElement.value
+  if (!element) return true
+  return element.scrollHeight - element.scrollTop - element.clientHeight <= bottomThreshold
+}
+
+const handleScroll = () => {
+  autoFollow.value = isNearBottom()
+}
+
+const scrollToBottom = async (force = false) => {
+  await nextTick()
+  const element = scrollElement.value
+  if (!element || (!force && !autoFollow.value)) return
+  element.scrollTop = element.scrollHeight
+}
 
 watch(
-  () => [props.messages.length, props.streamingContent, props.running],
-  async () => {
-    await nextTick()
-    if (scrollElement.value) scrollElement.value.scrollTop = scrollElement.value.scrollHeight
+  () => [props.messages.length, props.streamingContent],
+  () => {
+    if (autoFollow.value) scrollToBottom()
   },
   { flush: 'post' },
+)
+
+watch(
+  () => props.running,
+  (running, wasRunning) => {
+    if (running && !wasRunning) {
+      autoFollow.value = true
+      scrollToBottom(true)
+    }
+  },
 )
 </script>
 

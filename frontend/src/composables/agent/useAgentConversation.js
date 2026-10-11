@@ -18,9 +18,15 @@ export function useAgentConversation() {
   const detailLoading = ref(false)
   const running = ref(false)
   const streamingContent = ref('')
+	const optimisticUserMessage = ref(null)
 	let activeController = null
 
-  const messages = computed(() => Array.isArray(current.value?.messages) ? current.value.messages : [])
+  const messages = computed(() => {
+    const savedMessages = Array.isArray(current.value?.messages) ? current.value.messages : []
+    return optimisticUserMessage.value
+      ? [...savedMessages, optimisticUserMessage.value]
+      : savedMessages
+  })
   const pendingRequestId = computed(() => current.value?.pendingRequestId || 0)
   const pendingActionId = computed(() => current.value?.pendingActionId || 0)
 
@@ -66,11 +72,21 @@ export function useAgentConversation() {
 
   async function runTurn(payload) {
     if (running.value) return
-    const conversationId = await ensureConversation()
     running.value = true
     streamingContent.value = ''
-		activeController = new AbortController()
+		if (payload.type === 'message' && String(payload.content || '').trim()) {
+			optimisticUserMessage.value = {
+				id: `local-${Date.now()}`,
+				role: 'user',
+				kind: 'text',
+				content: String(payload.content).trim(),
+				blocks: [],
+			}
+		}
+		let conversationId = 0
     try {
+			conversationId = await ensureConversation()
+			activeController = new AbortController()
       const response = await fetch(`${API_BASE}/agent/conversations/${conversationId}/turns`, {
         method: 'POST',
         credentials: 'include',
@@ -107,12 +123,15 @@ export function useAgentConversation() {
 			activeController = null
       running.value = false
       streamingContent.value = ''
-      const refreshResults = await Promise.allSettled([
-        loadConversation(conversationId, { quiet: true }),
-        loadConversations(),
-      ])
-      const refreshError = refreshResults.find((result) => result.status === 'rejected')
-      if (refreshError) console.error('[Agent] 刷新对话失败', refreshError.reason)
+		if (conversationId) {
+			const refreshResults = await Promise.allSettled([
+				loadConversation(conversationId, { quiet: true }),
+				loadConversations(),
+			])
+			const refreshError = refreshResults.find((result) => result.status === 'rejected')
+			if (refreshError) console.error('[Agent] 刷新对话失败', refreshError.reason)
+		}
+		optimisticUserMessage.value = null
     }
   }
 

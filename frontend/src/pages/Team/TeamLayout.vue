@@ -1,13 +1,10 @@
 <script setup>
 import { computed, provide, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { Lock, UserFilled, View } from "@element-plus/icons-vue";
 import { getTeamDetail } from "@/api/team";
-import { useUserStore } from "@/stores/user";
 
 const route = useRoute();
-const router = useRouter();
-const userStore = useUserStore();
 const team = ref({});
 
 // 供概览/作业/成员 tab 注入使用，避免重复请求
@@ -29,16 +26,6 @@ const isTabActive = (tab) => {
 };
 
 const shortDate = (date) => (date ? date.slice(0, 10) : "-");
-
-const openAgent = () => {
-  router.push({
-    name: "Agent",
-    query: {
-      from: route.fullPath,
-      teamId: String(route.params.id),
-    },
-  });
-};
 
 const fetchTeam = async (teamID) => {
   team.value = {};
@@ -101,9 +88,6 @@ watch(() => route.params.id, fetchTeam, { immediate: true });
           :class="{ 'border-blue-500! text-blue-500! font-medium': isTabActive(tab) }">
           {{ tab.label }}
         </router-link>
-        <button v-if="userStore.isAdmin" type="button" class="team-agent-trigger" @click="openAgent">
-          AI 助手
-        </button>
       </div>
     </div>
 
@@ -184,23 +168,6 @@ watch(() => route.params.id, fetchTeam, { immediate: true });
   color: #111827;
   font-size: 16px;
   font-variant-numeric: tabular-nums;
-}
-
-.team-agent-trigger {
-  align-self: stretch;
-  display: inline-flex;
-  align-items: center;
-  padding: 0;
-  border-bottom: 2px solid transparent;
-  color: #374151;
-  font-size: 15px;
-  font-weight: 500;
-  transition: color 150ms ease, border-color 150ms ease;
-}
-
-.team-agent-trigger:hover {
-  border-bottom-color: #3b82f6;
-  color: #3b82f6;
 }
 
 @media (max-width: 640px) {

@@ -130,17 +130,20 @@ func (r *AgentRepo) FinishAction(ctx context.Context, actionID int64, status str
 }
 
 type AgentTeam struct {
-	ID          int64  `gorm:"column:id"`
-	PublicID    int64  `gorm:"column:public_id"`
-	Name        string `gorm:"column:name"`
-	Description string `gorm:"column:description"`
-	MemberCount int    `gorm:"column:member_count"`
+	ID            int64  `gorm:"column:id"`
+	PublicID      int64  `gorm:"column:public_id"`
+	Name          string `gorm:"column:name"`
+	Description   string `gorm:"column:description"`
+	MemberCount   int    `gorm:"column:member_count"`
+	HomeworkCount int    `gorm:"column:homework_count"`
 }
 
 func (r *AgentRepo) ListManageableTeams(ctx context.Context, userID int64, isSiteAdmin bool) ([]AgentTeam, error) {
 	var teams []AgentTeam
 	db := r.db.WithContext(ctx).Table("teams").
-		Select("teams.id, teams.public_id, teams.name, teams.description, COUNT(team_members.id) AS member_count").
+		Select(`teams.id, teams.public_id, teams.name, teams.description,
+			COUNT(team_members.id) AS member_count,
+			(SELECT COUNT(*) FROM homeworks WHERE homeworks.team_id = teams.id) AS homework_count`).
 		Joins("LEFT JOIN team_members ON team_members.team_id = teams.id")
 	if !isSiteAdmin {
 		db = db.Where("teams.id IN (?)", r.db.WithContext(ctx).Table("team_members").
@@ -154,6 +157,7 @@ type AgentProblemCandidate struct {
 	ID            int64       `gorm:"column:id" json:"-"`
 	DisplayID     string      `gorm:"column:display_id" json:"id"`
 	Name          string      `gorm:"column:name" json:"name"`
+	Description   string      `gorm:"column:description" json:"-"`
 	Difficulty    int         `gorm:"column:difficulty" json:"difficulty"`
 	SubmitCount   int64       `gorm:"column:submit_count" json:"submitCount"`
 	AcceptedCount int64       `gorm:"column:accepted_count" json:"acceptedCount"`
@@ -170,7 +174,7 @@ type AgentProblemTagStat struct {
 // It is used to keep the assistant's knowledge-point prompt focused instead of
 // sending the complete tag catalog to the browser.
 func (r *AgentRepo) ListProblemTagStats(ctx context.Context, difficulty, limit int) ([]AgentProblemTagStat, error) {
-	if limit <= 0 || limit > 30 {
+	if limit <= 0 || limit > 100 {
 		limit = 12
 	}
 	var tags []AgentProblemTagStat
@@ -195,7 +199,7 @@ func (r *AgentRepo) ListProblemCandidates(ctx context.Context, tagIDs []int64, d
 	}
 	var candidates []AgentProblemCandidate
 	db := r.db.WithContext(ctx).Table("problems AS p").
-		Select(`p.id, p.display_id, p.name, p.difficulty,
+		Select(`p.id, p.display_id, p.name, MAX(p.description) AS description, p.difficulty,
 			COUNT(s.id) AS submit_count,
 			COALESCE(SUM(CASE WHEN s.status = ? THEN 1 ELSE 0 END), 0) AS accepted_count`, judge.Accepted).
 		Joins("LEFT JOIN submissions AS s ON s.problem_id = p.id").
