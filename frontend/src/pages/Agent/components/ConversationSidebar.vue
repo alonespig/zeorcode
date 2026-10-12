@@ -97,7 +97,12 @@ const displayTime = (value) => {
 .new-chat:hover { background: #e9e9eb; }
 
 .conversation-label { padding: 25px 10px 8px; color: #8f8f8f; font-size: 11px; font-weight: 500; }
-.conversation-list { min-height: 100px; flex: 1; overflow-y: auto; }
+.conversation-list {
+  min-height: 100px;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
 .conversation-item {
   position: relative; width: 100%; min-height: 44px; padding: 7px 38px 7px 11px; text-align: left;
   border-radius: 8px; color: #424242; transition: background-color .15s ease;

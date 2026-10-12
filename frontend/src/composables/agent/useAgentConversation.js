@@ -30,14 +30,26 @@ export function useAgentConversation() {
   const pendingRequestId = computed(() => current.value?.pendingRequestId || 0)
   const pendingActionId = computed(() => current.value?.pendingActionId || 0)
 
-  async function loadConversations() {
-    listLoading.value = true
+  async function loadConversations({ quiet = false, preserveOrder = false } = {}) {
+    if (!quiet) listLoading.value = true
     try {
       const response = await getAgentConversations()
-      conversations.value = response.data?.list || []
+      const nextConversations = response.data?.list || []
+      if (preserveOrder && conversations.value.length) {
+        const nextById = new Map(nextConversations.map((item) => [item.id, item]))
+        const stableConversations = conversations.value.flatMap((item) => {
+          const nextItem = nextById.get(item.id)
+          if (!nextItem) return []
+          nextById.delete(item.id)
+          return [{ ...item, ...nextItem }]
+        })
+        conversations.value = [...stableConversations, ...nextById.values()]
+      } else {
+        conversations.value = nextConversations
+      }
       return conversations.value
     } finally {
-      listLoading.value = false
+      if (!quiet) listLoading.value = false
     }
   }
 
@@ -126,7 +138,7 @@ export function useAgentConversation() {
 		if (conversationId) {
 			const refreshResults = await Promise.allSettled([
 				loadConversation(conversationId, { quiet: true }),
-				loadConversations(),
+				loadConversations({ quiet: true, preserveOrder: true }),
 			])
 			const refreshError = refreshResults.find((result) => result.status === 'rejected')
 			if (refreshError) console.error('[Agent] 刷新对话失败', refreshError.reason)
