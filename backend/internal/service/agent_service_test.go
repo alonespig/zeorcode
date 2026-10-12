@@ -1,6 +1,7 @@
 package service
 
 import (
+	"strings"
 	"testing"
 
 	"zoj/internal/model"
@@ -23,6 +24,65 @@ func TestIsHomeworkIntent(t *testing.T) {
 			t.Errorf("isHomeworkIntent(%q) = %v, want %v", tt.content, got, tt.want)
 		}
 	}
+}
+
+func TestIsProblemSetIntent(t *testing.T) {
+	tests := []struct {
+		content string
+		want    bool
+	}{
+		{content: "帮我创建一个二分题单", want: true},
+		{content: "整理一份图论 problem set", want: true},
+		{content: "这个题单里有哪些题", want: false},
+		{content: "创建团队作业", want: false},
+	}
+	for _, tt := range tests {
+		if got := isProblemSetIntent(tt.content); got != tt.want {
+			t.Errorf("isProblemSetIntent(%q) = %v, want %v", tt.content, got, tt.want)
+		}
+	}
+}
+
+func TestStartProblemSetWorkflowRequiresAdmin(t *testing.T) {
+	service := &AgentService{}
+	state := &agentConversationState{}
+	reply, err := service.startProblemSetWorkflow(state, false)
+	if err != nil {
+		t.Fatalf("startProblemSetWorkflow() error = %v", err)
+	}
+	if state.ActiveWorkflow != "" || !strings.Contains(reply.Content, "管理员权限") {
+		t.Fatalf("unexpected non-admin result: state=%+v reply=%+v", state, reply)
+	}
+
+	reply, err = service.startProblemSetWorkflow(state, true)
+	if err != nil {
+		t.Fatalf("startProblemSetWorkflow() error = %v", err)
+	}
+	if state.ActiveWorkflow != agentWorkflowProblemSet || state.ProblemSet == nil || state.Step != agentStepChooseTraining {
+		t.Fatalf("unexpected admin state: %+v", state)
+	}
+	if len(reply.Blocks) != 1 || reply.Blocks[0].Type != "single_select" {
+		t.Fatalf("unexpected prompt: %+v", reply)
+	}
+}
+
+func TestApplyProblemSetSettings(t *testing.T) {
+	draft := &problemSetDraft{}
+	err := applyProblemSetSettings(draft, &problemSetSettingsInput{
+		Title: "  二分专项  ", Description: "基础到提高", ProblemCount: 10,
+		Published: model.ProblemSetDraft, Visibility: model.ProblemSetPublic,
+	})
+	if err != nil {
+		t.Fatalf("applyProblemSetSettings() error = %v", err)
+	}
+	if draft.Title != "二分专项" || draft.ProblemCount != 10 || draft.Description != "基础到提高" {
+		t.Fatalf("unexpected draft: %+v", draft)
+	}
+
+	err = applyProblemSetSettings(draft, &problemSetSettingsInput{
+		Title: "私有题单", ProblemCount: 5, Published: model.ProblemSetPublished, Visibility: model.ProblemSetInviteOnly,
+	})
+	requireAppErrorCode(t, err, errcode.InvalidParams)
 }
 
 func TestApplyHomeworkSettings(t *testing.T) {

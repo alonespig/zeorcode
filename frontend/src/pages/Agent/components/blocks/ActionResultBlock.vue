@@ -5,13 +5,15 @@
       <h3>{{ block.title }}</h3>
       <p>{{ block.payload?.title }}</p>
     </div>
-    <RouterLink v-if="block.payload?.link" :to="block.payload.link">查看作业</RouterLink>
+    <RouterLink v-if="block.payload?.link" :to="block.payload.link">{{ linkText }}</RouterLink>
   </section>
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { CircleCheckFilled } from '@element-plus/icons-vue'
-defineProps({ block: { type: Object, required: true } })
+const props = defineProps({ block: { type: Object, required: true } })
+const linkText = computed(() => props.block.payload?.action === 'create_problemset' ? '查看题单' : '查看作业')
 </script>
 
 <style scoped>

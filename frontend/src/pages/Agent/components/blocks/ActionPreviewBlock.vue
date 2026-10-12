@@ -7,7 +7,15 @@
         <p>{{ block.description }}</p>
       </div>
     </div>
-    <dl :class="{ 'has-full-row': payload.requirements }">
+    <dl v-if="isProblemSet" :class="{ 'has-full-row': payload.requirements || payload.description }">
+      <div><dt>题单名称</dt><dd>{{ payload.title }}</dd></div>
+      <div><dt>发布设置</dt><dd>{{ publishedText }} · {{ visibilityText }}</dd></div>
+      <div><dt>训练设置</dt><dd>{{ payload.trainingType }} · {{ payload.difficulty }}</dd></div>
+      <div><dt>题目</dt><dd>{{ payload.problemCount }} 题 · {{ (payload.knowledgeTags || []).join('、') }}</dd></div>
+      <div v-if="payload.description" class="full-row"><dt>题单说明</dt><dd class="plain-copy">{{ payload.description }}</dd></div>
+      <div v-if="payload.requirements" class="full-row"><dt>补充要求</dt><dd>{{ payload.requirements }}</dd></div>
+    </dl>
+    <dl v-else :class="{ 'has-full-row': payload.requirements }">
       <div><dt>团队</dt><dd>{{ payload.teamName }}</dd></div>
       <div v-if="payload.sequence"><dt>作业序号</dt><dd>第 {{ payload.sequence }} 次</dd></div>
       <div><dt>作业名称</dt><dd>{{ payload.title }}</dd></div>
@@ -34,6 +42,11 @@ import { DocumentChecked } from '@element-plus/icons-vue'
 const props = defineProps({ block: { type: Object, required: true }, disabled: Boolean, submitting: Boolean })
 defineEmits(['approve', 'reject'])
 const payload = computed(() => props.block.payload || {})
+const isProblemSet = computed(() => payload.value.action === 'create_problemset')
+const publishedText = computed(() => payload.value.published === 1 ? '立即发布' : '保存为草稿')
+const visibilityText = computed(() => payload.value.visibility === 1
+  ? `邀请码访问${payload.value.hasInviteCode ? '（已设置）' : ''}`
+  : '公开访问')
 </script>
 
 <style scoped>
@@ -51,6 +64,7 @@ dl > div:nth-last-child(-n+2) { border-bottom: 0; }
 .full-row { grid-column: 1 / -1; border-right: 0; }
 dt { color: #929cac; font-size: 11px; }
 dd { margin: 5px 0 0; color: #344158; font-size: 13px; font-weight: 600; }
+.plain-copy { white-space: pre-wrap; font-weight: 400; line-height: 1.65; }
 .preview-footer { min-height: 35px; display: flex; align-items: center; justify-content: flex-end; gap: 9px; margin-top: 14px; }
 .preview-footer span { color: #929cac; font-size: 12px; }
 button { height: 34px; padding: 0 16px; border-radius: 5px; font-size: 13px; }

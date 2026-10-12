@@ -17,6 +17,14 @@
         @submit="(requestId, value) => $emit('answer', requestId, value)"
         @cancel="$emit('cancel')"
       />
+      <ProblemSetSettingsBlock
+        v-else-if="block.type === 'problemset_settings'"
+        :block="block"
+        :disabled="block.requestId !== pendingRequestId"
+        :submitting="running"
+        @submit="(requestId, value) => $emit('answer', requestId, value)"
+        @cancel="$emit('cancel')"
+      />
       <TextInputBlock
         v-else-if="block.type === 'text_input'"
         :block="block"
@@ -50,6 +58,7 @@
 <script setup>
 import ChoiceBlock from './blocks/ChoiceBlock.vue'
 import HomeworkSettingsBlock from './blocks/HomeworkSettingsBlock.vue'
+import ProblemSetSettingsBlock from './blocks/ProblemSetSettingsBlock.vue'
 import TextInputBlock from './blocks/TextInputBlock.vue'
 import DataTableBlock from './blocks/DataTableBlock.vue'
 import NoticeBlock from './blocks/NoticeBlock.vue'

@@ -25,16 +25,18 @@ import (
 )
 
 const (
-	agentWorkflowHomework     = "create_homework"
-	agentStepChooseTeam       = "choose_team"
-	agentStepChooseTraining   = "choose_training_type"
-	agentStepChooseScope      = "choose_topic_scope"
-	agentStepChooseDifficulty = "choose_difficulty"
-	agentStepChooseTags       = "choose_tags"
-	agentStepRequirements     = "custom_requirements"
-	agentStepSettings         = "homework_settings"
-	agentStepShortage         = "problem_shortage"
-	agentStepConfirm          = "confirm_homework"
+	agentWorkflowHomework       = "create_homework"
+	agentWorkflowProblemSet     = "create_problemset"
+	agentStepChooseTeam         = "choose_team"
+	agentStepChooseTraining     = "choose_training_type"
+	agentStepChooseScope        = "choose_topic_scope"
+	agentStepChooseDifficulty   = "choose_difficulty"
+	agentStepChooseTags         = "choose_tags"
+	agentStepRequirements       = "custom_requirements"
+	agentStepSettings           = "homework_settings"
+	agentStepProblemSetSettings = "problemset_settings"
+	agentStepShortage           = "problem_shortage"
+	agentStepConfirm            = "confirm_homework"
 
 	homeworkTrainingBeginner      = "beginner"
 	homeworkTrainingDataStructure = "data_structure"
@@ -55,21 +57,24 @@ const (
 )
 
 type AgentService struct {
-	repo        *repository.AgentRepo
-	homeworkSrv *HomeworkService
-	cache       *cache.Cache
-	model       *llm.Client
+	repo          *repository.AgentRepo
+	homeworkSrv   *HomeworkService
+	problemSetSrv *ProblemSetService
+	cache         *cache.Cache
+	model         *llm.Client
 }
 
-func NewAgentService(repo *repository.AgentRepo, homeworkSrv *HomeworkService, c *cache.Cache, modelClient *llm.Client) *AgentService {
-	return &AgentService{repo: repo, homeworkSrv: homeworkSrv, cache: c, model: modelClient}
+func NewAgentService(repo *repository.AgentRepo, homeworkSrv *HomeworkService, problemSetSrv *ProblemSetService,
+	c *cache.Cache, modelClient *llm.Client) *AgentService {
+	return &AgentService{repo: repo, homeworkSrv: homeworkSrv, problemSetSrv: problemSetSrv, cache: c, model: modelClient}
 }
 
 type agentConversationState struct {
-	ActiveWorkflow   string         `json:"activeWorkflow,omitempty"`
-	Step             string         `json:"step,omitempty"`
-	PendingRequestID int64          `json:"pendingRequestId,omitempty"`
-	Homework         *homeworkDraft `json:"homework,omitempty"`
+	ActiveWorkflow   string           `json:"activeWorkflow,omitempty"`
+	Step             string           `json:"step,omitempty"`
+	PendingRequestID int64            `json:"pendingRequestId,omitempty"`
+	Homework         *homeworkDraft   `json:"homework,omitempty"`
+	ProblemSet       *problemSetDraft `json:"problemSet,omitempty"`
 }
 
 type homeworkDraft struct {
@@ -169,6 +174,8 @@ func (s *AgentService) ConversationDetail(ctx context.Context, publicID, userID 
 	resp.PendingRequestID = state.PendingRequestID
 	if state.Homework != nil {
 		resp.PendingActionID = state.Homework.ActionPublicID
+	} else if state.ProblemSet != nil {
+		resp.PendingActionID = state.ProblemSet.ActionPublicID
 	}
 	for _, message := range messages {
 		if message.Kind == "interaction_response" {
@@ -336,6 +343,9 @@ func (s *AgentService) processMessage(ctx context.Context, conversation *model.A
 		}
 		return agentReply{Content: "当前任务正在等待你的选择。请使用上一条消息中的选项；如果不想继续，可以回复“取消”。"}, nil
 	}
+	if isProblemSetIntent(content) {
+		return s.startProblemSetWorkflow(state, isSiteAdmin)
+	}
 	if isHomeworkIntent(content) {
 		return s.startHomeworkWorkflow(ctx, state, userID, isSiteAdmin)
 	}
@@ -421,6 +431,9 @@ func (s *AgentService) resumeInteraction(ctx context.Context, conversation *mode
 	state *agentConversationState, userID int64, isSiteAdmin bool, req *AgentTurnParams) (agentReply, error) {
 	if state.ActiveWorkflow == "" || state.PendingRequestID == 0 || req.RequestID != state.PendingRequestID {
 		return agentReply{}, errcode.ErrAgentInteractionExpired
+	}
+	if state.ActiveWorkflow == agentWorkflowProblemSet {
+		return s.resumeProblemSetInteraction(ctx, conversation, run, state, isSiteAdmin, req)
 	}
 	if state.ActiveWorkflow != agentWorkflowHomework || state.Homework == nil {
 		return agentReply{}, errcode.ErrAgentInteractionExpired
@@ -775,26 +788,7 @@ func (s *AgentService) buildHomeworkPreview(ctx context.Context, conversation *m
 	state.Step = agentStepConfirm
 	state.PendingRequestID = 0
 
-	rows := make([]map[string]any, 0, len(state.Homework.SelectedProblems))
-	for index, problem := range state.Homework.SelectedProblems {
-		tagNames := make([]string, 0, len(problem.Tags))
-		for _, tag := range problem.Tags {
-			tagNames = append(tagNames, tag.Name)
-		}
-		passRate := "—"
-		if problem.SubmitCount > 0 {
-			passRate = fmt.Sprintf("%.1f%%", float64(problem.AcceptedCount)*100/float64(problem.SubmitCount))
-		}
-		rows = append(rows, map[string]any{"sort": index + 1, "id": problem.DisplayID, "name": problem.Name,
-			"difficulty": problem.Difficulty, "tags": tagNames, "selectionReason": problem.SelectionReason, "passRate": passRate})
-	}
-	table := AgentBlock{Type: "data_table", Title: "已选择的题目",
-		Columns: []AgentTableColumn{
-			{Key: "sort", Label: "#", Width: 56, Align: "center"}, {Key: "id", Label: "题号", Width: 90},
-			{Key: "name", Label: "题目", Width: 220}, {Key: "difficulty", Label: "难度", Width: 90, Align: "center", Formatter: "difficulty"},
-			{Key: "tags", Label: "知识点", Width: 180, Formatter: "tags"}, {Key: "selectionReason", Label: "选题依据", Width: 260},
-			{Key: "passRate", Label: "通过率", Width: 90, Align: "right"},
-		}, Rows: rows}
+	table := agentProblemSelectionTable(state.Homework.SelectedProblems)
 	previewPayload := map[string]any{"actionId": action.PublicID, "draftVersion": state.Homework.Version,
 		"teamId": state.Homework.TeamPublicID, "teamName": state.Homework.TeamName, "title": state.Homework.Title,
 		"sequence": state.Homework.Sequence, "description": state.Homework.Description,
@@ -808,6 +802,9 @@ func (s *AgentService) buildHomeworkPreview(ctx context.Context, conversation *m
 
 func (s *AgentService) approveAction(ctx context.Context, conversation *model.AgentConversation,
 	state *agentConversationState, userID int64, isSiteAdmin bool, req *AgentTurnParams) (agentReply, error) {
+	if state.ActiveWorkflow == agentWorkflowProblemSet {
+		return s.approveProblemSetAction(ctx, conversation, state, userID, isSiteAdmin, req)
+	}
 	if state.ActiveWorkflow != agentWorkflowHomework || state.Step != agentStepConfirm || state.Homework == nil ||
 		req.ActionID == 0 || req.ActionID != state.Homework.ActionPublicID || req.DraftVersion != state.Homework.Version {
 		return agentReply{}, errcode.ErrAgentActionConflict
@@ -862,7 +859,13 @@ func (s *AgentService) approveAction(ctx context.Context, conversation *model.Ag
 
 func (s *AgentService) rejectAction(ctx context.Context, conversation *model.AgentConversation,
 	state *agentConversationState, req *AgentTurnParams) (agentReply, error) {
-	if state.Homework == nil || req.ActionID != state.Homework.ActionPublicID || req.DraftVersion != state.Homework.Version {
+	actionPublicID, version, objectName := int64(0), 0, "作业"
+	if state.ActiveWorkflow == agentWorkflowProblemSet && state.ProblemSet != nil {
+		actionPublicID, version, objectName = state.ProblemSet.ActionPublicID, state.ProblemSet.Version, "题单"
+	} else if state.ActiveWorkflow == agentWorkflowHomework && state.Homework != nil {
+		actionPublicID, version = state.Homework.ActionPublicID, state.Homework.Version
+	}
+	if actionPublicID == 0 || req.ActionID != actionPublicID || req.DraftVersion != version {
 		return agentReply{}, errcode.ErrAgentActionConflict
 	}
 	action, err := s.repo.GetAction(ctx, req.ActionID, conversation.ID)
@@ -878,7 +881,7 @@ func (s *AgentService) rejectAction(ctx context.Context, conversation *model.Age
 		}
 	}
 	*state = agentConversationState{}
-	return agentReply{Content: "已取消这次操作，没有创建作业。"}, nil
+	return agentReply{Content: fmt.Sprintf("已取消这次操作，没有创建%s。", objectName)}, nil
 }
 
 func (s *AgentService) createAssistantMessage(ctx context.Context, conversationID, runID int64, reply agentReply) (AgentMessage, error) {

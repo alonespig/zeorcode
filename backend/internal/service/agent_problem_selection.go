@@ -222,3 +222,26 @@ func fallbackHomeworkSelectionReason(candidate repository.AgentProblemCandidate,
 	}
 	return "符合当前知识点与难度筛选条件"
 }
+
+func agentProblemSelectionTable(problems []repository.AgentProblemCandidate) AgentBlock {
+	rows := make([]map[string]any, 0, len(problems))
+	for index, problem := range problems {
+		tagNames := make([]string, 0, len(problem.Tags))
+		for _, tag := range problem.Tags {
+			tagNames = append(tagNames, tag.Name)
+		}
+		passRate := "—"
+		if problem.SubmitCount > 0 {
+			passRate = fmt.Sprintf("%.1f%%", float64(problem.AcceptedCount)*100/float64(problem.SubmitCount))
+		}
+		rows = append(rows, map[string]any{"sort": index + 1, "id": problem.DisplayID, "name": problem.Name,
+			"difficulty": problem.Difficulty, "tags": tagNames, "selectionReason": problem.SelectionReason, "passRate": passRate})
+	}
+	return AgentBlock{Type: "data_table", Title: "已选择的题目",
+		Columns: []AgentTableColumn{
+			{Key: "sort", Label: "#", Width: 56, Align: "center"}, {Key: "id", Label: "题号", Width: 90},
+			{Key: "name", Label: "题目", Width: 220}, {Key: "difficulty", Label: "难度", Width: 90, Align: "center", Formatter: "difficulty"},
+			{Key: "tags", Label: "知识点", Width: 180, Formatter: "tags"}, {Key: "selectionReason", Label: "选题依据", Width: 260},
+			{Key: "passRate", Label: "通过率", Width: 90, Align: "right"},
+		}, Rows: rows}
+}
