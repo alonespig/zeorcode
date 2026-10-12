@@ -15,6 +15,7 @@ import (
 
 	"zoj/internal/infra/cache"
 	"zoj/internal/infra/llm"
+	"zoj/internal/infra/logger"
 	"zoj/internal/model"
 	"zoj/internal/repository"
 	"zoj/pkg/errcode"
@@ -709,6 +710,17 @@ func (s *AgentService) prepareHomeworkCandidates(ctx context.Context, conversati
 	}
 	candidates = filterHomeworkCandidates(candidates, state.Homework)
 	sortCandidates(candidates, state.Homework.TagIDs)
+	candidates = homeworkCandidateShortlist(candidates, state.Homework.ProblemCount)
+	if ranked, applied, rankErr := s.rankHomeworkCandidatesByContent(ctx, candidates, state.Homework); rankErr != nil {
+		logger.Warnw("agent problem content assessment failed", "conversationID", conversation.ID, "err", rankErr)
+	} else if applied {
+		candidates = ranked
+	}
+	for index := range candidates {
+		if candidates[index].SelectionReason == "" {
+			candidates[index].SelectionReason = fallbackHomeworkSelectionReason(candidates[index], state.Homework)
+		}
+	}
 	selectedCount := state.Homework.ProblemCount
 	if selectedCount > len(candidates) {
 		selectedCount = len(candidates)
@@ -774,13 +786,14 @@ func (s *AgentService) buildHomeworkPreview(ctx context.Context, conversation *m
 			passRate = fmt.Sprintf("%.1f%%", float64(problem.AcceptedCount)*100/float64(problem.SubmitCount))
 		}
 		rows = append(rows, map[string]any{"sort": index + 1, "id": problem.DisplayID, "name": problem.Name,
-			"difficulty": problem.Difficulty, "tags": tagNames, "passRate": passRate})
+			"difficulty": problem.Difficulty, "tags": tagNames, "selectionReason": problem.SelectionReason, "passRate": passRate})
 	}
 	table := AgentBlock{Type: "data_table", Title: "已选择的题目",
 		Columns: []AgentTableColumn{
 			{Key: "sort", Label: "#", Width: 56, Align: "center"}, {Key: "id", Label: "题号", Width: 90},
 			{Key: "name", Label: "题目", Width: 220}, {Key: "difficulty", Label: "难度", Width: 90, Align: "center", Formatter: "difficulty"},
-			{Key: "tags", Label: "知识点", Width: 180, Formatter: "tags"}, {Key: "passRate", Label: "通过率", Width: 90, Align: "right"},
+			{Key: "tags", Label: "知识点", Width: 180, Formatter: "tags"}, {Key: "selectionReason", Label: "选题依据", Width: 260},
+			{Key: "passRate", Label: "通过率", Width: 90, Align: "right"},
 		}, Rows: rows}
 	previewPayload := map[string]any{"actionId": action.PublicID, "draftVersion": state.Homework.Version,
 		"teamId": state.Homework.TeamPublicID, "teamName": state.Homework.TeamName, "title": state.Homework.Title,
@@ -1379,7 +1392,7 @@ func isBeginnerProblemCandidate(candidate repository.AgentProblemCandidate) bool
 		"DP", "动态规划", "网络流", "差分约束", "最短路", "最小生成树", "二分图", "拓扑",
 		"线段树", "树状数组", "莫队", "KMP", "Trie", "字符串哈希", "矩阵快速幂", "同余", "组合数学",
 	}
-	content := candidate.Name + "\n" + candidate.Description
+	content := problemCandidateSearchText(candidate)
 	for _, tag := range candidate.Tags {
 		content += "\n" + tag.Name
 	}
@@ -1393,7 +1406,7 @@ func isBeginnerProblemCandidate(candidate repository.AgentProblemCandidate) bool
 }
 
 func candidateMatchesHomeworkKnowledge(candidate repository.AgentProblemCandidate, draft *homeworkDraft) bool {
-	searchText := strings.ToLower(candidate.Name + "\n" + candidate.Description)
+	searchText := strings.ToLower(problemCandidateSearchText(candidate))
 	tagText := make([]string, 0, len(candidate.Tags))
 	for _, tag := range candidate.Tags {
 		tagText = append(tagText, tag.Name)
@@ -1419,6 +1432,13 @@ func candidateMatchesHomeworkKnowledge(candidate repository.AgentProblemCandidat
 		}
 	}
 	return false
+}
+
+func problemCandidateSearchText(candidate repository.AgentProblemCandidate) string {
+	return strings.Join([]string{
+		candidate.Name, candidate.Description, candidate.InputFormat, candidate.OutputFormat,
+		candidate.Hint, candidate.SampleInput, candidate.SampleOutput, candidate.SampleExplain,
+	}, "\n")
 }
 
 func matchesHomeworkConcept(searchText, key string) bool {

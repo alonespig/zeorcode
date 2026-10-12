@@ -235,6 +235,51 @@ func TestSortCandidatesPrefersTagCoverage(t *testing.T) {
 	}
 }
 
+func TestApplyHomeworkCandidateAssessmentRanksByContentScore(t *testing.T) {
+	candidates := []repository.AgentProblemCandidate{
+		{DisplayID: "A", Name: "循环求和"},
+		{DisplayID: "B", Name: "最短路"},
+		{DisplayID: "C", Name: "数组统计"},
+	}
+	raw := "```json\n" + `{"items":[
+		{"id":"C","score":82,"reason":"遍历数组并维护计数"},
+		{"id":"A","score":91,"reason":"使用循环累加输入数据"},
+		{"id":"B","score":45,"reason":"主要考查图论"},
+		{"id":"INVENTED","score":100,"reason":"不存在"}
+	]}` + "\n```"
+
+	ranked, ok := applyHomeworkCandidateAssessment(candidates, raw, 3)
+	if !ok {
+		t.Fatal("assessment should be accepted")
+	}
+	if len(ranked) != 2 || ranked[0].DisplayID != "A" || ranked[1].DisplayID != "C" {
+		t.Fatalf("unexpected ranked candidates: %+v", ranked)
+	}
+	if ranked[0].SelectionReason != "使用循环累加输入数据" {
+		t.Fatalf("selection reason = %q", ranked[0].SelectionReason)
+	}
+}
+
+func TestApplyHomeworkCandidateAssessmentRejectsIncompleteResult(t *testing.T) {
+	candidates := []repository.AgentProblemCandidate{{DisplayID: "A"}, {DisplayID: "B"}}
+	ranked, ok := applyHomeworkCandidateAssessment(candidates,
+		`{"items":[{"id":"A","score":90,"reason":"匹配"}]}`, 2)
+	if ok || ranked != nil {
+		t.Fatalf("incomplete assessment should be rejected: %+v", ranked)
+	}
+}
+
+func TestProblemCandidateSearchTextIncludesStatementDetails(t *testing.T) {
+	candidate := repository.AgentProblemCandidate{
+		Name: "基础练习", InputFormat: "输入一个字符串", SampleExplain: "逐个统计字符出现次数",
+	}
+	if !candidateMatchesHomeworkKnowledge(candidate, &homeworkDraft{
+		KnowledgeKeys: []string{"concept:string"}, TagNames: []string{"字符串基础"},
+	}) {
+		t.Fatal("input format and sample explanation should participate in deterministic matching")
+	}
+}
+
 func TestDecodeAgentState(t *testing.T) {
 	state, err := decodeAgentState(`{"activeWorkflow":"create_homework","pendingRequestId":12345678}`)
 	if err != nil {

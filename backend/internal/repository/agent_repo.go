@@ -154,14 +154,21 @@ func (r *AgentRepo) ListManageableTeams(ctx context.Context, userID int64, isSit
 }
 
 type AgentProblemCandidate struct {
-	ID            int64       `gorm:"column:id" json:"-"`
-	DisplayID     string      `gorm:"column:display_id" json:"id"`
-	Name          string      `gorm:"column:name" json:"name"`
-	Description   string      `gorm:"column:description" json:"-"`
-	Difficulty    int         `gorm:"column:difficulty" json:"difficulty"`
-	SubmitCount   int64       `gorm:"column:submit_count" json:"submitCount"`
-	AcceptedCount int64       `gorm:"column:accepted_count" json:"acceptedCount"`
-	Tags          []model.Tag `gorm:"-" json:"tags"`
+	ID              int64       `gorm:"column:id" json:"-"`
+	DisplayID       string      `gorm:"column:display_id" json:"id"`
+	Name            string      `gorm:"column:name" json:"name"`
+	Description     string      `gorm:"column:description" json:"-"`
+	InputFormat     string      `gorm:"column:input_format" json:"-"`
+	OutputFormat    string      `gorm:"column:output_format" json:"-"`
+	Hint            string      `gorm:"column:hint" json:"-"`
+	SampleInput     string      `gorm:"-" json:"-"`
+	SampleOutput    string      `gorm:"-" json:"-"`
+	SampleExplain   string      `gorm:"-" json:"-"`
+	Difficulty      int         `gorm:"column:difficulty" json:"difficulty"`
+	SubmitCount     int64       `gorm:"column:submit_count" json:"submitCount"`
+	AcceptedCount   int64       `gorm:"column:accepted_count" json:"acceptedCount"`
+	Tags            []model.Tag `gorm:"-" json:"tags"`
+	SelectionReason string      `gorm:"-" json:"selectionReason,omitempty"`
 }
 
 type AgentProblemTagStat struct {
@@ -199,7 +206,12 @@ func (r *AgentRepo) ListProblemCandidates(ctx context.Context, tagIDs []int64, d
 	}
 	var candidates []AgentProblemCandidate
 	db := r.db.WithContext(ctx).Table("problems AS p").
-		Select(`p.id, p.display_id, p.name, MAX(p.description) AS description, p.difficulty,
+		Select(`p.id, p.display_id, p.name,
+			MAX(p.description) AS description,
+			MAX(p.input_format) AS input_format,
+			MAX(p.output_format) AS output_format,
+			MAX(p.hint) AS hint,
+			p.difficulty,
 			COUNT(s.id) AS submit_count,
 			COALESCE(SUM(CASE WHEN s.status = ? THEN 1 ELSE 0 END), 0) AS accepted_count`, judge.Accepted).
 		Joins("LEFT JOIN submissions AS s ON s.problem_id = p.id").
@@ -244,6 +256,32 @@ func (r *AgentRepo) ListProblemCandidates(ctx context.Context, tagIDs []int64, d
 	}
 	for i := range candidates {
 		candidates[i].Tags = tagsByProblem[candidates[i].ID]
+	}
+
+	type sampleRow struct {
+		ProblemID int64  `gorm:"column:problem_id"`
+		Input     string `gorm:"column:input"`
+		Output    string `gorm:"column:output"`
+		Explain   string `gorm:"column:explain"`
+	}
+	firstSampleIDs := r.db.WithContext(ctx).Table("problem_samples").
+		Select("MIN(id)").Where("problem_id IN ?", ids).Group("problem_id")
+	var samples []sampleRow
+	if err := r.db.WithContext(ctx).Table("problem_samples").
+		Select("problem_id, input, output, `explain`").
+		Where("id IN (?)", firstSampleIDs).Scan(&samples).Error; err != nil {
+		return nil, err
+	}
+	samplesByProblem := make(map[int64]sampleRow, len(samples))
+	for _, sample := range samples {
+		samplesByProblem[sample.ProblemID] = sample
+	}
+	for i := range candidates {
+		if sample, ok := samplesByProblem[candidates[i].ID]; ok {
+			candidates[i].SampleInput = sample.Input
+			candidates[i].SampleOutput = sample.Output
+			candidates[i].SampleExplain = sample.Explain
+		}
 	}
 	return candidates, nil
 }
