@@ -81,11 +81,14 @@
 
     <!-- 编辑器 -->
     <div class="f-panel mt-5 px-8 py-5 max-md:px-4 max-md:py-4">
-      <div class="mb-3 flex items-center">
+      <div class="mb-3 flex items-center gap-2">
         <span class="text-sm  text-gray-600">语言：</span>
         <el-select v-model="language" style="width: 120px">
           <el-option v-for="item in languages" :key="item.id" :label="item.name" :value="item.id" />
         </el-select>
+        <el-button v-if="hasTemplate" class="ml-auto" plain :icon="RefreshLeft" @click="restoreTemplate">
+          恢复模板
+        </el-button>
       </div>
       <!-- 高度随视口收缩，避免小屏上编辑器独占一整屏 -->
       <Codemirror v-model="code" :extensions="extensions" :style="{ height: 'clamp(240px, 45vh, 400px)' }" />
@@ -103,14 +106,16 @@
 <script setup>
 import { computed, ref, reactive, inject, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getLanguages } from '@/api/languages'
 import { ElMessage } from "element-plus";
+import { RefreshLeft } from "@element-plus/icons-vue";
 import { submit } from "@/api/user";
 import { useUserStore } from "@/stores/user";
 import { renderMarkdown } from "@/utils/markdown";
 import { Codemirror } from 'vue-codemirror'
 import { EditorView } from '@codemirror/view'
 import { getEditorLanguageExtension } from '@/utils/editorLanguage'
+import { useLanguages } from "@/hooks/useLanguages";
+import { useSubmissionEditor } from "@/hooks/useSubmissionEditor";
 
 const route = useRoute();
 const router = useRouter();
@@ -119,19 +124,13 @@ const userStore = useUserStore();
 // 题目数据由 ProblemLayout 注入，避免重复请求
 const problem = inject("problem");
 
-const languages = ref()
-const code = ref('')
-const language = ref()
 const submitting = ref(false)
-
-const fetchLanguage = async () => {
-  const res = await getLanguages()
-  languages.value = res.data
-  // 默认选中第一门语言（数字 id），避免下拉空选导致提交时校验失败
-  if (languages.value?.length && !language.value) {
-    language.value = languages.value[0].id
-  }
-}
+const { languageList: languages, loadLanguages } = useLanguages();
+const editorContext = computed(() => `problem:${route.params.id}`);
+const { language, code, hasTemplate, restoreTemplate } = useSubmissionEditor({
+  contextKey: editorContext,
+  languages,
+});
 
 const customTheme = EditorView.theme({
   '&': {
@@ -219,5 +218,5 @@ const copyText = async (key, text) => {
   }
 };
 
-onMounted(fetchLanguage);
+onMounted(loadLanguages);
 </script>

@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, reactive, ref } from "vue";
 import dayjs from "dayjs";
 import { ElMessageBox, type FormInstance, type FormRules } from "element-plus";
-import { Plus } from "@element-plus/icons-vue";
+import { MagicStick, Plus } from "@element-plus/icons-vue";
 import { message } from "@/utils/message";
 import { PureTableBar } from "@/components/RePureTableBar";
 import {
@@ -24,7 +24,12 @@ const dialogVisible = ref(false);
 const submitting = ref(false);
 const editingId = ref<number>();
 const formRef = ref<FormInstance>();
-const form = reactive<SaveLanguageParams>({ name: "", status: 1, sort: 0 });
+const form = reactive<SaveLanguageParams>({
+  name: "",
+  status: 1,
+  sort: 0,
+  defaultCode: ""
+});
 
 const dialogTitle = computed(() =>
   editingId.value === undefined ? "新增编程语言" : "编辑编程语言"
@@ -43,6 +48,7 @@ const columns: TableColumnList = [
   { label: "名称", prop: "name", minWidth: 180 },
   { label: "状态", slot: "status", width: 120, align: "center" },
   { label: "排序", prop: "sort", width: 100, align: "center" },
+  { label: "默认模板", slot: "defaultCode", width: 120, align: "center" },
   { label: "创建时间", slot: "createdAt", width: 170, align: "center" },
   { label: "更新时间", slot: "updatedAt", width: 170, align: "center" },
   {
@@ -76,6 +82,7 @@ function openCreate() {
   form.status = 1;
   form.sort =
     dataList.value.reduce((max, item) => Math.max(max, item.sort), 0) + 1;
+  form.defaultCode = "";
   dialogVisible.value = true;
   nextTick(() => formRef.value?.clearValidate());
 }
@@ -85,6 +92,7 @@ function openEdit(row: LanguageRow) {
   form.name = row.name;
   form.status = row.status;
   form.sort = row.sort;
+  form.defaultCode = row.defaultCode ?? "";
   dialogVisible.value = true;
   nextTick(() => formRef.value?.clearValidate());
 }
@@ -96,7 +104,8 @@ async function save() {
   const data: SaveLanguageParams = {
     name: form.name.trim(),
     status: form.status,
-    sort: form.sort
+    sort: form.sort,
+    defaultCode: form.defaultCode
   };
   if (!data.name) {
     message("请输入语言名称", { type: "warning" });
@@ -134,7 +143,8 @@ async function toggleStatus(
     await updateLanguage(row.id, {
       name: row.name,
       status: nextStatus,
-      sort: row.sort
+      sort: row.sort,
+      defaultCode: row.defaultCode
     });
     message(nextStatus === 1 ? "语言已启用" : "语言已停用", {
       type: "success"
@@ -168,6 +178,55 @@ async function remove(row: LanguageRow) {
   } finally {
     row._busy = false;
   }
+}
+
+function recommendedTemplate(name: string) {
+  const normalized = name.trim().toLowerCase();
+  if (["c++", "cpp", "cc", "cxx", "g++"].includes(normalized)) {
+    return `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    return 0;
+}
+`;
+  }
+  if (normalized === "java") {
+    return `import java.io.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+
+    }
+}
+`;
+  }
+  if (["python", "python3", "py"].includes(normalized)) {
+    return `import sys
+
+def solve():
+    pass
+
+if __name__ == "__main__":
+    solve()
+`;
+  }
+  return "";
+}
+
+function fillRecommendedTemplate() {
+  const template = recommendedTemplate(form.name);
+  if (!template) {
+    message("请先填写 c++、java 或 python 等受支持的语言名称", {
+      type: "warning"
+    });
+    return;
+  }
+  form.defaultCode = template;
 }
 
 onMounted(loadLanguages);
@@ -213,6 +272,11 @@ onMounted(loadLanguages);
           <template #createdAt="{ row }">
             {{ formatTime(row.createdAt) }}
           </template>
+          <template #defaultCode="{ row }">
+            <el-tag :type="row.defaultCode ? 'success' : 'info'" effect="plain">
+              {{ row.defaultCode ? "已配置" : "未配置" }}
+            </el-tag>
+          </template>
           <template #updatedAt="{ row }">
             {{ formatTime(row.updatedAt) }}
           </template>
@@ -237,7 +301,7 @@ onMounted(loadLanguages);
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      width="480px"
+      width="720px"
       destroy-on-close
       :close-on-click-modal="false"
       @closed="formRef?.resetFields()"
@@ -268,6 +332,29 @@ onMounted(loadLanguages);
             controls-position="right"
           />
         </el-form-item>
+        <el-form-item label="代码模板" prop="defaultCode">
+          <div class="template-field">
+            <div class="template-toolbar">
+              <el-button
+                link
+                type="primary"
+                :icon="MagicStick"
+                @click="fillRecommendedTemplate"
+              >
+                填入推荐模板
+              </el-button>
+            </div>
+            <el-input
+              v-model="form.defaultCode"
+              type="textarea"
+              :rows="12"
+              resize="vertical"
+              maxlength="65535"
+              placeholder="请输入该语言统一使用的默认代码模板"
+              class="template-editor"
+            />
+          </div>
+        </el-form-item>
         <p class="ml-20 mt-1 text-xs leading-6 text-gray-400">
           名称必须与评测程序支持的语言一致，未知名称会被后端拒绝。
         </p>
@@ -281,3 +368,25 @@ onMounted(loadLanguages);
     </el-dialog>
   </div>
 </template>
+
+<style scoped>
+.template-field {
+  width: 100%;
+}
+
+.template-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.template-editor :deep(textarea) {
+  font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  line-height: 1.6;
+  tab-size: 4;
+}
+</style>

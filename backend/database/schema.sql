@@ -203,6 +203,7 @@ CREATE TABLE `languages` (
   `name` varchar(32) NOT NULL,
   `status` tinyint NOT NULL DEFAULT '1',
   `sort` int NOT NULL DEFAULT '0',
+  `default_code` text NOT NULL,
   `created_at` datetime(3) DEFAULT NULL,
   `updated_at` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -210,10 +211,10 @@ CREATE TABLE `languages` (
   KEY `idx_languages_listing` (`status`,`sort`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-INSERT INTO `languages` (`id`, `name`, `status`, `sort`, `created_at`, `updated_at`) VALUES
-  (1, 'c++', 1, 1, NOW(3), NOW(3)),
-  (2, 'java', 1, 2, NOW(3), NOW(3)),
-  (3, 'python', 1, 3, NOW(3), NOW(3));
+INSERT INTO `languages` (`id`, `name`, `status`, `sort`, `default_code`, `created_at`, `updated_at`) VALUES
+  (1, 'c++', 1, 1, CONCAT('#include <bits/stdc++.h>', CHAR(10), 'using namespace std;', CHAR(10), CHAR(10), 'int main() {', CHAR(10), '    ios::sync_with_stdio(false);', CHAR(10), '    cin.tie(nullptr);', CHAR(10), CHAR(10), '    return 0;', CHAR(10), '}', CHAR(10)), NOW(3), NOW(3)),
+  (2, 'java', 1, 2, CONCAT('import java.io.*;', CHAR(10), 'import java.util.*;', CHAR(10), CHAR(10), 'public class Main {', CHAR(10), '    public static void main(String[] args) throws Exception {', CHAR(10), CHAR(10), '    }', CHAR(10), '}', CHAR(10)), NOW(3), NOW(3)),
+  (3, 'python', 1, 3, CONCAT('import sys', CHAR(10), CHAR(10), 'def solve():', CHAR(10), '    pass', CHAR(10), CHAR(10), 'if __name__ == "__main__":', CHAR(10), '    solve()', CHAR(10)), NOW(3), NOW(3));
 DROP TABLE IF EXISTS `system_broadcasts`;
 DROP TABLE IF EXISTS `admin_audit_logs`;
 CREATE TABLE `admin_audit_logs` (

@@ -23,10 +23,13 @@ type LanguageResolver interface {
 
 // SaveLanguageParams 创建/更新语言的输入。
 type SaveLanguageParams struct {
-	Name   string
-	Status int
-	Sort   int
+	Name        string
+	Status      int
+	Sort        int
+	DefaultCode string
 }
+
+const maxLanguageDefaultCodeBytes = 65535
 
 func NewLanguageService(repo *repository.LanguageRepo) *LanguageService {
 	return &LanguageService{repo: repo}
@@ -75,7 +78,11 @@ func (s *LanguageService) Create(ctx context.Context, params SaveLanguageParams)
 	if exists {
 		return nil, errcode.ErrInvalidParams.WithMsg("编程语言已存在")
 	}
-	language := &model.Language{Name: name, Status: params.Status, Sort: params.Sort}
+	defaultCode, err := normalizeLanguageDefaultCode(name, params.DefaultCode)
+	if err != nil {
+		return nil, err
+	}
+	language := &model.Language{Name: name, Status: params.Status, Sort: params.Sort, DefaultCode: defaultCode}
 	if err := s.repo.Create(ctx, language); err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
@@ -100,10 +107,39 @@ func (s *LanguageService) Update(ctx context.Context, id int, params SaveLanguag
 	if exists {
 		return errcode.ErrInvalidParams.WithMsg("编程语言已存在")
 	}
-	if err := s.repo.Update(ctx, id, map[string]any{"name": name, "status": params.Status, "sort": params.Sort}); err != nil {
+	defaultCode, err := normalizeLanguageDefaultCode(name, params.DefaultCode)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.Update(ctx, id, map[string]any{
+		"name": name, "status": params.Status, "sort": params.Sort, "default_code": defaultCode,
+	}); err != nil {
 		return errcode.ErrDatabase.Wrap(err)
 	}
 	return nil
+}
+
+func normalizeLanguageDefaultCode(name, code string) (string, error) {
+	if strings.TrimSpace(code) == "" {
+		code = builtInLanguageDefaultCode(name)
+	}
+	if len(code) > maxLanguageDefaultCodeBytes {
+		return "", errcode.ErrInvalidParams.WithMsg("默认代码模板不能超过 64 KB")
+	}
+	return code, nil
+}
+
+func builtInLanguageDefaultCode(name string) string {
+	switch judge.NormalizeLanguage(name) {
+	case judge.LanguageCPP:
+		return "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    return 0;\n}\n"
+	case judge.LanguageJava:
+		return "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n\n    }\n}\n"
+	case judge.LanguagePython:
+		return "import sys\n\ndef solve():\n    pass\n\nif __name__ == \"__main__\":\n    solve()\n"
+	default:
+		return ""
+	}
 }
 
 func (s *LanguageService) Delete(ctx context.Context, id int) error {

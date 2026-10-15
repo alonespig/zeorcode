@@ -2,10 +2,12 @@
 import { computed, onMounted, shallowRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
+import { RefreshLeft } from "@element-plus/icons-vue";
 import { Codemirror } from "vue-codemirror";
 import { EditorView } from "@codemirror/view";
 import { getHomeworkDetail, getHomeworkProblem, submitHomework } from "@/api/team";
 import { useLanguages } from "@/hooks/useLanguages";
+import { useSubmissionEditor } from "@/hooks/useSubmissionEditor";
 import { getEditorLanguageExtension } from "@/utils/editorLanguage";
 import ContestProblem from "@/components/problem/ContestProblem.vue";
 import HomeworkRecentSubmissions from "@/components/homework/HomeworkRecentSubmissions.vue";
@@ -15,8 +17,6 @@ const route = useRoute();
 const router = useRouter();
 const homework = shallowRef({});
 const problem = shallowRef({});
-const code = shallowRef("");
-const language = shallowRef();
 const submitting = shallowRef(false);
 const problemLoading = shallowRef(false);
 const detailVisible = shallowRef(false);
@@ -26,6 +26,13 @@ let homeworkFetchVersion = 0;
 let problemFetchVersion = 0;
 
 const { languageList, loadLanguages } = useLanguages();
+const editorContext = computed(
+  () => `homework:${route.params.hid}:problem:${route.params.problemId}`
+);
+const { language, code, hasTemplate, restoreTemplate } = useSubmissionEditor({
+  contextKey: editorContext,
+  languages: languageList,
+});
 
 const problemList = computed(() => homework.value.problems || []);
 const currentProblemId = computed(() => String(route.params.problemId || ""));
@@ -102,7 +109,6 @@ const fetchHomework = async (homeworkId) => {
 const fetchProblem = async (homeworkId, problemId) => {
   const version = ++problemFetchVersion;
   problemLoading.value = true;
-  code.value = "";
   try {
     const res = await getHomeworkProblem(homeworkId, problemId);
     if (version === problemFetchVersion) {
@@ -163,7 +169,6 @@ watch(
 
 onMounted(async () => {
   await loadLanguages();
-  if (languageList.value.length && !language.value) language.value = languageList.value[0].id;
 });
 </script>
 
@@ -174,11 +179,14 @@ onMounted(async () => {
         <ContestProblem v-loading="problemLoading" :problem="problem" />
 
         <section class="f-panel px-6 py-4" aria-label="提交代码">
-          <div class="mb-3 flex items-center">
+          <div class="mb-3 flex items-center gap-2">
             <span class="text-sm text-gray-600">语言：</span>
             <el-select v-model="language" class="w-32!">
               <el-option v-for="item in languageList" :key="item.id" :label="item.name" :value="item.id" />
             </el-select>
+            <el-button v-if="hasTemplate" class="ml-auto" plain :icon="RefreshLeft" @click="restoreTemplate">
+              恢复模板
+            </el-button>
           </div>
           <Codemirror v-model="code" :extensions="extensions" :style="{ height: 'clamp(240px, 40vh, 360px)' }" />
           <div class="mt-4 flex">

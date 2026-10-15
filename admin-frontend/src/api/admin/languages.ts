@@ -7,6 +7,7 @@ export interface LanguageItem {
   name: string;
   status: 0 | 1;
   sort: number;
+  defaultCode: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -15,6 +16,7 @@ export interface SaveLanguageParams {
   name: string;
   status: 0 | 1;
   sort: number;
+  defaultCode: string;
 }
 
 export function getAdminLanguages() {

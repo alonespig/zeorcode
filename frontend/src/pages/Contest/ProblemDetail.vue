@@ -6,11 +6,14 @@
         <ContestProblem :problem="problem" />
 
         <div class="f-panel px-6 py-4">
-          <div class="mb-3 flex items-center">
+          <div class="mb-3 flex items-center gap-2">
             <span class="text-sm text-gray-600">语言：</span>
             <el-select v-model="language" style="width: 120px">
               <el-option v-for="item in languageList" :key="item.id" :label="item.name" :value="item.id" />
             </el-select>
+            <el-button v-if="hasTemplate" class="ml-auto" plain :icon="RefreshLeft" @click="restoreTemplate">
+              恢复模板
+            </el-button>
           </div>
           <!-- 高度随视口收缩，避免小屏上编辑器独占一整屏 -->
           <Codemirror v-model="code" :extensions="extensions" :style="{ height: 'clamp(240px, 40vh, 360px)' }" />
@@ -80,11 +83,13 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
+import { RefreshLeft } from "@element-plus/icons-vue";
 import { Codemirror } from "vue-codemirror";
 import { EditorView } from "@codemirror/view";
 import { getContestProblem, getContestProblemList, getContestDesc, submit } from "@/api/contest";
 import { useContestStatus } from "@/hooks/useContestStatus";
 import { useLanguages } from "@/hooks/useLanguages";
+import { useSubmissionEditor } from "@/hooks/useSubmissionEditor";
 import { getEditorLanguageExtension } from "@/utils/editorLanguage";
 import { CONTEST_STATUS, AcceptedCode, WrongAnswerCode } from "@/constants/index";
 import { useUserStore } from "@/stores/user";
@@ -98,11 +103,16 @@ const userStore = useUserStore();
 const contestData = ref(null);
 const problem = ref({});
 const problemList = ref([]);
-const code = ref("");
-const language = ref();
 const submitting = ref(false);
 
 const { languageList, loadLanguages } = useLanguages();
+const editorContext = computed(
+  () => `contest:${route.params.id}:problem:${route.params.problemId}`
+);
+const { language, code, hasTemplate, restoreTemplate } = useSubmissionEditor({
+  contextKey: editorContext,
+  languages: languageList,
+});
 const { status, statusText, statusTime } = useContestStatus(contestData);
 
 const cdLabel = computed(() => {
@@ -202,19 +212,15 @@ const handleSubmit = async () => {
 
 onMounted(async () => {
   await loadLanguages();
-  if (languageList.value?.length && !language.value) {
-    language.value = languageList.value[0].id;
-  }
   fetchProblem();
   fetchProblemList();
   fetchContest();
 });
 
-// 侧栏切题：同一路由换 label，重新拉题面并清空代码
+// 侧栏切题：同一路由换 label，编辑器恢复对应题目和语言的本地草稿。
 watch(
   () => route.params.problemId,
   () => {
-    code.value = "";
     fetchProblem();
   }
 );

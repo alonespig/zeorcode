@@ -41,7 +41,7 @@ func (h *LanguageController) Create(c *gin.Context) (any, error) {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
 	language, err := h.service.Create(c.Request.Context(), service.SaveLanguageParams{
-		Name: req.Name, Status: req.Status, Sort: req.Sort,
+		Name: req.Name, Status: req.Status, Sort: req.Sort, DefaultCode: req.DefaultCode,
 	})
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (h *LanguageController) Update(c *gin.Context) (any, error) {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
 	return nil, h.service.Update(c.Request.Context(), id, service.SaveLanguageParams{
-		Name: req.Name, Status: req.Status, Sort: req.Sort,
+		Name: req.Name, Status: req.Status, Sort: req.Sort, DefaultCode: req.DefaultCode,
 	})
 }
 
@@ -83,12 +83,13 @@ func toLanguageItems(langs []model.Language) []dto.LanguageItem {
 	items := make([]dto.LanguageItem, 0, len(langs))
 	for _, l := range langs {
 		items = append(items, dto.LanguageItem{
-			ID:        l.ID,
-			Name:      l.Name,
-			Status:    l.Status,
-			Sort:      l.Sort,
-			CreatedAt: l.CreatedAt,
-			UpdatedAt: l.UpdatedAt,
+			ID:          l.ID,
+			Name:        l.Name,
+			Status:      l.Status,
+			Sort:        l.Sort,
+			DefaultCode: l.DefaultCode,
+			CreatedAt:   l.CreatedAt,
+			UpdatedAt:   l.UpdatedAt,
 		})
 	}
 	return items
@@ -96,11 +97,12 @@ func toLanguageItems(langs []model.Language) []dto.LanguageItem {
 
 func toLanguageItem(l *model.Language) *dto.LanguageItem {
 	return &dto.LanguageItem{
-		ID:        l.ID,
-		Name:      l.Name,
-		Status:    l.Status,
-		Sort:      l.Sort,
-		CreatedAt: l.CreatedAt,
-		UpdatedAt: l.UpdatedAt,
+		ID:          l.ID,
+		Name:        l.Name,
+		Status:      l.Status,
+		Sort:        l.Sort,
+		DefaultCode: l.DefaultCode,
+		CreatedAt:   l.CreatedAt,
+		UpdatedAt:   l.UpdatedAt,
 	}
 }

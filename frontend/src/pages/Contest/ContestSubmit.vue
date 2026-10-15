@@ -11,21 +11,24 @@
 
     <div class="form-item">
       <span class="label">语言</span>
-      <select v-model="form.language" placeholder="选择语言">
+      <select v-model="language" placeholder="选择语言">
         <option v-for="item in languageList" :key="item.id" :value="item.id">
           {{ item.name }}
         </option>
       </select>
+      <el-button v-if="hasTemplate" class="restore-template-btn" plain :icon="RefreshLeft" @click="restoreTemplate">
+        恢复模板
+      </el-button>
     </div>
 
     <div class="form-item">
       <span class="label">源代码</span>
-      <textarea v-model="form.code" type="textarea" class="editor"></textarea>
+      <textarea v-model="code" type="textarea" class="editor"></textarea>
     </div>
 
     <div class="form-actions">
       <el-button type="primary" @click="submitHandler">提交代码</el-button>
-      <el-button @click="form = { label: null, language: null, code: null }">重置</el-button>
+      <el-button v-if="!hasTemplate" @click="code = ''">清空</el-button>
     </div>
   </div>
 </template>
@@ -33,8 +36,10 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { RefreshLeft } from "@element-plus/icons-vue";
 import { getContestProblemList,submit } from "@/api/contest";
 import { useLanguages } from "@/hooks/useLanguages";
+import { useSubmissionEditor } from "@/hooks/useSubmissionEditor";
 
 const route = useRoute();
 const router = useRouter();
@@ -45,13 +50,20 @@ const { languageList, loadLanguages } = useLanguages();
 
 const form = ref({
   label: route.query?.id || null,
-  language: null,
-  code: null,
 })
+const editorContext = computed(() =>
+  form.value.label ? `contest:${params.value.id}:problem:${form.value.label}` : ""
+);
+const { language, code, hasTemplate, restoreTemplate } = useSubmissionEditor({
+  contextKey: editorContext,
+  languages: languageList,
+});
 
 const submitHandler = async () => {
   let formData = {
-    ...form.value,
+    label: form.value.label,
+    language: language.value,
+    code: code.value,
     contestId: Number(params.value.id),
   }
   await submit(formData)
@@ -67,6 +79,7 @@ const getProblemList = async () => {
     name: item.label + " - " + item.name,
     label: item.label,
   }))
+  if (!form.value.label && problemList.value.length) form.value.label = problemList.value[0].label;
 }
 
 onMounted(() => {
@@ -129,6 +142,10 @@ onMounted(() => {
     display: flex;
     justify-content: space-around;
     gap: 10px;
+  }
+
+  .restore-template-btn {
+    margin-left: auto;
   }
 }
 </style>

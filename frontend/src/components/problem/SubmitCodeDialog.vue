@@ -12,6 +12,9 @@
         <span>时间 {{ timeLimitMs }}ms</span>
         <span>内存 {{ memoryLimitMb }}MB</span>
       </div>
+      <el-button v-if="hasTemplate" plain :icon="RefreshLeft" @click="restoreTemplate">
+        恢复模板
+      </el-button>
     </div>
 
     <div class="editor-wrap">
@@ -33,8 +36,10 @@
 import { ref, computed, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
+import { RefreshLeft } from "@element-plus/icons-vue";
 import { submit } from "@/api/user";
 import { useLanguages } from "@/hooks/useLanguages";
+import { useSubmissionEditor } from "@/hooks/useSubmissionEditor";
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -53,8 +58,11 @@ const dialogVisible = computed({
   set: (v) => emit("update:visible", v),
 });
 
-const language = ref(null);
-const code = ref("");
+const editorContext = computed(() => `problem:${props.problemId}`);
+const { language, code, hasTemplate, restoreTemplate } = useSubmissionEditor({
+  contextKey: editorContext,
+  languages: languageList,
+});
 const submitting = ref(false);
 
 const taRef = ref(null);
@@ -78,36 +86,12 @@ const onTab = (e) => {
   });
 };
 
-// ---------- 草稿暂存 + 记住语言 ----------
-const draftKey = computed(() => `submit-code-draft-${props.problemId}`);
-const LAST_LANG_KEY = "submit-code-last-language";
-
-const loadDraft = () => {
-  let saved = null;
-  try {
-    saved = JSON.parse(localStorage.getItem(draftKey.value) || "null");
-  } catch {
-    saved = null;
-  }
-  const lastLang = localStorage.getItem(LAST_LANG_KEY);
-  code.value = saved?.code || "";
-  const candidate = Number(saved?.language ?? lastLang);
-  language.value = languageList.value.some((item) => item.id === candidate)
-    ? candidate
-    : languageList.value[0]?.id ?? null;
-};
-
-watch([language, code], () => {
-  localStorage.setItem(draftKey.value, JSON.stringify({ language: language.value, code: code.value }));
-});
-
-// 打开弹窗时回填草稿
+// 打开弹窗时加载语言，编辑器会自动恢复对应草稿或默认模板。
 watch(
   () => props.visible,
   async (v) => {
     if (v) {
       await loadLanguages();
-      loadDraft();
     }
   }
 );
@@ -129,7 +113,6 @@ const handleSubmit = async () => {
       language: language.value,
       code: code.value,
     });
-    localStorage.setItem(LAST_LANG_KEY, language.value);
     ElMessage.success("提交成功");
     dialogVisible.value = false;
     router.push({ name: "SubmissionDetail", params: { id: res.data.submissionID } });

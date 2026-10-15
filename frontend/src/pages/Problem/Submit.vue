@@ -11,16 +11,19 @@
         </div>
         <div class="form-item">
           <span class="label">语言</span>
-          <select v-model="form.language" placeholder="选择语言">
+          <select v-model="language" placeholder="选择语言">
             <option v-for="item in languageList" :key="item.id" :value="item.id">
               {{ item.name }}
             </option>
           </select>
+          <el-button v-if="hasTemplate" class="restore-template-btn" plain :icon="RefreshLeft" @click="restoreTemplate">
+            恢复模板
+          </el-button>
         </div>
 
         <div class="form-item">
           <span class="label">源代码</span>
-          <textarea v-model="form.code" type="textarea" class="editor"></textarea>
+          <textarea v-model="code" type="textarea" class="editor"></textarea>
         </div>
 
         <div class="form-actions">
@@ -33,23 +36,19 @@
 </template>
 
 <script setup lang="js">
-import { ref, onMounted } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { ElMessage } from "element-plus";
+import { RefreshLeft } from "@element-plus/icons-vue";
 import { useRoute, useRouter } from "vue-router";
 import { submit } from "@/api/user";
 import { getProblem } from "@/api/problems";
 import { useLanguages } from "@/hooks/useLanguages";
+import { useSubmissionEditor } from "@/hooks/useSubmissionEditor";
 
 
 const route = useRoute();
 const router = useRouter();
 const { languageList, loadLanguages } = useLanguages();
-
-const form = ref({
-  label: null,
-  language: null,
-  code: null,
-})
 
 const problem = ref({
   title: "",
@@ -59,12 +58,17 @@ const problem = ref({
   acceptedCount: 0,
   acceptanceRate: 0,
 });
+const editorContext = computed(() => `problem:${route.params.id}`);
+const { language, code, hasTemplate, restoreTemplate } = useSubmissionEditor({
+  contextKey: editorContext,
+  languages: languageList,
+});
 
 const submitHandler = async () => {
   let formData = {
     problemId: route.params.id,
-    language: form.value.language,
-    code: form.value.code,
+    language: language.value,
+    code: code.value,
   }
   try {
     const res = await submit(formData);
@@ -141,6 +145,10 @@ onMounted(async () => {
         display: flex;
         justify-content: space-around;
         gap: 10px;
+      }
+
+      .restore-template-btn {
+        margin-left: auto;
       }
     }
   }

@@ -16,7 +16,7 @@ const loading = shallowRef(false);
 const saving = shallowRef(false);
 const dialogVisible = shallowRef(false);
 const editingId = shallowRef(null);
-const form = reactive({ name: "", status: 1, sort: 0 });
+const form = reactive({ name: "", status: 1, sort: 0, defaultCode: "" });
 
 const dialogTitle = computed(() => editingId.value ? "编辑编程语言" : "新增编程语言");
 
@@ -36,6 +36,7 @@ const resetForm = () => {
   form.name = "";
   form.status = 1;
   form.sort = languages.value.reduce((max, item) => Math.max(max, item.sort || 0), 0) + 1;
+  form.defaultCode = "";
 };
 
 const openCreate = () => {
@@ -49,6 +50,7 @@ const openEdit = (row) => {
   form.name = row.name;
   form.status = row.status;
   form.sort = row.sort;
+  form.defaultCode = row.defaultCode || "";
   dialogVisible.value = true;
 };
 
@@ -56,6 +58,7 @@ const payload = () => ({
   name: form.name.trim(),
   status: form.status,
   sort: Number(form.sort) || 0,
+  defaultCode: form.defaultCode,
 });
 
 const save = async () => {
@@ -85,7 +88,12 @@ const save = async () => {
 const toggleStatus = async (row) => {
   const nextStatus = row.status === 1 ? 0 : 1;
   try {
-    await updateAdminLanguage(row.id, { name: row.name, status: nextStatus, sort: row.sort });
+    await updateAdminLanguage(row.id, {
+      name: row.name,
+      status: nextStatus,
+      sort: row.sort,
+      defaultCode: row.defaultCode,
+    });
     row.status = nextStatus;
     invalidateLanguageCache();
     ElMessage.success(nextStatus === 1 ? "语言已启用" : "语言已停用");
@@ -115,6 +123,29 @@ const remove = async (row) => {
 };
 
 const formatTime = (value) => value ? dayjs(value).format("YYYY-MM-DD HH:mm") : "—";
+
+const recommendedTemplate = (name) => {
+  const normalized = name.trim().toLowerCase();
+  if (["c++", "cpp", "cc", "cxx", "g++"].includes(normalized)) {
+    return "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    return 0;\n}\n";
+  }
+  if (normalized === "java") {
+    return "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n\n    }\n}\n";
+  }
+  if (["python", "python3", "py"].includes(normalized)) {
+    return "import sys\n\ndef solve():\n    pass\n\nif __name__ == \"__main__\":\n    solve()\n";
+  }
+  return "";
+};
+
+const fillRecommendedTemplate = () => {
+  const template = recommendedTemplate(form.name);
+  if (!template) {
+    ElMessage.warning("请先填写受支持的语言名称");
+    return;
+  }
+  form.defaultCode = template;
+};
 
 onMounted(loadLanguages);
 </script>
@@ -148,6 +179,13 @@ onMounted(loadLanguages);
         </template>
       </el-table-column>
       <el-table-column prop="sort" label="排序" width="100" />
+      <el-table-column label="默认模板" width="120">
+        <template #default="{ row }">
+          <el-tag :type="row.defaultCode ? 'success' : 'info'" effect="plain">
+            {{ row.defaultCode ? "已配置" : "未配置" }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="创建时间" width="180">
         <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
       </el-table-column>
@@ -162,7 +200,7 @@ onMounted(loadLanguages);
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px" :close-on-click-modal="false">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="720px" :close-on-click-modal="false">
       <el-form :model="form" label-width="80px">
         <el-form-item label="名称" required>
           <el-input v-model="form.name" maxlength="32" show-word-limit placeholder="例如 c++、java、python" />
@@ -172,6 +210,20 @@ onMounted(loadLanguages);
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="form.sort" :min="0" :max="9999" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="代码模板" class="template-form-item">
+          <div class="template-toolbar">
+            <span>首次进入编辑器时自动填入</span>
+            <el-button link type="primary" @click="fillRecommendedTemplate">填入推荐模板</el-button>
+          </div>
+          <el-input
+            v-model="form.defaultCode"
+            type="textarea"
+            :rows="12"
+            resize="vertical"
+            placeholder="请输入该语言统一使用的默认代码模板"
+            class="template-editor"
+          />
         </el-form-item>
         <p class="form-hint">名称必须是评测程序已经支持的语言；未知名称会被后端拒绝。</p>
       </el-form>
@@ -216,5 +268,24 @@ onMounted(loadLanguages);
   color: #909399;
   font-size: 12px;
   line-height: 1.6;
+}
+
+.template-form-item :deep(.el-form-item__content) {
+  display: block;
+}
+
+.template-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  color: #909399;
+  font-size: 12px;
+}
+
+.template-editor :deep(textarea) {
+  font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  line-height: 1.6;
+  tab-size: 4;
 }
 </style>
