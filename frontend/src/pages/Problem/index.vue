@@ -120,8 +120,12 @@
 
       <!-- 分页 -->
       <div v-if="total > pageSize" class="f-pagination">
-        <el-pagination size="large" :page-size="pageSize" :pager-count="16" v-model:current-page="page"
-          @current-change="pageChange" layout="prev, pager, next" :total="total" />
+        <AppPagination
+          v-model:current-page="page"
+          :page-size="pageSize"
+          :total="total"
+          @current-change="pageChange"
+        />
       </div>
     </div>
 
@@ -282,6 +286,12 @@ onMounted(() => {
   --table-cell-padding-y: 14px;
   max-width: 1360px;
   padding-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .problemset .f-pagination {
+    min-height: 54px;
+  }
 }
 
 </style>

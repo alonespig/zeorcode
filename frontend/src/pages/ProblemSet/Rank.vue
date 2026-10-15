@@ -120,10 +120,8 @@ watch(
     </el-table>
 
     <div v-if="rank.total > pageSize" class="flex justify-end border-t border-gray-100 px-5 py-3.5">
-      <el-pagination
+      <AppPagination
         v-model:current-page="page"
-        background
-        layout="prev, pager, next"
         :page-size="pageSize"
         :total="rank.total"
         @current-change="loadRank"

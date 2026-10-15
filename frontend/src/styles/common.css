@@ -189,7 +189,7 @@
   justify-content: center;
   align-items: center;
   background-color: var(--color-surface);
-  min-height: 46px;
+  min-height: 60px;
   border-top: 1px solid var(--table-row-border);
 }
 

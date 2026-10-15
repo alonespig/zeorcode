@@ -6,7 +6,7 @@
     <el-empty v-else description="还没有提交记录" />
 
     <div v-if="total > pageSize" class="f-pagination">
-      <el-pagination layout="prev, pager, next" :current-page="page" :page-size="pageSize" :total="total"
+      <AppPagination :current-page="page" :page-size="pageSize" :total="total"
         @current-change="handlePageChange" />
     </div>
   </div>

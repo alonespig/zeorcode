@@ -181,10 +181,10 @@ const confirm = () => {
           <el-empty v-if="!listLoading && !problemSets.length" description="暂无题单" :image-size="56" />
         </div>
 
-        <el-pagination
+        <AppPagination
           v-if="total > pageSize"
           class="problemset-pagination"
-          size="small"
+          compact
           layout="prev, next"
           :page-size="pageSize"
           :total="total"

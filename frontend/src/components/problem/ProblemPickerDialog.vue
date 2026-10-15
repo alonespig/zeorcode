@@ -200,9 +200,8 @@ const confirm = async () => {
     </div>
 
     <div class="picker-pagination">
-      <el-pagination
-        size="small"
-        layout="prev, pager, next"
+      <AppPagination
+        compact
         :page-size="pageSize"
         :total="total"
         :current-page="page"

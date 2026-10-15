@@ -92,8 +92,8 @@
 
       <!-- 分页 -->
       <div v-if="total > pageSize" class="f-pagination">
-        <el-pagination layout="total, prev, pager, next" :current-page="page" :page-size="pageSize" :total="total"
-          :pager-count="7" @current-change="handlePageChange" />
+        <AppPagination layout="total, prev, pager, next" :current-page="page" :page-size="pageSize" :total="total"
+          @current-change="handlePageChange" />
       </div>
     </div>
   </div>

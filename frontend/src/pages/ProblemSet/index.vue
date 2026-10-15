@@ -105,8 +105,8 @@
     </el-table>
 
     <div v-if="total > pageSize" class="f-pagination">
-      <el-pagination size="large" :page-size="pageSize" :pager-count="16" v-model:current-page="page"
-        layout="prev, pager, next" :total="total" @current-change="pageChange" />
+      <AppPagination v-model:current-page="page" :page-size="pageSize" :total="total"
+        @current-change="pageChange" />
     </div>
 
     <!-- 标签选择弹窗（与题库一致） -->

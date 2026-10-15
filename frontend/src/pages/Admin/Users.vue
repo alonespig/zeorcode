@@ -64,7 +64,7 @@
     </el-table>
 
     <div class="pager">
-      <el-pagination background layout="total, prev, pager, next" :current-page="page" :page-size="pageSize"
+      <AppPagination layout="total, prev, pager, next" :current-page="page" :page-size="pageSize"
         :total="total" @current-change="handlePageChange" />
     </div>
 

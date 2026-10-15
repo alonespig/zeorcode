@@ -171,8 +171,8 @@ onMounted(loadList);
     </el-table>
 
     <div v-if="total > pageSize" class="f-pagination">
-      <el-pagination v-model:current-page="page" size="large" :page-size="pageSize" :pager-count="7"
-        layout="prev, pager, next" :total="total" @current-change="loadList" />
+      <AppPagination v-model:current-page="page" :page-size="pageSize" :total="total"
+        @current-change="loadList" />
     </div>
 
     <HomeworkSubmissionViewer v-model="detailVisible" :homework-id="route.params.hid"

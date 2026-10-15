@@ -46,7 +46,7 @@
       </div>
 
       <div v-if="total > pageSize" class="flex items-center justify-center border-t border-gray-100 px-[22px] py-3">
-        <el-pagination layout="prev, pager, next" :current-page="page"
+        <AppPagination layout="prev, pager, next" :current-page="page"
           :page-size="pageSize" :total="total" @current-change="handlePage" />
       </div>
     </div>
