@@ -75,9 +75,17 @@
     /* sans-serif: 通用最终兜底无衬线字体 */
   }
 
-  /* 始终显示竖直滚动条，避免不同页面滚动条有无导致内容左右抖动 */
+  /* 普通页面预留滚动条空间，避免长短页面切换时内容左右抖动。 */
   html {
-    overflow-y: scroll;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+
+  /* 弹窗自带可滚动遮罩层。打开弹窗时关闭页面滚动并取消根节点的预留槽，
+     右侧只显示弹窗自身的一条滚动条。Element Plus 会补偿原页面宽度。 */
+  html:has(> body.el-popup-parent--hidden) {
+    overflow: hidden;
+    scrollbar-gutter: auto;
   }
 
   * {
