@@ -8,6 +8,7 @@ import (
 	"zoj/internal/http/router"
 	"zoj/internal/infra/cache"
 	"zoj/internal/infra/database"
+	"zoj/internal/infra/judgepool"
 	"zoj/internal/infra/llm"
 	"zoj/internal/infra/mail"
 	"zoj/internal/infra/mq"
@@ -15,6 +16,7 @@ import (
 	"zoj/internal/infra/session"
 	"zoj/internal/repository"
 	"zoj/internal/service"
+	"zoj/pkg/judge"
 
 	"github.com/google/wire"
 )
@@ -26,6 +28,7 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 		session.New,
 		service.NewTokenService,
 		mq.New,
+		judgepool.New,
 		cache.CacheSet,
 		mail.MailSet,
 		llm.ProviderSet,
@@ -39,6 +42,7 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 		wire.Bind(new(service.SubmissionCache), new(*cache.Cache)),
 		wire.Bind(new(service.ProblemTestDataReader), new(*repository.ProblemTestDataStore)),
 		wire.Bind(new(service.LanguageResolver), new(*service.LanguageService)),
+		wire.Bind(new(service.CodeRunPool), new(*judge.Pool)),
 		handler.HandlerSet,
 		router.NewHttpServer,
 	)

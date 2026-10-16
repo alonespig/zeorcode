@@ -15,6 +15,26 @@ func toSubmitCodeParams(req dto.SubmitCodeReq) service.SubmitCodeParams {
 	}
 }
 
+func toCodeRunParams(req dto.RunCodeReq) service.CodeRunParams {
+	return service.CodeRunParams{
+		ProblemID: req.ProblemID,
+		Code:      req.Code,
+		Input:     req.Input,
+		Language:  req.Language,
+	}
+}
+
+func toCodeRunResp(result *service.CodeRunResult) *dto.RunCodeResp {
+	return &dto.RunCodeResp{
+		Status:        result.Status,
+		TimeUsed:      result.TimeUsed,
+		MemoryUsed:    result.MemoryUsed,
+		Stdout:        result.Stdout,
+		Stderr:        result.Stderr,
+		CompileOutput: result.CompileOutput,
+	}
+}
+
 func toSubmissionCaseResults(cases []service.SubmissionCaseResult) []dto.SubmissionCaseResult {
 	items := make([]dto.SubmissionCaseResult, 0, len(cases))
 	for _, c := range cases {

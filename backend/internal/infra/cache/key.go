@@ -34,6 +34,10 @@ func SubmitLock(userID int64) string {
 	return fmt.Sprintf("submit:%d:lock", userID)
 }
 
+func CodeRunLock(userID int64) string {
+	return fmt.Sprintf("code-run:%d:lock", userID)
+}
+
 func UserRankGen() string {
 	return "user:rank:gen"
 }

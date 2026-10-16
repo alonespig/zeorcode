@@ -107,11 +107,15 @@ func (c *Client) Run(art *Artifact, input string, lim Limits) (*Verdict, error) 
 	cpuLimitNs := int64(lim.TimeMs) * 1_000_000
 	clockLimitNs := cpuLimitNs * 2
 	memoryLimitBytes := int64(lim.MemoryMB) * 1024 * 1024
+	outputLimitBytes := lim.OutputBytes
+	if outputLimitBytes <= 0 {
+		outputLimitBytes = 40 * 1024 * 1024
+	}
 
 	cmd := map[string]any{
 		"args":        args,
 		"env":         []string{"PATH=/usr/bin:/bin", "LANG=C.UTF-8"},
-		"files":       []map[string]any{{"content": input}, {"name": "stdout", "max": 40 * 1024 * 1024}, {"name": "stderr", "max": 10240}},
+		"files":       []map[string]any{{"content": input}, {"name": "stdout", "max": outputLimitBytes}, {"name": "stderr", "max": 10240}},
 		"cpuLimit":    cpuLimitNs,
 		"clockLimit":  clockLimitNs,
 		"memoryLimit": memoryLimitBytes,

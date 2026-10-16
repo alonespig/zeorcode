@@ -6,6 +6,7 @@ var ServerSet = wire.NewSet(
 	NewContestService,
 	NewProblemService,
 	NewSubmissionService,
+	NewCodeRunService,
 	NewPostService,
 	NewUserService,
 	NewRemoteService,

@@ -11,6 +11,7 @@ import (
 	"zoj/internal/http/router"
 	"zoj/internal/infra/cache"
 	"zoj/internal/infra/database"
+	"zoj/internal/infra/judgepool"
 	"zoj/internal/infra/llm"
 	"zoj/internal/infra/mail"
 	"zoj/internal/infra/mq"
@@ -41,7 +42,9 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 	contestService := service.NewContestService(contestRepo, problemRepo, submissionRepo, userRepo, cacheCache, mqMQ, notificationService, problemTestDataStore, languageService)
 	contestController := handler.NewContestController(contestService)
 	submissionService := service.NewSubmissionService(submissionRepo, userRepo, problemRepo, problemTestDataStore, cacheCache, mqMQ, languageService)
-	submissionController := handler.NewSubmissionController(submissionService, contestService, mqMQ)
+	pool, cleanup3 := judgepool.New()
+	codeRunService := service.NewCodeRunService(problemRepo, languageService, cacheCache, pool)
+	submissionController := handler.NewSubmissionController(submissionService, codeRunService, contestService, mqMQ)
 	postRepo := repository.NewPostRepo(db)
 	postService := service.NewPostService(postRepo, userRepo, problemRepo, notificationService)
 	postController := handler.NewPostController(postService)
@@ -78,6 +81,7 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 	languageController := handler.NewLanguageController(languageService)
 	httpServer := router.NewHttpServer(problemController, contestController, submissionController, postController, userController, uploadController, adminController, remoteController, notificationController, problemSetController, teamController, homeworkController, agentController, languageController, tokenService, cacheCache, auditService)
 	return httpServer, func() {
+		cleanup3()
 		cleanup2()
 		cleanup()
 	}, nil

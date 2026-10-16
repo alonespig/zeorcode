@@ -26,8 +26,9 @@ func NormalizeLanguage(language string) string {
 
 // Limits 单次运行的资源限制
 type Limits struct {
-	TimeMs   int // CPU 时间上限（毫秒）
-	MemoryMB int // 内存上限（MB）
+	TimeMs      int // CPU 时间上限（毫秒）
+	MemoryMB    int // 内存上限（MB）
+	OutputBytes int // 标准输出上限（字节）；<=0 使用默认值
 }
 
 // Artifact 编译产物，可在多次 Run 之间复用

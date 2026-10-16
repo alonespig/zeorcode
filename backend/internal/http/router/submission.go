@@ -1,6 +1,8 @@
 package router
 
 import (
+	"time"
+
 	"zoj/internal/http/middleware"
 	"zoj/internal/http/response"
 
@@ -14,6 +16,10 @@ func (h *HttpServer) initSubmissionRouter(r *gin.Engine) {
 	{
 		api.POST("", middleware.JWTAuth(h.auth),
 			response.Wrap(h.submissionController.Create))
+		api.POST("/run",
+			middleware.RateLimit(h.cache, "code-run", 120, time.Minute),
+			middleware.JWTAuth(h.auth),
+			response.Wrap(h.submissionController.Run))
 
 		api.GET("", middleware.JWTAuthOptional(h.auth),
 			response.Wrap(h.submissionController.GetSubmissionList))

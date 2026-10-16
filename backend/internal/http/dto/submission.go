@@ -6,6 +6,22 @@ type SubmitCodeReq struct {
 	Language  int    `json:"language" binding:"required"`
 }
 
+type RunCodeReq struct {
+	ProblemID string `json:"problemID" binding:"required"`
+	Code      string `json:"code" binding:"required"`
+	Input     string `json:"input"`
+	Language  int    `json:"language" binding:"required"`
+}
+
+type RunCodeResp struct {
+	Status        int    `json:"status"`
+	TimeUsed      int64  `json:"time"`
+	MemoryUsed    int64  `json:"memory"`
+	Stdout        string `json:"stdout"`
+	Stderr        string `json:"stderr"`
+	CompileOutput string `json:"compileOutput"`
+}
+
 type SubmissionItemResp struct {
 	ID          int64  `json:"id"`        // 对外提交编号
 	ProblemID   string `json:"problemID"` // 对外题号

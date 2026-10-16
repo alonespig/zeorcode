@@ -14,12 +14,13 @@ import (
 
 type SubmissionController struct {
 	subSrv     *service.SubmissionService
+	runSrv     *service.CodeRunService
 	contestSrv *service.ContestService
 	mq         *mq.MQ
 }
 
-func NewSubmissionController(s *service.SubmissionService, contestSrv *service.ContestService, m *mq.MQ) *SubmissionController {
-	return &SubmissionController{subSrv: s, contestSrv: contestSrv, mq: m}
+func NewSubmissionController(s *service.SubmissionService, runSrv *service.CodeRunService, contestSrv *service.ContestService, m *mq.MQ) *SubmissionController {
+	return &SubmissionController{subSrv: s, runSrv: runSrv, contestSrv: contestSrv, mq: m}
 }
 
 func (s *SubmissionController) Create(c *gin.Context) (any, error) {
@@ -42,6 +43,32 @@ func (s *SubmissionController) Create(c *gin.Context) (any, error) {
 		return nil, err
 	}
 	return gin.H{"submissionID": subID}, nil
+}
+
+func (s *SubmissionController) Run(c *gin.Context) (any, error) {
+	const maxRequestBytes = 8 * 1024 * 1024
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxRequestBytes)
+
+	var req dto.RunCodeReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		return nil, errcode.ErrInvalidParams.Wrap(err)
+	}
+	userIDValue, exists := c.Get("userID")
+	if !exists {
+		return nil, errcode.ErrUnauthorized
+	}
+	userID, ok := userIDValue.(int64)
+	if !ok {
+		return nil, errcode.ErrInvalidParams.WithMsg("用户ID类型错误")
+	}
+	roleValue, _ := c.Get("role")
+	role, _ := roleValue.(int)
+
+	result, err := s.runSrv.Run(c.Request.Context(), toCodeRunParams(req), userID, role == 1)
+	if err != nil {
+		return nil, err
+	}
+	return toCodeRunResp(result), nil
 }
 
 func (s *SubmissionController) GetSubmissionList(c *gin.Context) (any, error) {
