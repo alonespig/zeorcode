@@ -32,8 +32,13 @@ func TestIsProblemSetIntent(t *testing.T) {
 		want    bool
 	}{
 		{content: "帮我创建一个二分题单", want: true},
+		{content: "创建一个提单", want: true},
+		{content: "帮我建一个刷题单", want: true},
+		{content: "来一份图论题目单", want: true},
 		{content: "整理一份图论 problem set", want: true},
 		{content: "这个题单里有哪些题", want: false},
+		{content: "提单的状态是什么", want: false},
+		{content: "帮我提交单元测试", want: false},
 		{content: "创建团队作业", want: false},
 	}
 	for _, tt := range tests {

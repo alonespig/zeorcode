@@ -475,9 +475,17 @@ func problemSetSuccessReply(draft *problemSetDraft, problemSetPublicID int64) ag
 }
 
 func isProblemSetIntent(content string) bool {
-	content = strings.ToLower(content)
-	hasObject := strings.Contains(content, "题单") || strings.Contains(content, "problem set") || strings.Contains(content, "problemset")
-	hasAction := strings.Contains(content, "创建") || strings.Contains(content, "生成") || strings.Contains(content, "新建") ||
-		strings.Contains(content, "整理") || strings.Contains(content, "制作") || strings.Contains(content, "出一")
+	content = strings.ToLower(strings.Join(strings.Fields(content), ""))
+	hasObject := containsAgentIntentPhrase(content, "题单", "提单", "题目单", "刷题单", "problemset")
+	hasAction := containsAgentIntentPhrase(content, "创建", "生成", "新建", "整理", "制作", "出一", "建一", "做一", "来一", "弄一")
 	return hasObject && hasAction
+}
+
+func containsAgentIntentPhrase(content string, phrases ...string) bool {
+	for _, phrase := range phrases {
+		if strings.Contains(content, phrase) {
+			return true
+		}
+	}
+	return false
 }
