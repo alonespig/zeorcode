@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { AcceptedCode, JUDGE_STATUS, JUDGE_STATUS_CLASS, JUDGE_STATUS_TEXT } from "@/constants/index";
 import { formatMemory, formatTime } from "@/utils/format";
+import SubmissionJudgingAnimation from "./SubmissionJudgingAnimation.vue";
 
 const props = defineProps({
   caseResults: { type: Array, default: () => [] },
@@ -27,7 +28,7 @@ const statusClass = (status) => JUDGE_STATUS_CLASS[status] || "unknown";
   <section class="result-panel" :class="{ 'result-panel--embedded': embedded }" aria-labelledby="case-result-title">
     <header class="panel-head"><h2 id="case-result-title">测试点详情</h2></header>
     <div v-if="remoteOj" class="empty-state">远程评测（{{ remoteOj }}）由原 OJ 完成，不提供测试点明细。</div>
-    <div v-else-if="isProcessing && totalCases === 0" class="empty-state">正在评测，测试点结果将在完成后显示。</div>
+    <SubmissionJudgingAnimation v-else-if="isProcessing && totalCases === 0" />
     <div v-else-if="totalCases === 0" class="empty-state">暂无测试点信息。</div>
     <template v-else>
       <div class="case-overview">
