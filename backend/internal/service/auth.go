@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"zoj/internal/infra/logger"
-	"zoj/internal/infra/session"
-	"zoj/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
+	"github.com/alonespig/zeorcode/backend/internal/infra/session"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/spf13/viper"

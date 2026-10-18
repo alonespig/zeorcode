@@ -2,7 +2,7 @@ package dto
 
 import (
 	"time"
-	"zoj/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/model"
 )
 
 type CreateContestReq struct {

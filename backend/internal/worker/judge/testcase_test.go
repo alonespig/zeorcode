@@ -3,7 +3,7 @@ package judge
 import (
 	"testing"
 
-	judgeapi "zoj/pkg/judge"
+	judgeapi "github.com/alonespig/zeorcode/backend/pkg/judge"
 )
 
 // TestJudgeOutput 锁定 AC / PE / WA 判定顺序与空白容忍规则：

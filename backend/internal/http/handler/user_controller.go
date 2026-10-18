@@ -4,11 +4,11 @@ import (
 	"context"
 	"strconv"
 
-	"zoj/internal/http/dto"
-	"zoj/internal/http/middleware"
-	"zoj/internal/http/response"
-	"zoj/internal/service"
-	"zoj/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/http/dto"
+	"github.com/alonespig/zeorcode/backend/internal/http/middleware"
+	"github.com/alonespig/zeorcode/backend/internal/http/response"
+	"github.com/alonespig/zeorcode/backend/internal/service"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )

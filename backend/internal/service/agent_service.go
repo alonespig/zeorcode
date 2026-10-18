@@ -13,13 +13,13 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"zoj/internal/infra/cache"
-	"zoj/internal/infra/llm"
-	"zoj/internal/infra/logger"
-	"zoj/internal/model"
-	"zoj/internal/repository"
-	"zoj/pkg/errcode"
-	"zoj/pkg/publicid"
+	"github.com/alonespig/zeorcode/backend/internal/infra/cache"
+	"github.com/alonespig/zeorcode/backend/internal/infra/llm"
+	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/pkg/publicid"
 
 	"gorm.io/gorm"
 )

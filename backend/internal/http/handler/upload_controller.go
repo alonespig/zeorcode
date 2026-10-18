@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"zoj/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"

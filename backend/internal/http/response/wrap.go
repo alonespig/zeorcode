@@ -3,8 +3,8 @@ package response
 import (
 	"errors"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/infra/logger"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
 
 	"github.com/gin-gonic/gin"
 )

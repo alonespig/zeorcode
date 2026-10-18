@@ -6,13 +6,13 @@ import (
 	"errors"
 	"time"
 
-	"zoj/internal/infra/credential"
-	"zoj/internal/infra/logger"
-	"zoj/internal/infra/mq"
-	"zoj/internal/model"
-	"zoj/internal/repository"
-	judgeapi "zoj/pkg/judge"
-	"zoj/pkg/remoteoj"
+	"github.com/alonespig/zeorcode/backend/internal/infra/credential"
+	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
+	"github.com/alonespig/zeorcode/backend/internal/infra/mq"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
+	judgeapi "github.com/alonespig/zeorcode/backend/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/pkg/remoteoj"
 
 	"go.uber.org/zap"
 )

@@ -3,8 +3,8 @@ package service
 import (
 	"testing"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/model"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/model"
 )
 
 func member(role int) TeamAccess {

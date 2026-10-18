@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"zoj/internal/model"
-	"zoj/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 )
 
 func contestProblemAccessPolicy(contest *model.Contest, registered, isAdmin bool, now time.Time) error {

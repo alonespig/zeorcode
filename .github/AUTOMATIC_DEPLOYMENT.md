@@ -2,6 +2,8 @@
 
 当代码推送到 `main` 后，`deploy.yml` 会测试后端、按目标架构构建 Linux 后端、主站前端和管理后台，并通过 SSH 更新生产服务器。管理后台构建到主站的 `/admin/` 子路径，发布后对应 `/var/www/zoj/admin/`。生产服务器必须先完成首次安装，确保以下服务和路径已经存在：
 
+发布包中的后端程序名为 `zeorcode`。服务器上的 `/opt/zoj`、`zoj-http.service` 和 `zoj-judge.service` 暂时保留历史名称，以兼容现有生产环境；部署脚本会把新程序安装到原有运行路径。
+
 - `zoj-http.service`
 - `zoj-judge.service`
 - Nginx 和 `/var/www/zoj`

@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"zoj/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/model"
 
 	"gorm.io/gorm"
 )

@@ -43,7 +43,7 @@ jwt:
 
 security:
   # 远程账号密码/cookie 的 AES 加密密钥，上线务必改成足够长的随机串
-  aes_key: "zoj-change-me-to-a-long-random-secret-key"
+  aes_key: "zeorcode-change-me-to-a-long-random-secret-key"
 
 judge:
   # 多个 worker 实例共享远程账号池时设为 true，避免启动时清理其他实例的占用状态

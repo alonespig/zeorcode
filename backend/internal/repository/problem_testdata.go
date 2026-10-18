@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"zoj/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
 
 	"github.com/spf13/viper"
 )

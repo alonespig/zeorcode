@@ -1,7 +1,7 @@
 package judge
 
 import (
-	judgeapi "zoj/pkg/judge"
+	judgeapi "github.com/alonespig/zeorcode/backend/pkg/judge"
 )
 
 // judgeOutput 用清单哈希判定用户输出：AC / PE / WA

@@ -40,7 +40,7 @@ rollback() {
   if [[ "${activated}" -eq 1 ]]; then
     echo "Deployment failed; restoring the previous application version." >&2
     systemctl stop zoj-http zoj-judge || true
-    install -o root -g zoj -m 0750 "${rollback_dir}/zoj" "${backend_bin}" || true
+    install -o root -g zoj -m 0750 "${rollback_dir}/zeorcode" "${backend_bin}" || true
     rsync -a --delete "${rollback_dir}/frontend/" "${frontend_dir}/" || true
 
     if [[ -n "${previous_release}" ]]; then
@@ -62,19 +62,19 @@ mkdir -p "${release_dir}" "${rollback_dir}/frontend"
 chown root:root "${archive_path}"
 tar -xzf "${archive_path}" -C "${release_dir}" --strip-components=1
 
-test -x "${release_dir}/backend/zoj"
+test -x "${release_dir}/backend/zeorcode"
 test -f "${release_dir}/frontend/index.html"
 test -f "${release_dir}/frontend/admin/index.html"
 test -d "${release_dir}/database"
 
 nginx -t
-cp -a "${backend_bin}" "${rollback_dir}/zoj"
+cp -a "${backend_bin}" "${rollback_dir}/zeorcode"
 rsync -a --delete "${frontend_dir}/" "${rollback_dir}/frontend/"
 previous_release="$(readlink -f "${current_link}" 2>/dev/null || true)"
 
 activated=1
 systemctl stop zoj-http zoj-judge
-install -o root -g zoj -m 0750 "${release_dir}/backend/zoj" "${backend_bin}"
+install -o root -g zoj -m 0750 "${release_dir}/backend/zeorcode" "${backend_bin}"
 rsync -a --delete "${release_dir}/frontend/" "${frontend_dir}/"
 chown -R root:root "${frontend_dir}"
 ln -sfn "${release_dir}" "${current_link}"

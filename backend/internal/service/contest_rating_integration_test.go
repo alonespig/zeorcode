@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"zoj/internal/model"
-	"zoj/internal/repository"
-	"zoj/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -21,9 +21,12 @@ import (
 // 使用独立数据库，以便多连接测试真实行锁；不修改 DSN 指定库中的表。
 func newRatingTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	dsn := os.Getenv("ZOJ_TEST_MYSQL_DSN")
+	dsn := os.Getenv("ZEORCODE_TEST_MYSQL_DSN")
 	if dsn == "" {
-		t.Skip("ZOJ_TEST_MYSQL_DSN is not set (CREATE DATABASE privilege required)")
+		dsn = os.Getenv("ZOJ_TEST_MYSQL_DSN")
+	}
+	if dsn == "" {
+		t.Skip("ZEORCODE_TEST_MYSQL_DSN is not set (CREATE DATABASE privilege required)")
 	}
 	admin, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -34,7 +37,7 @@ func newRatingTestDB(t *testing.T) *gorm.DB {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = adminSQL.Close() })
-	name := fmt.Sprintf("zoj_rating_test_%d", time.Now().UnixNano())
+	name := fmt.Sprintf("zeorcode_rating_test_%d", time.Now().UnixNano())
 	if err := admin.Exec("CREATE DATABASE `" + name + "`").Error; err != nil {
 		t.Fatal(err)
 	}

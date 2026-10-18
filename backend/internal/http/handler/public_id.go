@@ -3,8 +3,8 @@ package handler
 import (
 	"strconv"
 
-	"zoj/pkg/errcode"
-	"zoj/pkg/publicid"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/pkg/publicid"
 
 	"github.com/gin-gonic/gin"
 )

@@ -3,8 +3,8 @@
 package all
 
 import (
-	_ "zoj/pkg/remoteoj/atcoder"
-	_ "zoj/pkg/remoteoj/hdu"
-	_ "zoj/pkg/remoteoj/loj"
-	_ "zoj/pkg/remoteoj/nowcoder"
+	_ "github.com/alonespig/zeorcode/backend/pkg/remoteoj/atcoder"
+	_ "github.com/alonespig/zeorcode/backend/pkg/remoteoj/hdu"
+	_ "github.com/alonespig/zeorcode/backend/pkg/remoteoj/loj"
+	_ "github.com/alonespig/zeorcode/backend/pkg/remoteoj/nowcoder"
 )

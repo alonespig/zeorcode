@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"zoj/internal/model"
-	"zoj/internal/repository"
-	"zoj/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 )
 
 func TestIsHomeworkIntent(t *testing.T) {

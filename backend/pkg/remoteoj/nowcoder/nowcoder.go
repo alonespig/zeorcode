@@ -14,8 +14,8 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/spf13/viper"
 
-	"zoj/pkg/judge"
-	"zoj/pkg/remoteoj"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/pkg/remoteoj"
 )
 
 // Nowcoder 牛客 OJ：页面服务端渲染，但站点在阿里云 WAF 后，
@@ -45,7 +45,7 @@ var (
 	reTagID      = regexp.MustCompile(`\btagId["'\s:=]+(\d+)`)
 )
 
-// ncLang zoj 语言名 -> 牛客 language id + languageName。
+// ncLang ZeorCode 语言名 -> 牛客 language id + languageName。
 // id 取自真实提交的 submit_cd POST 请求体(下拉是 Vue 渲染、HTML 里没有 id)，均已抓包确认。
 // 参考：Python2=5、C=3 等如需支持照此扩展。
 var ncLang = map[string]struct{ id, name string }{
@@ -301,7 +301,7 @@ func (n *Nowcoder) MapLanguage(lang string) (string, error) {
 	return "", fmt.Errorf("牛客暂不支持语言: %s", lang)
 }
 
-// mapStatus 牛客结果 -> zoj 状态码。优先按中文判定描述匹配(更稳)，再用已知状态码兜底。
+// mapStatus 牛客结果 -> ZeorCode 状态码。优先按中文判定描述匹配(更稳)，再用已知状态码兜底。
 func mapStatus(status int, desc string) int {
 	switch {
 	case strings.Contains(desc, "答案正确"), strings.Contains(desc, "通过"):

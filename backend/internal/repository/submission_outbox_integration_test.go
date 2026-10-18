@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"zoj/internal/model"
-	"zoj/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -17,12 +17,15 @@ import (
 
 func openSubmissionOutboxTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	dsn := os.Getenv("ZOJ_TEST_MYSQL_DSN")
+	dsn := os.Getenv("ZEORCODE_TEST_MYSQL_DSN")
+	if dsn == "" {
+		dsn = os.Getenv("ZOJ_TEST_MYSQL_DSN")
+	}
 	if dsn == "" {
 		dsn = os.Getenv("FASTOJ_TEST_MYSQL_DSN")
 	}
 	if dsn == "" {
-		t.Skip("ZOJ_TEST_MYSQL_DSN and legacy FASTOJ_TEST_MYSQL_DSN are not set")
+		t.Skip("ZEORCODE_TEST_MYSQL_DSN and legacy test DSNs are not set")
 	}
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {

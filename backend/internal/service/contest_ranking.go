@@ -6,12 +6,12 @@ import (
 	"sort"
 	"time"
 
-	"zoj/internal/infra/cache"
-	"zoj/internal/model"
-	"zoj/internal/repository"
-	"zoj/pkg/errcode"
-	"zoj/pkg/judge"
-	"zoj/pkg/scoring"
+	"github.com/alonespig/zeorcode/backend/internal/infra/cache"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/pkg/scoring"
 )
 
 // contestRankTTL 排行榜缓存有效期：轮询期间命中缓存，最多滞后这么久

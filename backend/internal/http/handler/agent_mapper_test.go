@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"zoj/internal/service"
+	"github.com/alonespig/zeorcode/backend/internal/service"
 )
 
 // 验证 message.completed 的 Data（service.AgentMessage）经 mapper 后 JSON 与旧协议一致。

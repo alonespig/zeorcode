@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/http/response"
-	"zoj/internal/infra/cache"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/http/response"
+	"github.com/alonespig/zeorcode/backend/internal/infra/cache"
 
 	"github.com/gin-gonic/gin"
 )

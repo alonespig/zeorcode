@@ -7,10 +7,10 @@ import (
 	"math"
 	"time"
 
-	"zoj/internal/infra/cache"
-	"zoj/internal/infra/logger"
-	"zoj/internal/model"
-	judgeapi "zoj/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/internal/infra/cache"
+	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	judgeapi "github.com/alonespig/zeorcode/backend/pkg/judge"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"

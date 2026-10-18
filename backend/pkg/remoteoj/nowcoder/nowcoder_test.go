@@ -3,7 +3,7 @@ package nowcoder
 import (
 	"testing"
 
-	"zoj/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
 )
 
 func TestExtractIDs(t *testing.T) {

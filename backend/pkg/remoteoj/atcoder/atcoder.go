@@ -13,7 +13,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 
-	"zoj/pkg/remoteoj"
+	"github.com/alonespig/zeorcode/backend/pkg/remoteoj"
 )
 
 // AtCoder 实现。页面是普通服务端渲染(无阿里云式 JS 挑战)，公开题直接 GET 即可。
@@ -35,7 +35,7 @@ var (
 	reBlankLines = regexp.MustCompile(`\n{3,}`)
 )
 
-// acLang zoj 语言名 -> AtCoder LanguageId(取自提交页 <select> 的 option value)
+// acLang ZeorCode 语言名 -> AtCoder LanguageId(取自提交页 <select> 的 option value)
 var acLang = map[string]string{
 	"cpp":    "6017", // C++23 (GCC 15.2.0)
 	"java":   "6056", // Java24 (OpenJDK 24.0.2)

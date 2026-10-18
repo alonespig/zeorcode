@@ -3,7 +3,7 @@ package judgepool
 import (
 	"time"
 
-	judgeapi "zoj/pkg/judge"
+	judgeapi "github.com/alonespig/zeorcode/backend/pkg/judge"
 
 	"github.com/spf13/viper"
 )

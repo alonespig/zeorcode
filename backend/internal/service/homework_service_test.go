@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"zoj/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 )
 
 func TestParseHomeworkWindow(t *testing.T) {

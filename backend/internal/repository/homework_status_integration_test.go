@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"zoj/internal/model"
-	"zoj/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
 )
 
 func TestHomeworkUserProblemStatusesExcludeOtherContexts(t *testing.T) {

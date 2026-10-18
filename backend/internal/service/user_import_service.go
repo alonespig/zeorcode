@@ -8,8 +8,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"zoj/internal/model"
-	"zoj/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
 	"github.com/xuri/excelize/v2"
 )

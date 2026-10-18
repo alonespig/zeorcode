@@ -3,9 +3,9 @@ package handler
 import (
 	"strconv"
 
-	"zoj/internal/http/dto"
-	"zoj/internal/service"
-	"zoj/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/http/dto"
+	"github.com/alonespig/zeorcode/backend/internal/service"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )

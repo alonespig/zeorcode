@@ -7,18 +7,18 @@
 package di
 
 import (
-	"zoj/internal/http/handler"
-	"zoj/internal/http/router"
-	"zoj/internal/infra/cache"
-	"zoj/internal/infra/database"
-	"zoj/internal/infra/judgepool"
-	"zoj/internal/infra/llm"
-	"zoj/internal/infra/mail"
-	"zoj/internal/infra/mq"
-	"zoj/internal/infra/redis"
-	"zoj/internal/infra/session"
-	"zoj/internal/repository"
-	"zoj/internal/service"
+	"github.com/alonespig/zeorcode/backend/internal/http/handler"
+	"github.com/alonespig/zeorcode/backend/internal/http/router"
+	"github.com/alonespig/zeorcode/backend/internal/infra/cache"
+	"github.com/alonespig/zeorcode/backend/internal/infra/database"
+	"github.com/alonespig/zeorcode/backend/internal/infra/judgepool"
+	"github.com/alonespig/zeorcode/backend/internal/infra/llm"
+	"github.com/alonespig/zeorcode/backend/internal/infra/mail"
+	"github.com/alonespig/zeorcode/backend/internal/infra/mq"
+	"github.com/alonespig/zeorcode/backend/internal/infra/redis"
+	"github.com/alonespig/zeorcode/backend/internal/infra/session"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
+	"github.com/alonespig/zeorcode/backend/internal/service"
 )
 
 // Injectors from wire.go:

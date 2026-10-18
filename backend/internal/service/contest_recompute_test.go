@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"zoj/internal/model"
-	"zoj/internal/repository"
-	"zoj/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
 )
 
 func TestContestProblemLabel(t *testing.T) {

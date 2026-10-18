@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/model"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/model"
 )
 
 // ProblemTestDataReader is defined by the application services that need to

@@ -5,8 +5,8 @@ import (
 )
 
 var RootCmd = &cobra.Command{
-	Use:   "zoj",
-	Short: "ZOJ 在线判题系统后端",
+	Use:   "zeorcode",
+	Short: "ZeorCode 在线判题系统后端",
 }
 
 func init() {

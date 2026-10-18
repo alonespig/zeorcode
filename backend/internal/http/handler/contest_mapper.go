@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"zoj/internal/http/dto"
-	"zoj/internal/service"
+	"github.com/alonespig/zeorcode/backend/internal/http/dto"
+	"github.com/alonespig/zeorcode/backend/internal/service"
 )
 
 func toContestProblemInputs(inputs []dto.ContestProblemInput) []service.ContestProblemInput {

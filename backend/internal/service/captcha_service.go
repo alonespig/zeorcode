@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"zoj/internal/infra/cache"
-	"zoj/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/infra/cache"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
 	"github.com/mojocn/base64Captcha"
 	goredis "github.com/redis/go-redis/v9"

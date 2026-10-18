@@ -7,8 +7,8 @@ import (
 	"syscall"
 	"time"
 
-	"zoj/internal/di"
-	"zoj/internal/infra/logger"
+	"github.com/alonespig/zeorcode/backend/internal/di"
+	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"

@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"zoj/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/model"
 )
 
 func TestBuildProblemSetRankCellsKeepsProblemOrderAndStatus(t *testing.T) {

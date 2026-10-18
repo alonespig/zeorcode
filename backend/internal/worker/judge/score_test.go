@@ -3,8 +3,8 @@ package judge
 import (
 	"testing"
 
-	"zoj/internal/model"
-	judgeapi "zoj/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	judgeapi "github.com/alonespig/zeorcode/backend/pkg/judge"
 )
 
 func results(statuses ...int) []*model.JudgeResult {

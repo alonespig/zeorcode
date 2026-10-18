@@ -1,8 +1,8 @@
 package router
 
 import (
-	"zoj/internal/http/middleware"
-	"zoj/internal/http/response"
+	"github.com/alonespig/zeorcode/backend/internal/http/middleware"
+	"github.com/alonespig/zeorcode/backend/internal/http/response"
 
 	"github.com/gin-gonic/gin"
 )

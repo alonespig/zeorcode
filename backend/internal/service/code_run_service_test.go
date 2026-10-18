@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"zoj/internal/model"
-	judgeapi "zoj/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	judgeapi "github.com/alonespig/zeorcode/backend/pkg/judge"
 )
 
 type fakeCodeRunPool struct {

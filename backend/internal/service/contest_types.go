@@ -3,7 +3,7 @@ package service
 import (
 	"time"
 
-	"zoj/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/model"
 )
 
 // ===== 命令 / 查询输入 =====

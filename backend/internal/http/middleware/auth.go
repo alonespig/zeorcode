@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"zoj/internal/http/response"
-	"zoj/internal/service"
-	"zoj/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/http/response"
+	"github.com/alonespig/zeorcode/backend/internal/service"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )

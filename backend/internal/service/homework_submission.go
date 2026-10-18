@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"zoj/internal/infra/logger"
-	"zoj/internal/model"
-	"zoj/internal/repository"
-	"zoj/pkg/errcode"
-	"zoj/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
 
 	"gorm.io/gorm"
 )

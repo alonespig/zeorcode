@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"zoj/internal/model"
-	"zoj/internal/repository"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
 )
 
 func TestBuildHomeworkRankRowsIncludesMembersWithoutSubmissions(t *testing.T) {

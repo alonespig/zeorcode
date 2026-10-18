@@ -9,8 +9,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"zoj/internal/infra/llm"
-	"zoj/internal/repository"
+	"github.com/alonespig/zeorcode/backend/internal/infra/llm"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
 )
 
 const (

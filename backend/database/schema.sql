@@ -1,4 +1,4 @@
--- ZOJ 完整数据库 schema（由当前 oj_db 结构导出，含 hidden / display_id / uid 等全部字段）。
+-- ZeorCode 完整数据库 schema（由当前 oj_db 结构导出，含 hidden / display_id / uid 等全部字段）。
 -- AutoMigrate 关闭时，全新环境用它建库：mysql -uroot -p oj_db < database/schema.sql
 
 

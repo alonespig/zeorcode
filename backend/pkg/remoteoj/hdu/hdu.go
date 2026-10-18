@@ -17,14 +17,14 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/html/charset"
 
-	"zoj/pkg/judge"
-	"zoj/pkg/remoteoj"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/pkg/remoteoj"
 )
 
 const hduHost = "https://acm.hdu.edu.cn"
 
 // HDU 杭电 OJ。页面是老式服务端渲染、编码为 GB2312(需转码)，公开题直接 GET。
-// 题面用 $...$(MathJax) + **markdown**，去标签后原样保留，正好对接 zoj 的 markdown+katex 渲染。
+// 题面用 $...$(MathJax) + **markdown**，去标签后原样保留，正好对接 ZeorCode 的 markdown+katex 渲染。
 // 提交需登录且有验证码，不做远程判题 —— HDU 定位为"导题源"，导入后本地评测。
 type HDU struct{}
 
@@ -346,7 +346,7 @@ func hduStatus(raw string) int {
 		return judge.MemoryLimitExceeded
 	case "Output Limit Exceeded":
 		return judge.RuntimeError
-	case "Presentation Error": // zoj 无 PE，归到 WA
+	case "Presentation Error": // ZeorCode 无 PE，归到 WA
 		return judge.WrongAnswer
 	}
 	// Queuing / Running / Compiling / Submitted 等 → 还在判

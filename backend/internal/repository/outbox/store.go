@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"zoj/internal/model"
-	"zoj/internal/worker/dispatch"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/worker/dispatch"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

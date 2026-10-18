@@ -1,11 +1,11 @@
 package main
 
 import (
-	"zoj/cmd"
-	"zoj/internal/config"
-	"zoj/internal/infra/logger"
+	"github.com/alonespig/zeorcode/backend/cmd"
+	"github.com/alonespig/zeorcode/backend/internal/config"
+	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
 
-	_ "zoj/pkg/remoteoj/all" // 触发各远程 OJ 实现自注册
+	_ "github.com/alonespig/zeorcode/backend/pkg/remoteoj/all" // 触发各远程 OJ 实现自注册
 )
 
 func main() {

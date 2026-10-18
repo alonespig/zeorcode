@@ -9,9 +9,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"zoj/internal/model"
-	"zoj/internal/repository"
-	"zoj/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"

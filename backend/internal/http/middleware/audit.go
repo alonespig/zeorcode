@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"zoj/internal/http/response"
-	"zoj/internal/service"
+	"github.com/alonespig/zeorcode/backend/internal/http/response"
+	"github.com/alonespig/zeorcode/backend/internal/service"
 
 	"github.com/gin-gonic/gin"
 )

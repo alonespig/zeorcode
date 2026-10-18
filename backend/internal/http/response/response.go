@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"zoj/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )

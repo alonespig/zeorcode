@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"zoj/internal/model"
-	"zoj/internal/repository"
-	"zoj/pkg/errcode"
-	"zoj/pkg/judge"
-	"zoj/pkg/publicid"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/pkg/publicid"
 )
 
 type fakeSubmissionStore struct {

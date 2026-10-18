@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"zoj/internal/repository"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
 )
 
 type DashboardService struct {

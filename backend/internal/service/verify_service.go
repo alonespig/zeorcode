@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"zoj/pkg/errcode"
-	"zoj/internal/infra/cache"
-	"zoj/internal/infra/mail"
-	"zoj/internal/repository"
+	"github.com/alonespig/zeorcode/backend/internal/infra/cache"
+	"github.com/alonespig/zeorcode/backend/internal/infra/mail"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
 	goredis "github.com/redis/go-redis/v9"
 )
@@ -172,14 +172,14 @@ func genCode() string {
 // buildMail 按场景生成邮件标题与 HTML 正文。
 func buildMail(scene, code string) (subject, body string) {
 	action := map[string]string{
-		SceneRegister: "注册 ZOJ 账号",
-		SceneReset:    "重置 ZOJ 登录密码",
+		SceneRegister: "注册 ZeorCode 账号",
+		SceneReset:    "重置 ZeorCode 登录密码",
 		SceneBind:     "绑定新邮箱",
 	}[scene]
 
-	subject = "【ZOJ】验证码 " + code
+	subject = "【ZeorCode】验证码 " + code
 	body = fmt.Sprintf(`<div style="max-width:480px;margin:0 auto;font-family:-apple-system,'Segoe UI',sans-serif;color:#1f2430;">
-  <h2 style="font-size:18px;font-weight:600;margin:0 0 16px;">ZOJ 邮箱验证</h2>
+  <h2 style="font-size:18px;font-weight:600;margin:0 0 16px;">ZeorCode 邮箱验证</h2>
   <p style="font-size:14px;color:#5b6470;margin:0 0 12px;">你正在%s，本次验证码为：</p>
   <div style="font-size:30px;font-weight:700;letter-spacing:8px;color:#20b2aa;margin:8px 0 16px;">%s</div>
   <p style="font-size:13px;color:#9aa1ab;margin:0;">验证码 5 分钟内有效，请勿泄露给他人。如非本人操作，请忽略此邮件。</p>

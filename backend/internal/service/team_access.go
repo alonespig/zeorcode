@@ -1,8 +1,8 @@
 package service
 
 import (
-	"zoj/pkg/errcode"
-	"zoj/internal/model"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/model"
 )
 
 // TeamAccess 调用方在某个团队中的权限视图。

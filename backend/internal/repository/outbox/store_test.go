@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"zoj/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/model"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"

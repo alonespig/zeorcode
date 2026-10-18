@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"zoj/pkg/judge"
-	"zoj/pkg/remoteoj"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/pkg/remoteoj"
 )
 
 const (
@@ -143,7 +143,7 @@ func (l *LibreOJ) CrawlProblem(_ *remoteoj.RemoteAccount, pid string) (*remoteoj
 	return p, nil
 }
 
-// lojLang zoj 语言 -> LibreOJ language + compileAndRunOptions
+// lojLang ZeorCode 语言 -> LibreOJ language + compileAndRunOptions
 type lojLang struct {
 	name string
 	opts map[string]any

@@ -3,10 +3,10 @@ package router
 import (
 	"time"
 
-	"zoj/internal/http/handler"
-	"zoj/internal/http/middleware"
-	"zoj/internal/infra/cache"
-	"zoj/internal/service"
+	"github.com/alonespig/zeorcode/backend/internal/http/handler"
+	"github.com/alonespig/zeorcode/backend/internal/http/middleware"
+	"github.com/alonespig/zeorcode/backend/internal/infra/cache"
+	"github.com/alonespig/zeorcode/backend/internal/service"
 
 	"github.com/gin-gonic/gin"
 )

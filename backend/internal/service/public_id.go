@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	"zoj/pkg/errcode"
-	"zoj/pkg/publicid"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/pkg/publicid"
 )
 
 const publicIDGenerateAttempts = 16

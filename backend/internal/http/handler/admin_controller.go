@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	"zoj/internal/http/dto"
-	"zoj/internal/http/response"
-	"zoj/internal/service"
-	"zoj/pkg/errcode"
-	"zoj/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/internal/http/dto"
+	"github.com/alonespig/zeorcode/backend/internal/http/response"
+	"github.com/alonespig/zeorcode/backend/internal/service"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"

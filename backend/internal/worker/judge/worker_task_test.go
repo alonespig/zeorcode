@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"testing"
 
-	"zoj/internal/infra/mq"
-	"zoj/internal/model"
-	"zoj/internal/repository"
+	"github.com/alonespig/zeorcode/backend/internal/infra/mq"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/internal/repository"
 )
 
 type fakeSubmissionTaskStore struct {

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"zoj/internal/model"
-	"zoj/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 )
 
 func requireAppErrorCode(t *testing.T, err error, want errcode.Code) {

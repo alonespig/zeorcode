@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"zoj/internal/infra/cache"
-	"zoj/internal/infra/logger"
-	"zoj/pkg/errcode"
-	judgeapi "zoj/pkg/judge"
+	"github.com/alonespig/zeorcode/backend/internal/infra/cache"
+	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	judgeapi "github.com/alonespig/zeorcode/backend/pkg/judge"
 
 	"gorm.io/gorm"
 )
