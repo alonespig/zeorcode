@@ -1,6 +1,6 @@
 # ZeorCode 后端
 
-完整的 Ubuntu 生产环境安装、Nginx、MySQL、Redis、go-judge、systemd、HTTPS、更新与备份说明见 [DEPLOYMENT.md](DEPLOYMENT.md)。
+项目架构、本地启动和配置说明见[根目录 README](../README.md)，GitHub Actions、Nginx 与 systemd 发布流程见[自动部署说明](../.github/AUTOMATIC_DEPLOYMENT.md)。
 
 ## 构建
 
