@@ -13,6 +13,9 @@
 Nginx 应让主站和管理后台使用各自的 SPA 入口，并保持 `/api/` 继续反向代理到后端：
 
 ```nginx
+# 批量题目归档最大为 2GB，额外空间用于 multipart 请求头。
+client_max_body_size 3g;
+
 location ^~ /admin/ {
     try_files $uri $uri/ /admin/index.html;
 }
@@ -22,7 +25,7 @@ location / {
 }
 ```
 
-管理后台使用 Hash 路由，但显式配置 `/admin/` 入口可以保证后台首页和静态资源始终由正确目录提供。
+管理后台使用 Hash 路由，但显式配置 `/admin/` 入口可以保证后台首页和静态资源始终由正确目录提供。批量导入题目时还要确保 CDN、网关或云负载均衡的请求体限制不低于 2GB；后端会独立校验 ZIP 大小、路径和文件摘要。
 
 ## 1. 创建专用 SSH 密钥
 

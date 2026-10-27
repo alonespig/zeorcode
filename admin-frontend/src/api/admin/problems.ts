@@ -123,6 +123,14 @@ export interface TestDataImportResult {
   missing: string[];
 }
 
+export interface ProblemArchiveImportResult {
+  total: number;
+  imported: number;
+  skipped: number;
+  importedIds: string[];
+  skippedIds: string[];
+}
+
 /** 题目简要信息（按题号解析名称时使用，对应后端 dto.ProblemDetailResp 的 id/name） */
 export interface ProblemBrief {
   id: string;
@@ -224,4 +232,30 @@ export async function downloadTestDataFiles(
     }
   );
   return response.data;
+}
+
+/** 导出全部题目、标签、样例与本地测试数据。 */
+export function downloadProblemArchive() {
+  return http.request<AxiosResponse<Blob>>(
+    "get",
+    "/admin/problem-archive",
+    {
+      responseType: "blob",
+      timeout: 0
+    }
+  );
+}
+
+/** 导入由 ZeorCode 导出的题目归档；相同题号由后端安全跳过。 */
+export function importProblemArchive(file: File) {
+  const data = new FormData();
+  data.append("file", file);
+  return http.request<ApiResponse<ProblemArchiveImportResult>>(
+    "post",
+    "/admin/problem-archive",
+    {
+      data,
+      timeout: 30 * 60 * 1000
+    }
+  );
 }

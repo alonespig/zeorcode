@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { onMounted, reactive, ref, shallowRef } from "vue";
 import { useRouter } from "vue-router";
-import { Plus } from "@element-plus/icons-vue";
+import { Download, Plus, Upload } from "@element-plus/icons-vue";
 import type { PaginationProps } from "@pureadmin/table";
 import { PureTableBar } from "@/components/RePureTableBar";
+import { message } from "@/utils/message";
+import ProblemArchiveImportDialog from "./components/ProblemArchiveImportDialog.vue";
 import {
+  downloadProblemArchive,
   getProblemList,
   getTagList,
   type ProblemItem,
@@ -31,6 +34,8 @@ const loading = ref(false);
 const keyword = ref("");
 const difficulty = ref<number>();
 const selectedTags = ref<number[]>([]);
+const archiveDialogVisible = shallowRef(false);
+const exportingArchive = shallowRef(false);
 
 const pagination = reactive<PaginationProps>({
   pageSize: 20,
@@ -121,6 +126,30 @@ function onSizeChange(size: number) {
   onSearch();
 }
 
+async function exportAllProblems() {
+  if (exportingArchive.value) return;
+  exportingArchive.value = true;
+  try {
+    const response = await downloadProblemArchive();
+    const disposition = String(response.headers?.["content-disposition"] ?? "");
+    const match = disposition.match(/filename="?([^";]+)"?/i);
+    const filename = match?.[1] || "zeorcode-problems.zip";
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    message("题目归档导出完成", { type: "success" });
+  } catch {
+    // 错误信息已由 http 拦截器统一提示
+  } finally {
+    exportingArchive.value = false;
+  }
+}
+
 onMounted(() => {
   loadTags();
   onSearch();
@@ -139,6 +168,16 @@ onMounted(() => {
         </div>
       </template>
       <template #buttons>
+        <el-button :icon="Upload" @click="archiveDialogVisible = true">
+          导入题目
+        </el-button>
+        <el-button
+          :icon="Download"
+          :loading="exportingArchive"
+          @click="exportAllProblems"
+        >
+          导出全部
+        </el-button>
         <el-button
           type="primary"
           :icon="Plus"
@@ -253,5 +292,10 @@ onMounted(() => {
         </PureTable>
       </template>
     </PureTableBar>
+
+    <ProblemArchiveImportDialog
+      v-model="archiveDialogVisible"
+      @imported="onSearch"
+    />
   </div>
 </template>

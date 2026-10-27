@@ -21,6 +21,8 @@ func (h *HttpServer) initProblemRouter(r *gin.Engine) {
 	// 管理员接口
 	admin := r.Group("/api", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
+		admin.GET("/admin/problem-archive", h.problemController.DownloadProblemArchive)
+		admin.POST("/admin/problem-archive", response.Wrap(h.problemController.ImportProblemArchive))
 		admin.POST("/problems", response.Wrap(h.problemController.CreateProblem))
 		admin.PUT("/problems/:id", response.Wrap(h.problemController.UpdateProblem))
 		admin.GET("/problems/:id/edit", response.Wrap(h.problemController.GetProblemForEdit))

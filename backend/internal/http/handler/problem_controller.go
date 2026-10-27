@@ -3,13 +3,17 @@ package handler
 import (
 	"archive/zip"
 	"errors"
+	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alonespig/zeorcode/backend/internal/http/dto"
+	"github.com/alonespig/zeorcode/backend/internal/http/response"
 	"github.com/alonespig/zeorcode/backend/internal/service"
 	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
@@ -28,6 +32,58 @@ type ProblemController struct {
 
 func NewProblemController(srv *service.ProblemService) *ProblemController {
 	return &ProblemController{problemSrv: srv}
+}
+
+// DownloadProblemArchive streams every problem and its local test data as a
+// versioned ZeorCode archive. Authentication and administrator checks live on
+// the route, matching the rest of the problem-management endpoints.
+func (p *ProblemController) DownloadProblemArchive(c *gin.Context) {
+	archive, err := p.problemSrv.PrepareProblemArchive(c.Request.Context())
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	filename := fmt.Sprintf("zeorcode-problems-%s.zip", time.Now().Format("20060102-150405"))
+	c.Header("Content-Type", "application/zip")
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	c.Header("Cache-Control", "no-store")
+	if err := archive.WriteTo(c.Request.Context(), c.Writer); err != nil {
+		_ = c.Error(err)
+		c.Abort()
+	}
+}
+
+func (p *ProblemController) ImportProblemArchive(c *gin.Context) (any, error) {
+	const multipartOverheadAllowance int64 = 1 << 20
+	c.Request.Body = http.MaxBytesReader(
+		c.Writer,
+		c.Request.Body,
+		service.MaxProblemArchiveUploadSize+multipartOverheadAllowance,
+	)
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			return nil, errcode.ErrInvalidParams.WithMsg("题目归档大小超过 2GB")
+		}
+		return nil, errcode.ErrInvalidParams.WithMsg("请选择题目归档 ZIP").Wrap(err)
+	}
+	if !strings.HasSuffix(strings.ToLower(fileHeader.Filename), ".zip") {
+		return nil, errcode.ErrInvalidParams.WithMsg("请上传 .zip 题目归档")
+	}
+	if fileHeader.Size <= 0 || fileHeader.Size > service.MaxProblemArchiveUploadSize {
+		return nil, errcode.ErrInvalidParams.WithMsg("题目归档大小不合法（上限 2GB）")
+	}
+	file, err := fileHeader.Open()
+	if err != nil {
+		return nil, errcode.ErrFileUpload.Wrap(err)
+	}
+	defer file.Close()
+	zr, err := zip.NewReader(file, fileHeader.Size)
+	if err != nil {
+		return nil, errcode.ErrInvalidParams.WithMsg("压缩包损坏或不是有效 ZIP").Wrap(err)
+	}
+	return p.problemSrv.ImportProblemArchive(c.Request.Context(), zr)
 }
 
 func (p *ProblemController) CreateProblem(c *gin.Context) (any, error) {
