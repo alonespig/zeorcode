@@ -1,0 +1,46 @@
+server:
+  port: ":9090"
+  base_url: "http://localhost:8080"
+
+cors:
+  # Both frontends are served by the same Nginx origin in the Compose stack.
+  allowed_origins: []
+
+db:
+  user: "zeorcode"
+  password: ""
+  host: "mysql"
+  port: "3306"
+  name: "oj_db"
+  pool:
+    max_open_conns: 50
+    max_idle_conns: 10
+    conn_max_lifetime_seconds: 3600
+    conn_max_idle_time_seconds: 600
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  db: 0
+
+ai:
+  enabled: false
+  base_url: "https://api.openai.com/v1"
+  model: ""
+  api_key: ""
+  request_timeout_seconds: 60
+  max_output_tokens: 2048
+
+jwt:
+  secret: "replace-me"
+  expire: 24
+
+security:
+  aes_key: "replace-me"
+
+judge:
+  multi_instance: false
+  urls:
+    - "http://go-judge:5050"
+  concurrency: 4
+  data_dir: "ojdata/problems"

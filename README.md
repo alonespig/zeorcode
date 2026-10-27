@@ -86,6 +86,60 @@ zeorcode/
 
 AI 对话是可选功能。未配置模型时，其他业务和确定性的作业创建流程仍可运行。
 
+## Docker Compose 启动
+
+仓库根目录提供多阶段 [`Dockerfile`](./Dockerfile) 和 [`compose.yaml`](./compose.yaml)。Compose 会启动以下服务：
+
+- `web`：Nginx，对外提供主站、`/admin/` 管理后台，并反向代理 `/api/` 与 `/uploads/`。
+- `backend-http`：ZeorCode HTTP API。
+- `backend-judge`：异步评测 Worker，与 API 共用同一个后端镜像和题目数据卷。
+- `mysql`、`redis`：业务数据、会话和评测队列。
+- `go-judge`：隔离执行代码的沙箱服务。
+
+先创建本地环境文件并替换其中的密码和密钥：
+
+```bash
+cp .env.example .env
+```
+
+Windows PowerShell 可使用：
+
+```powershell
+Copy-Item .env.example .env
+```
+
+然后构建并启动：
+
+```bash
+docker compose up -d --build
+docker compose ps
+```
+
+默认访问地址：
+
+- 主站：`http://localhost:8080`
+- 管理后台：`http://localhost:8080/admin/`
+- API 调试地址：`http://localhost:9090/api/`（仅绑定宿主机回环地址）
+- 容器健康检查：`http://localhost:8080/healthz`
+
+查看 API 和评测日志：
+
+```bash
+docker compose logs -f backend-http backend-judge go-judge
+```
+
+停止服务但保留数据：
+
+```bash
+docker compose down
+```
+
+MySQL、Redis、上传文件和本地题目测试数据分别保存在命名卷中。`backend/database/schema.sql` 只会在 MySQL 数据卷首次创建时导入；后续结构升级仍需先备份再执行迁移。`docker compose down -v` 会同时删除这些数据卷，请勿在需要保留数据时使用。
+
+go-judge 按其官方容器运行要求启用了 `privileged` 和 `256m` 共享内存，因此应只在受控主机上运行，不要把 MySQL、Redis 或 go-judge 端口直接暴露到公网。若修改 `WEB_PORT`，还应同步修改 `.env` 中的 `PUBLIC_BASE_URL`，确保上传文件返回正确的公开地址。
+
+需要增加评测 Worker 时，先把 `.env` 中的 `JUDGE_MULTI_INSTANCE` 设为 `true`，再执行 `docker compose up -d --scale backend-judge=2`。多个 Worker 会共享同一套 MySQL、Redis 和题目数据卷。
+
 ## 本地启动
 
 ### 1. 获取代码
@@ -129,6 +183,8 @@ Copy-Item config.yaml.example config.yaml
 - `cors.allowed_origins`：需要跨域访问 API 时，加入对应前端来源。
 
 `config.yaml` 已被 Git 忽略，不要提交真实密码、Cookie 或 API Key。
+
+所有标量配置也支持通过 `ZEORCODE_` 前缀的环境变量覆盖，层级中的 `.` 转换为 `_`。例如 `db.host`、`db.pool.max_open_conns` 分别对应 `ZEORCODE_DB_HOST`、`ZEORCODE_DB_POOL_MAX_OPEN_CONNS`；环境变量的优先级高于 `config.yaml`。
 
 ### 4. 启动后端 API
 

@@ -1,0 +1,123 @@
+name: zeorcode
+
+x-backend-environment: &backend-environment
+  TZ: Asia/Shanghai
+  ZEORCODE_SERVER_PORT: ":9090"
+  ZEORCODE_SERVER_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+  ZEORCODE_DB_USER: ${MYSQL_USER:-zeorcode}
+  ZEORCODE_DB_PASSWORD: ${MYSQL_PASSWORD:?copy .env.example to .env and set MYSQL_PASSWORD}
+  ZEORCODE_DB_HOST: mysql
+  ZEORCODE_DB_PORT: "3306"
+  ZEORCODE_DB_NAME: ${MYSQL_DATABASE:-oj_db}
+  ZEORCODE_REDIS_ADDR: redis:6379
+  ZEORCODE_JUDGE_MULTI_INSTANCE: ${JUDGE_MULTI_INSTANCE:-false}
+  ZEORCODE_JWT_SECRET: ${ZEORCODE_JWT_SECRET:?copy .env.example to .env and set ZEORCODE_JWT_SECRET}
+  ZEORCODE_SECURITY_AES_KEY: ${ZEORCODE_AES_KEY:?copy .env.example to .env and set ZEORCODE_AES_KEY}
+  ZEORCODE_AI_ENABLED: ${ZEORCODE_AI_ENABLED:-false}
+  ZEORCODE_AI_BASE_URL: ${ZEORCODE_AI_BASE_URL:-https://api.openai.com/v1}
+  ZEORCODE_AI_MODEL: ${ZEORCODE_AI_MODEL:-}
+  ZEORCODE_AI_API_KEY: ${ZEORCODE_AI_API_KEY:-}
+
+x-backend-service: &backend-service
+  image: zeorcode/backend:local
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: backend
+  restart: unless-stopped
+  environment: *backend-environment
+  volumes:
+    - backend_uploads:/app/uploads
+    - backend_ojdata:/app/ojdata
+  depends_on:
+    mysql:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    go-judge:
+      condition: service_started
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-oj_db}
+      MYSQL_USER: ${MYSQL_USER:-zeorcode}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?copy .env.example to .env and set MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?copy .env.example to .env and set MYSQL_ROOT_PASSWORD}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  go-judge:
+    image: criyle/go-judge:v1.13.3
+    restart: unless-stopped
+    privileged: true
+    shm_size: 256m
+    expose:
+      - "5050"
+
+  backend-http:
+    <<: *backend-service
+    command: ["http"]
+    ports:
+      - "127.0.0.1:${API_PORT:-9090}:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/api/languages"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    stop_grace_period: 20s
+
+  backend-judge:
+    <<: *backend-service
+    command: ["judge", "--concurrency", "${JUDGE_CONCURRENCY:-4}"]
+    stop_grace_period: 30s
+
+  web:
+    image: zeorcode/web:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      backend-http:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  mysql_data:
+  redis_data:
+  backend_uploads:
+  backend_ojdata:
