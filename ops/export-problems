@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+usage() {
+  cat <<'EOF'
+导出 ZeorCode 全部题目、标签、样例和测试数据。
+
+用法：
+  export-problems [输出文件]
+
+环境变量：
+  ZEORCODE_URL           后端地址，默认 http://127.0.0.1:9090
+  ZEORCODE_TOKEN         管理员 token Cookie；未设置时会安全提示输入
+  ZEORCODE_ARCHIVE_MODE  输出权限，支持 0600（默认）、0640、0644
+
+示例：
+  ./export-problems
+  ZEORCODE_URL=https://oj.example.com ./export-problems /data/backup/problems.zip
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+if [[ "$#" -gt 1 ]]; then
+  usage >&2
+  exit 2
+fi
+
+base_url="${ZEORCODE_URL:-http://127.0.0.1:9090}"
+base_url="${base_url%/}"
+if [[ ! "${base_url}" =~ ^https?://[^[:space:]]+$ ]]; then
+  echo "无效的 ZEORCODE_URL：${base_url}" >&2
+  exit 2
+fi
+
+archive_mode="${ZEORCODE_ARCHIVE_MODE:-0600}"
+case "${archive_mode}" in
+  0600|0640|0644) ;;
+  *)
+    echo "无效的 ZEORCODE_ARCHIVE_MODE：${archive_mode}（仅支持 0600、0640、0644）" >&2
+    exit 2
+    ;;
+esac
+
+output_path="${1:-zeorcode-problems-$(date +%Y%m%d-%H%M%S).zip}"
+output_dir="$(dirname -- "${output_path}")"
+if [[ ! -d "${output_dir}" ]]; then
+  echo "输出目录不存在：${output_dir}" >&2
+  exit 2
+fi
+if [[ -e "${output_path}" ]]; then
+  echo "输出文件已存在，拒绝覆盖：${output_path}" >&2
+  exit 2
+fi
+
+token="${ZEORCODE_TOKEN:-}"
+if [[ -z "${token}" ]]; then
+  if [[ ! -t 0 ]]; then
+    echo "非交互运行时必须通过 ZEORCODE_TOKEN 提供管理员 token Cookie" >&2
+    exit 2
+  fi
+  read -r -s -p "请输入管理员 token Cookie（输入不回显）：" token
+  echo
+fi
+if [[ ! "${token}" =~ ^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$ ]]; then
+  echo "管理员 token 格式无效" >&2
+  exit 2
+fi
+
+umask 077
+work_dir="$(mktemp -d)"
+cleanup() {
+  rm -rf -- "${work_dir}"
+}
+trap cleanup EXIT
+
+curl_config="${work_dir}/curl.conf"
+download_path="${work_dir}/problems.zip"
+cat >"${curl_config}" <<EOF
+silent
+show-error
+connect-timeout = 10
+cookie = "token=${token}"
+EOF
+
+endpoint="${base_url}/api/admin/problem-archive"
+echo "正在从 ${endpoint} 导出题目归档……"
+if ! http_status="$(curl \
+  --config "${curl_config}" \
+  --output "${download_path}" \
+  --write-out '%{http_code}' \
+  "${endpoint}")"; then
+  echo "请求题目归档失败，请检查服务地址和网络连接" >&2
+  exit 1
+fi
+
+if [[ "${http_status}" != "200" ]]; then
+  echo "导出失败，服务器返回 HTTP ${http_status}：" >&2
+  head -c 4096 "${download_path}" >&2 || true
+  echo >&2
+  exit 1
+fi
+if [[ ! -s "${download_path}" ]]; then
+  echo "导出失败：服务器返回了空文件" >&2
+  exit 1
+fi
+
+zip_magic="$(od -An -tx1 -N2 "${download_path}" | tr -d '[:space:]')"
+if [[ "${zip_magic}" != "504b" ]]; then
+  echo "导出失败：服务器返回的内容不是 ZIP 文件" >&2
+  exit 1
+fi
+if command -v unzip >/dev/null 2>&1; then
+  if ! unzip -tqq "${download_path}"; then
+    echo "导出失败：ZIP 完整性校验未通过" >&2
+    exit 1
+  fi
+  if ! unzip -Z1 "${download_path}" | grep -Fxq 'manifest.json'; then
+    echo "导出失败：ZIP 中缺少 manifest.json" >&2
+    exit 1
+  fi
+fi
+
+mv -- "${download_path}" "${output_path}"
+chmod "${archive_mode}" "${output_path}"
+archive_size="$(du -h "${output_path}" | cut -f1)"
+echo "导出完成：${output_path}（${archive_size}，权限 ${archive_mode}）"

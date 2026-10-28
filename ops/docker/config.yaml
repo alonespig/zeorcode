@@ -41,6 +41,6 @@ security:
 judge:
   multi_instance: false
   urls:
-    - "http://go-judge:5050"
-  concurrency: 4
+    - "http://host.docker.internal:5050"
+  concurrency: 1
   data_dir: "ojdata/problems"

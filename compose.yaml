@@ -29,13 +29,13 @@ x-backend-service: &backend-service
   volumes:
     - backend_uploads:/app/uploads
     - backend_ojdata:/app/ojdata
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
   depends_on:
     mysql:
       condition: service_healthy
     redis:
       condition: service_healthy
-    go-judge:
-      condition: service_started
 
 services:
   mysql:
@@ -72,14 +72,6 @@ services:
       timeout: 3s
       retries: 20
 
-  go-judge:
-    image: criyle/go-judge:v1.13.3
-    restart: unless-stopped
-    privileged: true
-    shm_size: 256m
-    expose:
-      - "5050"
-
   backend-http:
     <<: *backend-service
     command: ["http"]
@@ -95,7 +87,7 @@ services:
 
   backend-judge:
     <<: *backend-service
-    command: ["judge", "--concurrency", "${JUDGE_CONCURRENCY:-4}"]
+    command: ["judge", "--concurrency", "${JUDGE_CONCURRENCY:-1}"]
     stop_grace_period: 30s
 
   web:

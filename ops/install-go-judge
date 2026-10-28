@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+if [[ "${EUID}" -ne 0 ]]; then
+  echo "请使用 sudo 运行此脚本" >&2
+  exit 2
+fi
+
+version="${GO_JUDGE_VERSION:-1.13.3}"
+if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "无效的 GO_JUDGE_VERSION：${version}" >&2
+  exit 2
+fi
+
+case "$(uname -m)" in
+  x86_64|amd64) release_arch="amd64" ;;
+  aarch64|arm64) release_arch="arm64" ;;
+  *)
+    echo "当前安装脚本仅支持 Linux amd64 和 arm64" >&2
+    exit 2
+    ;;
+esac
+
+for command_name in curl sha256sum install systemctl; do
+  if ! command -v "${command_name}" >/dev/null 2>&1; then
+    echo "缺少必要命令：${command_name}" >&2
+    exit 2
+  fi
+done
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+unit_source="${script_dir}/systemd/go-judge.service"
+if [[ ! -f "${unit_source}" ]]; then
+  echo "缺少 systemd 服务文件：${unit_source}" >&2
+  exit 2
+fi
+
+asset_name="go-judge_${version}_linux_${release_arch}"
+release_base="https://github.com/criyle/go-judge/releases/download/v${version}"
+work_dir="$(mktemp -d)"
+cleanup() {
+  rm -rf -- "${work_dir}"
+}
+trap cleanup EXIT
+
+echo "正在下载 go-judge v${version}（${release_arch}）……"
+curl --fail --location --show-error --silent \
+  --retry 3 --retry-delay 2 \
+  --output "${work_dir}/${asset_name}" \
+  "${release_base}/${asset_name}"
+curl --fail --location --show-error --silent \
+  --retry 3 --retry-delay 2 \
+  --output "${work_dir}/checksums.txt" \
+  "${release_base}/checksums.txt"
+
+expected_checksum="$(awk -v name="${asset_name}" '$2 == name { print $1; exit }' "${work_dir}/checksums.txt")"
+if [[ ! "${expected_checksum}" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "官方校验和文件中找不到 ${asset_name}" >&2
+  exit 1
+fi
+actual_checksum="$(sha256sum "${work_dir}/${asset_name}" | awk '{ print $1 }')"
+if [[ "${actual_checksum}" != "${expected_checksum}" ]]; then
+  echo "go-judge 二进制 SHA-256 校验失败" >&2
+  exit 1
+fi
+
+install -o root -g root -m 0755 "${work_dir}/${asset_name}" /usr/local/bin/go-judge
+install -o root -g root -m 0644 "${unit_source}" /etc/systemd/system/go-judge.service
+systemctl daemon-reload
+systemctl enable --now go-judge.service
+
+for _ in {1..20}; do
+  if curl --fail --silent http://127.0.0.1:5050/version >/dev/null; then
+    echo "go-judge v${version} 已安装并启动"
+    echo "注意：请在云安全组和主机防火墙中禁止公网访问 TCP 5050"
+    exit 0
+  fi
+  sleep 1
+done
+
+echo "go-judge 未能通过健康检查，请运行：journalctl -u go-judge -n 100 --no-pager" >&2
+exit 1

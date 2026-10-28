@@ -1,0 +1,15 @@
+[Unit]
+Description=go-judge sandbox service
+Documentation=https://docs.goj.ac/
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/go-judge -http-addr 0.0.0.0:5050 -parallelism 1 -tmp-fs-param size=64m,nr_inodes=2k -file-timeout 30m -release
+Restart=on-failure
+RestartSec=3s
+TimeoutStopSec=10s
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

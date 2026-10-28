@@ -6,6 +6,7 @@
 
 - `zoj-http.service`
 - `zoj-judge.service`
+- `go-judge.service`（使用 `sudo ./ops/install-go-judge` 安装官方二进制）
 - Nginx 和 `/var/www/zoj`
 - `/opt/zoj/backend/zoj`
 - `/opt/zoj/releases`

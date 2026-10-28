@@ -94,7 +94,17 @@ AI 对话是可选功能。未配置模型时，其他业务和确定性的作�
 - `backend-http`：ZeorCode HTTP API。
 - `backend-judge`：异步评测 Worker，与 API 共用同一个后端镜像和题目数据卷。
 - `mysql`、`redis`：业务数据、会话和评测队列。
-- `go-judge`：隔离执行代码的沙箱服务。
+
+go-judge 不再放进 Compose，而是使用官方预编译二进制在宿主机由 systemd 管理。这样可以避免在低配置服务器上运行特权嵌套容器。Ubuntu/Debian 服务器先安装编译器和运行环境，再执行仓库提供的安装脚本：
+
+```bash
+sudo apt-get update
+sudo apt-get install -y curl build-essential default-jdk-headless python3
+sudo ./ops/install-go-judge
+curl --fail http://127.0.0.1:5050/version
+```
+
+安装脚本固定下载并校验 go-judge v1.13.3 的官方 Linux 二进制，支持 amd64 和 arm64；systemd 默认使用单并发和较小的 tmpfs，适合 2 核 2GB 服务器。由于后端仍运行在容器内，go-judge 会监听宿主机 `0.0.0.0:5050`，Compose 通过 `host.docker.internal` 访问。必须在云安全组和主机防火墙中禁止公网访问 TCP 5050，仅允许本机 Docker 网段访问。
 
 先创建本地环境文件并替换其中的密码和密钥：
 
@@ -125,7 +135,8 @@ docker compose ps
 查看 API 和评测日志：
 
 ```bash
-docker compose logs -f backend-http backend-judge go-judge
+docker compose logs -f backend-http backend-judge
+sudo journalctl -u go-judge -f
 ```
 
 停止服务但保留数据：
@@ -136,7 +147,7 @@ docker compose down
 
 MySQL、Redis、上传文件和本地题目测试数据分别保存在命名卷中。`backend/database/schema.sql` 只会在 MySQL 数据卷首次创建时导入；后续结构升级仍需先备份再执行迁移。`docker compose down -v` 会同时删除这些数据卷，请勿在需要保留数据时使用。
 
-go-judge 按其官方容器运行要求启用了 `privileged` 和 `256m` 共享内存，因此应只在受控主机上运行，不要把 MySQL、Redis 或 go-judge 端口直接暴露到公网。若修改 `WEB_PORT`，还应同步修改 `.env` 中的 `PUBLIC_BASE_URL`，确保上传文件返回正确的公开地址。
+go-judge 原生进程需要使用 Linux cgroup 和命名空间能力，systemd 服务因此以 root 运行；它只应部署在专用、受控的评测主机上。不要把 MySQL、Redis 或 go-judge 端口直接暴露到公网。若修改 `WEB_PORT`，还应同步修改 `.env` 中的 `PUBLIC_BASE_URL`，确保上传文件返回正确的公开地址。
 
 需要增加评测 Worker 时，先把 `.env` 中的 `JUDGE_MULTI_INSTANCE` 设为 `true`，再执行 `docker compose up -d --scale backend-judge=2`。多个 Worker 会共享同一套 MySQL、Redis 和题目数据卷。
 
@@ -302,6 +313,17 @@ pnpm lint
 当 `backend/database` 发生变化时，自动部署会主动停止。完成数据库备份、迁移和验证后，再从 GitHub Actions 手动运行部署工作流。首次安装、Secrets、Nginx 和 systemd 配置见 [GitHub Actions 自动部署说明](./.github/AUTOMATIC_DEPLOYMENT.md)。
 
 当前生产服务器仍沿用 `/opt/zoj`、`/var/www/zoj`、`zoj-http.service` 和 `zoj-judge.service` 等历史运行标识；应用模块、CLI 和新发布包内的二进制已经统一为 `ZeorCode` / `zeorcode`。部署脚本会处理这一兼容关系。
+
+### 导出题目和测试数据
+
+管理员可在后台题目管理页面导出，也可以在后端服务器使用脚本生成同格式归档：
+
+```bash
+chmod +x ops/export-problems
+./ops/export-problems /data/backups/zeorcode-problems.zip
+```
+
+脚本默认请求 `http://127.0.0.1:9090`，运行时会隐藏输入管理员登录 Cookie 中的 `token`。远程调用可以通过 `ZEORCODE_URL=https://你的域名` 指定站点地址。归档包含题面、标签、样例和本地测试数据，下载完成后会检查 ZIP 完整性与 `manifest.json`。归档默认使用仅当前用户可读的 `0600` 权限；需要临时通过服务器面板下载时，可以设置 `ZEORCODE_ARCHIVE_MODE=0644`，下载后应及时删除或恢复为 `0600`。
 
 ## 数据与安全
 
