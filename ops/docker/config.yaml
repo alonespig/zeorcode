@@ -49,5 +49,6 @@ judge:
   agent_token: ""
   agent_insecure: false
   agent_ca_file: ""
+  # 通常留空；通过 IP 连接但节点证书签发给固定域名时再填写。
   agent_server_name: ""
   artifact_token: ""

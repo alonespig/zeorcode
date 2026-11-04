@@ -61,11 +61,14 @@ func New(ctx context.Context, cfg Config) (*Pool, error) {
 		if address == "" {
 			continue
 		}
-		conn, err := grpc.NewClient(
-			address,
+		dialOptions := []grpc.DialOption{
 			grpc.WithTransportCredentials(transport),
 			grpc.WithPerRPCCredentials(bearerCredentials{token: cfg.Token, allowInsecure: cfg.Insecure}),
-		)
+		}
+		if serverName := strings.TrimSpace(cfg.ServerName); serverName != "" {
+			dialOptions = append(dialOptions, grpc.WithAuthority(serverName))
+		}
+		conn, err := grpc.NewClient(address, dialOptions...)
 		if err != nil {
 			p.Close()
 			return nil, fmt.Errorf("create judge node client %s: %w", address, err)
@@ -231,7 +234,7 @@ func transportCredentials(cfg Config) (credentials.TransportCredentials, error) 
 	if cfg.Insecure {
 		return insecure.NewCredentials(), nil
 	}
-	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12, ServerName: strings.TrimSpace(cfg.ServerName)}
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
 	if cfg.CAFile != "" {
 		pemBytes, err := os.ReadFile(cfg.CAFile)
 		if err != nil {

@@ -195,7 +195,37 @@ sudo journalctl -u zeorcode-judge-node -f
 
 环境文件参考 [`ops/systemd/zeorcode-judge-node.env.example`](./ops/systemd/zeorcode-judge-node.env.example)。`ZEORCODE_JUDGE_ARTIFACT_BASE_URL` 填主站对外地址，例如 `https://oj.example.com`；节点会访问该地址下的 `/api/internal/judge/...`。`ZEORCODE_JUDGE_NODE_TOKEN` 与中心的 `judge.agent_token` 相同，`ZEORCODE_JUDGE_ARTIFACT_TOKEN` 与中心的 `judge.artifact_token` 相同，这两个令牌应分别生成且不要提交到 Git。
 
-公网或跨不可信网络部署时，为 gRPC 配置证书和私钥，并在中心设置 CA 与服务端名称。只有节点与中心位于受控私网时，才能在两端显式启用 `insecure`；无论哪种方式，都不要把本机 go-judge 的 5050 端口开放给其他主机。
+公网或跨不可信网络部署时，为 gRPC 配置证书和私钥。只有节点与中心位于受控私网时，才能在两端显式启用 `insecure`；无论哪种方式，都不要把本机 go-judge 的 5050 端口开放给其他主机。
+
+中心和评测节点位于不同公网服务器时，推荐给每个节点分配域名（例如 `judge-1.example.com`），让证书的 SAN 包含该域名，并仅允许中心服务器的公网 IP 访问节点的 `60051/tcp`。中心配置示例：
+
+```yaml
+judge:
+  mode: "agent"
+  agent_addresses:
+    - "judge-1.example.com:60051"
+    - "judge-2.example.com:60051"
+  agent_token: "由环境变量注入的独立随机令牌"
+  agent_insecure: false
+  agent_ca_file: ""       # 公共 CA 证书留空；私有 CA 填 CA 证书路径
+  agent_server_name: ""   # 地址使用证书域名时留空
+  artifact_token: "与节点下载题目所用令牌一致的另一随机令牌"
+```
+
+对应节点至少配置：
+
+```dotenv
+ZEORCODE_JUDGE_NODE_LISTEN=0.0.0.0:60051
+ZEORCODE_JUDGE_NODE_GO_JUDGE_URL=http://127.0.0.1:5050
+ZEORCODE_JUDGE_ARTIFACT_BASE_URL=https://oj.example.com
+ZEORCODE_JUDGE_NODE_TOKEN=<与中心 agent_token 相同>
+ZEORCODE_JUDGE_ARTIFACT_TOKEN=<与中心 artifact_token 相同>
+ZEORCODE_JUDGE_NODE_TLS_CERT=/etc/zeorcode/tls/judge-node.crt
+ZEORCODE_JUDGE_NODE_TLS_KEY=/etc/zeorcode/tls/judge-node.key
+ZEORCODE_JUDGE_NODE_INSECURE=false
+```
+
+`ZEORCODE_JUDGE_ARTIFACT_BASE_URL` 应指向中心站点的 HTTPS 域名，而不是直接暴露后端的 `9090` 端口。使用私有 CA 时，只把 CA **证书**复制到中心并设置 `agent_ca_file`，不要复制 CA 私钥。若中心通过节点公网 IP 建连、证书却签发给域名，可以把 `agent_server_name` 设置为该证书域名；多个节点使用不同证书域名时，应直接在 `agent_addresses` 中使用各自域名并将其留空。
 
 ### 配置中心 Worker
 

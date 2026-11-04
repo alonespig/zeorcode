@@ -65,5 +65,7 @@ judge:
   agent_token: ""
   agent_insecure: false
   agent_ca_file: ""
+  # 通常留空并让 agent_addresses 中的域名参与证书校验；仅在通过 IP
+  # 连接但证书签发给固定域名时，填写该证书域名。
   agent_server_name: ""
   artifact_token: ""
