@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package zeorcode.judge.v1;
 
-option go_package = "github.com/alonespig/zeorcode/backend/api/judge/v1;judgev1";
+option go_package = "github.com/alonespig/zeorcode/proto/judge/v1;judgev1";
 
 service JudgeNodeService {
   rpc Status(StatusRequest) returns (StatusResponse);

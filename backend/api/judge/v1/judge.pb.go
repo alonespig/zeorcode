@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v7.36.2
-// source: api/judge/v1/judge.proto
+// source: proto/judge/v1/judge.proto
 
 package judgev1
 
@@ -63,11 +63,11 @@ func (x JudgeEventType) String() string {
 }
 
 func (JudgeEventType) Descriptor() protoreflect.EnumDescriptor {
-	return file_api_judge_v1_judge_proto_enumTypes[0].Descriptor()
+	return file_proto_judge_v1_judge_proto_enumTypes[0].Descriptor()
 }
 
 func (JudgeEventType) Type() protoreflect.EnumType {
-	return &file_api_judge_v1_judge_proto_enumTypes[0]
+	return &file_proto_judge_v1_judge_proto_enumTypes[0]
 }
 
 func (x JudgeEventType) Number() protoreflect.EnumNumber {
@@ -76,7 +76,7 @@ func (x JudgeEventType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use JudgeEventType.Descriptor instead.
 func (JudgeEventType) EnumDescriptor() ([]byte, []int) {
-	return file_api_judge_v1_judge_proto_rawDescGZIP(), []int{0}
+	return file_proto_judge_v1_judge_proto_rawDescGZIP(), []int{0}
 }
 
 type StatusRequest struct {
@@ -87,7 +87,7 @@ type StatusRequest struct {
 
 func (x *StatusRequest) Reset() {
 	*x = StatusRequest{}
-	mi := &file_api_judge_v1_judge_proto_msgTypes[0]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -99,7 +99,7 @@ func (x *StatusRequest) String() string {
 func (*StatusRequest) ProtoMessage() {}
 
 func (x *StatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_judge_v1_judge_proto_msgTypes[0]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -112,7 +112,7 @@ func (x *StatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusRequest.ProtoReflect.Descriptor instead.
 func (*StatusRequest) Descriptor() ([]byte, []int) {
-	return file_api_judge_v1_judge_proto_rawDescGZIP(), []int{0}
+	return file_proto_judge_v1_judge_proto_rawDescGZIP(), []int{0}
 }
 
 type StatusResponse struct {
@@ -129,7 +129,7 @@ type StatusResponse struct {
 
 func (x *StatusResponse) Reset() {
 	*x = StatusResponse{}
-	mi := &file_api_judge_v1_judge_proto_msgTypes[1]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -141,7 +141,7 @@ func (x *StatusResponse) String() string {
 func (*StatusResponse) ProtoMessage() {}
 
 func (x *StatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_judge_v1_judge_proto_msgTypes[1]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -154,7 +154,7 @@ func (x *StatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResponse.ProtoReflect.Descriptor instead.
 func (*StatusResponse) Descriptor() ([]byte, []int) {
-	return file_api_judge_v1_judge_proto_rawDescGZIP(), []int{1}
+	return file_proto_judge_v1_judge_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *StatusResponse) GetNodeId() string {
@@ -210,7 +210,7 @@ type ProblemArtifact struct {
 
 func (x *ProblemArtifact) Reset() {
 	*x = ProblemArtifact{}
-	mi := &file_api_judge_v1_judge_proto_msgTypes[2]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -222,7 +222,7 @@ func (x *ProblemArtifact) String() string {
 func (*ProblemArtifact) ProtoMessage() {}
 
 func (x *ProblemArtifact) ProtoReflect() protoreflect.Message {
-	mi := &file_api_judge_v1_judge_proto_msgTypes[2]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -235,7 +235,7 @@ func (x *ProblemArtifact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProblemArtifact.ProtoReflect.Descriptor instead.
 func (*ProblemArtifact) Descriptor() ([]byte, []int) {
-	return file_api_judge_v1_judge_proto_rawDescGZIP(), []int{2}
+	return file_proto_judge_v1_judge_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ProblemArtifact) GetProblemId() int64 {
@@ -275,7 +275,7 @@ type JudgeRequest struct {
 
 func (x *JudgeRequest) Reset() {
 	*x = JudgeRequest{}
-	mi := &file_api_judge_v1_judge_proto_msgTypes[3]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -287,7 +287,7 @@ func (x *JudgeRequest) String() string {
 func (*JudgeRequest) ProtoMessage() {}
 
 func (x *JudgeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_judge_v1_judge_proto_msgTypes[3]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -300,7 +300,7 @@ func (x *JudgeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JudgeRequest.ProtoReflect.Descriptor instead.
 func (*JudgeRequest) Descriptor() ([]byte, []int) {
-	return file_api_judge_v1_judge_proto_rawDescGZIP(), []int{3}
+	return file_proto_judge_v1_judge_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *JudgeRequest) GetSubmissionId() int64 {
@@ -371,7 +371,7 @@ type CaseResult struct {
 
 func (x *CaseResult) Reset() {
 	*x = CaseResult{}
-	mi := &file_api_judge_v1_judge_proto_msgTypes[4]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -383,7 +383,7 @@ func (x *CaseResult) String() string {
 func (*CaseResult) ProtoMessage() {}
 
 func (x *CaseResult) ProtoReflect() protoreflect.Message {
-	mi := &file_api_judge_v1_judge_proto_msgTypes[4]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -396,7 +396,7 @@ func (x *CaseResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CaseResult.ProtoReflect.Descriptor instead.
 func (*CaseResult) Descriptor() ([]byte, []int) {
-	return file_api_judge_v1_judge_proto_rawDescGZIP(), []int{4}
+	return file_proto_judge_v1_judge_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CaseResult) GetCaseId() int32 {
@@ -438,7 +438,7 @@ type FinalResult struct {
 
 func (x *FinalResult) Reset() {
 	*x = FinalResult{}
-	mi := &file_api_judge_v1_judge_proto_msgTypes[5]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -450,7 +450,7 @@ func (x *FinalResult) String() string {
 func (*FinalResult) ProtoMessage() {}
 
 func (x *FinalResult) ProtoReflect() protoreflect.Message {
-	mi := &file_api_judge_v1_judge_proto_msgTypes[5]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -463,7 +463,7 @@ func (x *FinalResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinalResult.ProtoReflect.Descriptor instead.
 func (*FinalResult) Descriptor() ([]byte, []int) {
-	return file_api_judge_v1_judge_proto_rawDescGZIP(), []int{5}
+	return file_proto_judge_v1_judge_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *FinalResult) GetStatus() int32 {
@@ -499,7 +499,7 @@ type JudgeEvent struct {
 
 func (x *JudgeEvent) Reset() {
 	*x = JudgeEvent{}
-	mi := &file_api_judge_v1_judge_proto_msgTypes[6]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -511,7 +511,7 @@ func (x *JudgeEvent) String() string {
 func (*JudgeEvent) ProtoMessage() {}
 
 func (x *JudgeEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_judge_v1_judge_proto_msgTypes[6]
+	mi := &file_proto_judge_v1_judge_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -524,7 +524,7 @@ func (x *JudgeEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JudgeEvent.ProtoReflect.Descriptor instead.
 func (*JudgeEvent) Descriptor() ([]byte, []int) {
-	return file_api_judge_v1_judge_proto_rawDescGZIP(), []int{6}
+	return file_proto_judge_v1_judge_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *JudgeEvent) GetType() JudgeEventType {
@@ -555,11 +555,11 @@ func (x *JudgeEvent) GetFinalResult() *FinalResult {
 	return nil
 }
 
-var File_api_judge_v1_judge_proto protoreflect.FileDescriptor
+var File_proto_judge_v1_judge_proto protoreflect.FileDescriptor
 
-const file_api_judge_v1_judge_proto_rawDesc = "" +
+const file_proto_judge_v1_judge_proto_rawDesc = "" +
 	"\n" +
-	"\x18api/judge/v1/judge.proto\x12\x11zeorcode.judge.v1\"\x0f\n" +
+	"\x1aproto/judge/v1/judge.proto\x12\x11zeorcode.judge.v1\"\x0f\n" +
 	"\rStatusRequest\"\xe7\x01\n" +
 	"\x0eStatusResponse\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12#\n" +
@@ -610,23 +610,23 @@ const file_api_judge_v1_judge_proto_rawDesc = "" +
 	"\x17JUDGE_EVENT_TYPE_FAILED\x10\x052\xac\x01\n" +
 	"\x10JudgeNodeService\x12M\n" +
 	"\x06Status\x12 .zeorcode.judge.v1.StatusRequest\x1a!.zeorcode.judge.v1.StatusResponse\x12I\n" +
-	"\x05Judge\x12\x1f.zeorcode.judge.v1.JudgeRequest\x1a\x1d.zeorcode.judge.v1.JudgeEvent0\x01B<Z:github.com/alonespig/zeorcode/backend/api/judge/v1;judgev1b\x06proto3"
+	"\x05Judge\x12\x1f.zeorcode.judge.v1.JudgeRequest\x1a\x1d.zeorcode.judge.v1.JudgeEvent0\x01B6Z4github.com/alonespig/zeorcode/proto/judge/v1;judgev1b\x06proto3"
 
 var (
-	file_api_judge_v1_judge_proto_rawDescOnce sync.Once
-	file_api_judge_v1_judge_proto_rawDescData []byte
+	file_proto_judge_v1_judge_proto_rawDescOnce sync.Once
+	file_proto_judge_v1_judge_proto_rawDescData []byte
 )
 
-func file_api_judge_v1_judge_proto_rawDescGZIP() []byte {
-	file_api_judge_v1_judge_proto_rawDescOnce.Do(func() {
-		file_api_judge_v1_judge_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_api_judge_v1_judge_proto_rawDesc), len(file_api_judge_v1_judge_proto_rawDesc)))
+func file_proto_judge_v1_judge_proto_rawDescGZIP() []byte {
+	file_proto_judge_v1_judge_proto_rawDescOnce.Do(func() {
+		file_proto_judge_v1_judge_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_judge_v1_judge_proto_rawDesc), len(file_proto_judge_v1_judge_proto_rawDesc)))
 	})
-	return file_api_judge_v1_judge_proto_rawDescData
+	return file_proto_judge_v1_judge_proto_rawDescData
 }
 
-var file_api_judge_v1_judge_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_api_judge_v1_judge_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
-var file_api_judge_v1_judge_proto_goTypes = []any{
+var file_proto_judge_v1_judge_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_proto_judge_v1_judge_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_proto_judge_v1_judge_proto_goTypes = []any{
 	(JudgeEventType)(0),     // 0: zeorcode.judge.v1.JudgeEventType
 	(*StatusRequest)(nil),   // 1: zeorcode.judge.v1.StatusRequest
 	(*StatusResponse)(nil),  // 2: zeorcode.judge.v1.StatusResponse
@@ -636,7 +636,7 @@ var file_api_judge_v1_judge_proto_goTypes = []any{
 	(*FinalResult)(nil),     // 6: zeorcode.judge.v1.FinalResult
 	(*JudgeEvent)(nil),      // 7: zeorcode.judge.v1.JudgeEvent
 }
-var file_api_judge_v1_judge_proto_depIdxs = []int32{
+var file_proto_judge_v1_judge_proto_depIdxs = []int32{
 	3, // 0: zeorcode.judge.v1.JudgeRequest.problem:type_name -> zeorcode.judge.v1.ProblemArtifact
 	5, // 1: zeorcode.judge.v1.FinalResult.cases:type_name -> zeorcode.judge.v1.CaseResult
 	0, // 2: zeorcode.judge.v1.JudgeEvent.type:type_name -> zeorcode.judge.v1.JudgeEventType
@@ -653,27 +653,27 @@ var file_api_judge_v1_judge_proto_depIdxs = []int32{
 	0, // [0:5] is the sub-list for field type_name
 }
 
-func init() { file_api_judge_v1_judge_proto_init() }
-func file_api_judge_v1_judge_proto_init() {
-	if File_api_judge_v1_judge_proto != nil {
+func init() { file_proto_judge_v1_judge_proto_init() }
+func file_proto_judge_v1_judge_proto_init() {
+	if File_proto_judge_v1_judge_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_judge_v1_judge_proto_rawDesc), len(file_api_judge_v1_judge_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_judge_v1_judge_proto_rawDesc), len(file_proto_judge_v1_judge_proto_rawDesc)),
 			NumEnums:      1,
 			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_api_judge_v1_judge_proto_goTypes,
-		DependencyIndexes: file_api_judge_v1_judge_proto_depIdxs,
-		EnumInfos:         file_api_judge_v1_judge_proto_enumTypes,
-		MessageInfos:      file_api_judge_v1_judge_proto_msgTypes,
+		GoTypes:           file_proto_judge_v1_judge_proto_goTypes,
+		DependencyIndexes: file_proto_judge_v1_judge_proto_depIdxs,
+		EnumInfos:         file_proto_judge_v1_judge_proto_enumTypes,
+		MessageInfos:      file_proto_judge_v1_judge_proto_msgTypes,
 	}.Build()
-	File_api_judge_v1_judge_proto = out.File
-	file_api_judge_v1_judge_proto_goTypes = nil
-	file_api_judge_v1_judge_proto_depIdxs = nil
+	File_proto_judge_v1_judge_proto = out.File
+	file_proto_judge_v1_judge_proto_goTypes = nil
+	file_proto_judge_v1_judge_proto_depIdxs = nil
 }

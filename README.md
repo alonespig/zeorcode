@@ -46,7 +46,7 @@ flowchart LR
     W -. 远程提交 .-> ROJ[Remote OJ]
 ```
 
-HTTP API 负责业务请求、鉴权、提交入队和题目数据分发；Judge Worker 独立消费评测任务，并通过 gRPC 把任务分配给负载较低的 judge-node。每个 judge-node 只连接同机 go-judge，按题目版本和 SHA-256 摘要缓存测试输入。多个 API、Worker 与评测节点可以按需横向扩展，共享 MySQL 与 Redis。
+HTTP API 负责业务请求、鉴权、提交入队和题目数据分发；Judge Worker 独立消费评测任务，并通过 gRPC 把任务分配给负载较低的 judge-node。每个 judge-node 只连接同机 go-judge，按题目版本和 SHA-256 摘要缓存测试输入。多个 API 与 Worker 共享 MySQL、Redis 和题目数据；评测节点不连接数据库，可独立横向扩展。
 
 ## 技术栈
 
@@ -68,10 +68,12 @@ zeorcode/
 ├── frontend/          # 用户主站
 ├── admin-frontend/    # 管理后台
 ├── backend/           # HTTP API、评测 Worker 与数据库定义
-│   ├── cmd/           # zeorcode http / judge 与独立 judge-node 入口
+│   ├── cmd/           # zeorcode http / judge 子命令
 │   ├── database/      # 全量数据库 schema
 │   ├── internal/      # handler、service、repository 与基础设施
 │   └── pkg/           # 评测、Rating、远程 OJ 等公共包
+├── judge-node/        # 独立 Go Module：gRPC 评测节点与本机 go-judge 适配
+├── proto/             # 中心端与评测节点共用的唯一 gRPC 协议源
 ├── ops/               # 生产发布脚本
 └── .github/           # CI/CD 工作流与部署文档
 ```
@@ -169,9 +171,10 @@ go-judge 原生进程需要使用 Linux cgroup 和命名空间能力，systemd �
 
 ### 构建并安装节点
 
-在仓库的 `backend` 目录构建 Linux 二进制（`arm64` 服务器把 `GOARCH` 改为 `arm64`）：
+在仓库的 `judge-node` 目录构建 Linux 二进制（`arm64` 服务器把 `GOARCH` 改为 `arm64`）：
 
 ```bash
+cd judge-node
 mkdir -p dist
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
   go build -trimpath -ldflags="-s -w" -o dist/zeorcode-judge-node ./cmd/judge-node

@@ -18,8 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alonespig/zeorcode/backend/internal/judgeartifact"
-	"github.com/alonespig/zeorcode/backend/internal/repository"
+	"github.com/alonespig/zeorcode/judge-node/internal/artifact"
 )
 
 const maxArchiveDownloadBytes = int64(1 << 30)
@@ -63,7 +62,7 @@ func NewArtifactCache(root, baseURL, token string) (*ArtifactCache, error) {
 	}, nil
 }
 
-func (c *ArtifactCache) Ensure(ctx context.Context, want judgeartifact.Descriptor) (string, *repository.TestCaseInfo, error) {
+func (c *ArtifactCache) Ensure(ctx context.Context, want artifact.Descriptor) (string, *artifact.TestCaseInfo, error) {
 	if want.ProblemID <= 0 || !validVersion(want.Version) || !validDigest(want.Digest) {
 		return "", nil, errors.New("invalid problem artifact reference")
 	}
@@ -74,7 +73,7 @@ func (c *ArtifactCache) Ensure(ctx context.Context, want judgeartifact.Descripto
 	defer mu.Unlock()
 
 	destination := filepath.Join(c.root, strconv.FormatInt(want.ProblemID, 10), want.Version, want.Digest)
-	if info, err := judgeartifact.VerifyDirectory(ctx, destination, want); err == nil {
+	if info, err := artifact.VerifyDirectory(ctx, destination, want); err == nil {
 		return destination, info, nil
 	}
 	if err := os.RemoveAll(destination); err != nil {
@@ -83,7 +82,7 @@ func (c *ArtifactCache) Ensure(ctx context.Context, want judgeartifact.Descripto
 	return c.download(ctx, destination, want)
 }
 
-func (c *ArtifactCache) download(ctx context.Context, destination string, want judgeartifact.Descriptor) (string, *repository.TestCaseInfo, error) {
+func (c *ArtifactCache) download(ctx context.Context, destination string, want artifact.Descriptor) (string, *artifact.TestCaseInfo, error) {
 	u := *c.baseURL
 	u.Path = strings.TrimRight(u.Path, "/") + "/api/internal/judge/problems/" + strconv.FormatInt(want.ProblemID, 10) + "/artifact"
 	query := u.Query()
@@ -133,7 +132,7 @@ func (c *ArtifactCache) download(ctx context.Context, destination string, want j
 	if err := extractArtifact(tempName, tempDir, want); err != nil {
 		return "", nil, err
 	}
-	info, err := judgeartifact.VerifyDirectory(ctx, tempDir, want)
+	info, err := artifact.VerifyDirectory(ctx, tempDir, want)
 	if err != nil {
 		return "", nil, err
 	}
@@ -146,7 +145,7 @@ func (c *ArtifactCache) download(ctx context.Context, destination string, want j
 	return destination, info, nil
 }
 
-func extractArtifact(archivePath, destination string, want judgeartifact.Descriptor) error {
+func extractArtifact(archivePath, destination string, want artifact.Descriptor) error {
 	zr, err := zip.OpenReader(archivePath)
 	if err != nil {
 		return fmt.Errorf("open problem artifact: %w", err)
@@ -197,7 +196,7 @@ func extractArtifact(archivePath, destination string, want judgeartifact.Descrip
 	if err != nil {
 		return err
 	}
-	var got judgeartifact.Descriptor
+	var got artifact.Descriptor
 	if err := json.Unmarshal(manifestBytes, &got); err != nil {
 		return errors.New("invalid artifact manifest")
 	}

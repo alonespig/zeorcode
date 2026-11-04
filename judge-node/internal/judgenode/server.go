@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"sync/atomic"
 
-	judgev1 "github.com/alonespig/zeorcode/backend/api/judge/v1"
-	"github.com/alonespig/zeorcode/backend/internal/judgeartifact"
-	judgeapi "github.com/alonespig/zeorcode/backend/pkg/judge"
+	judgev1 "github.com/alonespig/zeorcode/judge-node/api/judge/v1"
+	"github.com/alonespig/zeorcode/judge-node/internal/artifact"
+	judgeapi "github.com/alonespig/zeorcode/judge-node/internal/gojudge"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -83,7 +83,7 @@ func (s *Server) Judge(req *judgev1.JudgeRequest, stream judgev1.JudgeNodeServic
 		return status.FromContextError(ctx.Err()).Err()
 	}
 
-	want := judgeartifact.Descriptor{
+	want := artifact.Descriptor{
 		ProblemID: req.Problem.ProblemId,
 		Version:   req.Problem.Version,
 		Digest:    req.Problem.Digest,
