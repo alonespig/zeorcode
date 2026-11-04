@@ -1,0 +1,31 @@
+[Unit]
+Description=ZeorCode distributed judge node
+Wants=network-online.target
+After=network-online.target go-judge.service
+Requires=go-judge.service
+
+[Service]
+Type=simple
+User=zeorcode-judge
+Group=zeorcode-judge
+EnvironmentFile=/etc/zeorcode/judge-node.env
+ExecStart=/usr/local/bin/zeorcode-judge-node
+Restart=on-failure
+RestartSec=3s
+TimeoutStopSec=35s
+StateDirectory=zeorcode-judge
+StateDirectoryMode=0750
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/var/lib/zeorcode-judge
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

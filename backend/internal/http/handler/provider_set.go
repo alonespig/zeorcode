@@ -17,4 +17,5 @@ var HandlerSet = wire.NewSet(
 	NewHomeworkController,
 	NewAgentController,
 	NewLanguageController,
+	NewJudgeArtifactController,
 )

@@ -79,7 +79,8 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 	agentService := service.NewAgentService(agentRepo, homeworkService, problemSetService, cacheCache, llmClient)
 	agentController := handler.NewAgentController(agentService)
 	languageController := handler.NewLanguageController(languageService)
-	httpServer := router.NewHttpServer(problemController, contestController, submissionController, postController, userController, uploadController, adminController, remoteController, notificationController, problemSetController, teamController, homeworkController, agentController, languageController, tokenService, cacheCache, auditService)
+	judgeArtifactController := handler.NewJudgeArtifactController()
+	httpServer := router.NewHttpServer(problemController, contestController, submissionController, postController, userController, uploadController, adminController, remoteController, notificationController, problemSetController, teamController, homeworkController, agentController, languageController, judgeArtifactController, tokenService, cacheCache, auditService)
 	return httpServer, func() {
 		cleanup3()
 		cleanup2()

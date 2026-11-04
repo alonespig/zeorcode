@@ -189,7 +189,7 @@ func generateInfo(testDir string) (*TestCaseInfo, error) {
 	}
 
 	info := &TestCaseInfo{
-		Version: strconv.FormatInt(time.Now().Unix(), 10),
+		Version: strconv.FormatInt(time.Now().UnixNano(), 10),
 		Mode:    "default",
 		Count:   len(cases),
 		Cases:   cases,

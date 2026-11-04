@@ -13,7 +13,7 @@ ZeorCode 将题库、在线代码编辑与评测、比赛、题单、班级作�
 ## 核心功能
 
 - **在线练习**：题目检索与标签筛选、Markdown/KaTeX 题面、代码模板、本地草稿、样例与自定义输入测试。
-- **异步评测**：提交队列、事务 Outbox、评测 Worker、测试点结果以及多台 go-judge 的轮询和健康检查。
+- **异步评测**：提交队列、事务 Outbox、评测 Worker、gRPC 分布式评测节点、题目数据缓存以及健康检查和故障切换。
 - **比赛系统**：公开与受限比赛、报名、ACM/OI 赛制、实时排名和 Rating 计算。
 - **题单系统**：题单简介、题目列表、完成进度和排行榜，已通过题库题目可计入完成状态。
 - **班级与作业**：团队成员管理、学生批量导入、作业发布、题单导入、逐题分析和成绩分布。
@@ -35,14 +35,18 @@ flowchart LR
     API --> O[Submission Outbox]
     O --> W[Judge Worker]
     W --> R
-    W --> J1[go-judge 1]
-    W --> J2[go-judge N]
+    W --> N1[judge-node 1]
+    W --> N2[judge-node N]
+    N1 --> J1[本机 go-judge]
+    N2 --> J2[本机 go-judge]
+    N1 -. 缓存缺失时拉取题目 .-> API
+    N2 -. 缓存缺失时拉取题目 .-> API
     W --> DB
     API -. 可选 .-> LLM[OpenAI 兼容模型]
     W -. 远程提交 .-> ROJ[Remote OJ]
 ```
 
-HTTP API 负责业务请求、鉴权和提交入队；Judge Worker 独立消费评测任务并调用 go-judge。多个 API、Worker 与 go-judge 实例可以按需横向扩展，共享 MySQL 与 Redis。
+HTTP API 负责业务请求、鉴权、提交入队和题目数据分发；Judge Worker 独立消费评测任务，并通过 gRPC 把任务分配给负载较低的 judge-node。每个 judge-node 只连接同机 go-judge，按题目版本和 SHA-256 摘要缓存测试输入。多个 API、Worker 与评测节点可以按需横向扩展，共享 MySQL 与 Redis。
 
 ## 技术栈
 
@@ -54,7 +58,7 @@ HTTP API 负责业务请求、鉴权和提交入队；Judge Worker 独立消费�
 | 后端 | Go、Gin、GORM、Cobra、Viper、Wire、Zap |
 | AI | CloudWeGo Eino、OpenAI 兼容 API |
 | 数据与队列 | MySQL 8、Redis |
-| 评测 | go-judge、多实例负载均衡、异步 Worker、事务 Outbox |
+| 评测 | go-judge、gRPC judge-node、多节点负载均衡、异步 Worker、事务 Outbox |
 | 自动部署 | GitHub Actions、Nginx、systemd、SSH 发布与失败回滚 |
 
 ## 仓库结构
@@ -64,7 +68,7 @@ zeorcode/
 ├── frontend/          # 用户主站
 ├── admin-frontend/    # 管理后台
 ├── backend/           # HTTP API、评测 Worker 与数据库定义
-│   ├── cmd/           # zeorcode http / judge 子命令
+│   ├── cmd/           # zeorcode http / judge 与独立 judge-node 入口
 │   ├── database/      # 全量数据库 schema
 │   ├── internal/      # handler、service、repository 与基础设施
 │   └── pkg/           # 评测、Rating、远程 OJ 等公共包
@@ -150,6 +154,67 @@ MySQL、Redis、上传文件和本地题目测试数据分别保存在命名卷�
 go-judge 原生进程需要使用 Linux cgroup 和命名空间能力，systemd 服务因此以 root 运行；它只应部署在专用、受控的评测主机上。不要把 MySQL、Redis 或 go-judge 端口直接暴露到公网。若修改 `WEB_PORT`，还应同步修改 `.env` 中的 `PUBLIC_BASE_URL`，确保上传文件返回正确的公开地址。
 
 需要增加评测 Worker 时，先把 `.env` 中的 `JUDGE_MULTI_INSTANCE` 设为 `true`，再执行 `docker compose up -d --scale backend-judge=2`。多个 Worker 会共享同一套 MySQL、Redis 和题目数据卷。
+
+## 分布式评测节点
+
+默认的 `judge.mode: direct` 继续支持后端直接连接一台或多台 go-judge。需要把评测机部署到其他服务器时，改用 `agent` 模式：中心 Worker 通过 gRPC 分发代码，远端 judge-node 在本机调用 go-judge。节点第一次遇到某个题目版本时，会使用独立 Bearer Token 从中心端的 `/api/internal/judge/problems/:id/artifact` 下载压缩包；压缩包只包含 `info.json` 和 `.in` 输入文件，不包含标准输出原文。
+
+调用流程如下：
+
+1. Judge Worker 从 Redis Stream 认领提交并选择健康、负载较低的节点。
+2. Worker 发送提交编号、版本、代码、资源限制以及题目版本和摘要。
+3. 节点校验本地缓存；缓存缺失、损坏或版本不一致时，从中心 HTTP API 拉取并原子更新。
+4. 节点调用本机 go-judge 编译和运行，通过 gRPC 流逐测试点返回结果。
+5. Worker 写入最终结果；节点连接失败时，会换一台健康节点重试。
+
+### 构建并安装节点
+
+在仓库的 `backend` 目录构建 Linux 二进制（`arm64` 服务器把 `GOARCH` 改为 `arm64`）：
+
+```bash
+mkdir -p dist
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+  go build -trimpath -ldflags="-s -w" -o dist/zeorcode-judge-node ./cmd/judge-node
+```
+
+把 `dist/zeorcode-judge-node`、[`ops/systemd/zeorcode-judge-node.service`](./ops/systemd/zeorcode-judge-node.service) 和环境文件模板上传到每台评测机，然后执行：
+
+```bash
+sudo useradd --system --home /var/lib/zeorcode-judge --shell /usr/sbin/nologin zeorcode-judge || true
+sudo install -o root -g root -m 0755 zeorcode-judge-node /usr/local/bin/zeorcode-judge-node
+sudo install -o root -g root -m 0644 zeorcode-judge-node.service /etc/systemd/system/zeorcode-judge-node.service
+sudo install -d -o root -g zeorcode-judge -m 0750 /etc/zeorcode
+sudo install -o root -g zeorcode-judge -m 0640 zeorcode-judge-node.env /etc/zeorcode/judge-node.env
+sudo systemctl daemon-reload
+sudo systemctl enable --now go-judge zeorcode-judge-node
+sudo journalctl -u zeorcode-judge-node -f
+```
+
+环境文件参考 [`ops/systemd/zeorcode-judge-node.env.example`](./ops/systemd/zeorcode-judge-node.env.example)。`ZEORCODE_JUDGE_ARTIFACT_BASE_URL` 填主站对外地址，例如 `https://oj.example.com`；节点会访问该地址下的 `/api/internal/judge/...`。`ZEORCODE_JUDGE_NODE_TOKEN` 与中心的 `judge.agent_token` 相同，`ZEORCODE_JUDGE_ARTIFACT_TOKEN` 与中心的 `judge.artifact_token` 相同，这两个令牌应分别生成且不要提交到 Git。
+
+公网或跨不可信网络部署时，为 gRPC 配置证书和私钥，并在中心设置 CA 与服务端名称。只有节点与中心位于受控私网时，才能在两端显式启用 `insecure`；无论哪种方式，都不要把本机 go-judge 的 5050 端口开放给其他主机。
+
+### 配置中心 Worker
+
+配置文件方式：
+
+```yaml
+judge:
+  mode: "agent"
+  data_dir: "ojdata/problems"
+  agent_addresses:
+    - "10.0.0.21:60051"
+    - "10.0.0.22:60051"
+  agent_token: "由安全渠道注入"
+  agent_insecure: true # 仅限受控私网；生产公网请使用 TLS
+  agent_ca_file: ""
+  agent_server_name: ""
+  artifact_token: "与节点下载配置一致的独立令牌"
+```
+
+Docker Compose 可在 `.env` 中设置 `JUDGE_MODE=agent`、逗号分隔的 `JUDGE_AGENT_ADDRESSES`、`JUDGE_AGENT_TOKEN` 和 `JUDGE_ARTIFACT_TOKEN`。修改后重建或重启 `backend-http` 与 `backend-judge`。HTTP 服务需要 `artifact_token` 用于题目下载鉴权，Worker 需要 `agent_token` 用于 gRPC 鉴权。
+
+当前分布式 RPC 用于正式提交评测。题目页的“自测运行”仍由 HTTP 服务配置的 `judge.urls` 执行，因此需要保留一台仅供中心端访问的 go-judge，或在不使用自测功能时接受该接口不可用。
 
 ## 本地启动
 

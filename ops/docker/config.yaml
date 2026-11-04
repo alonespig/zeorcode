@@ -39,8 +39,15 @@ security:
   aes_key: "replace-me"
 
 judge:
+  mode: "direct"
   multi_instance: false
   urls:
     - "http://host.docker.internal:5050"
   concurrency: 1
   data_dir: "ojdata/problems"
+  agent_addresses: []
+  agent_token: ""
+  agent_insecure: false
+  agent_ca_file: ""
+  agent_server_name: ""
+  artifact_token: ""

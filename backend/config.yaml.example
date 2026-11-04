@@ -46,6 +46,8 @@ security:
   aes_key: "zeorcode-change-me-to-a-long-random-secret-key"
 
 judge:
+  # direct: 后端直接调用 go-judge；agent: 通过分布式 judge-node gRPC 服务评测。
+  mode: "direct"
   # 多个 worker 实例共享远程账号池时设为 true，避免启动时清理其他实例的占用状态
   multi_instance: false
   # 评测机地址：可配多台，负载均衡（按提交轮询 + 后台探活自动跳过挂掉的实例）。
@@ -56,3 +58,12 @@ judge:
   # url: "http://172.27.49.67:5050"   # 单机回退：urls 为空时才用这个
   concurrency: 4
   data_dir: "ojdata/problems"
+
+  # agent 模式配置。Token 建议只通过 ZEORCODE_JUDGE_AGENT_TOKEN 和
+  # ZEORCODE_JUDGE_ARTIFACT_TOKEN 环境变量注入，不要提交到仓库。
+  agent_addresses: []
+  agent_token: ""
+  agent_insecure: false
+  agent_ca_file: ""
+  agent_server_name: ""
+  artifact_token: ""

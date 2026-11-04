@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/alonespig/zeorcode/backend/internal/infra/cache"
+	"github.com/alonespig/zeorcode/backend/internal/infra/judgeclient"
 	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
 	"github.com/alonespig/zeorcode/backend/internal/infra/mq"
+	"github.com/alonespig/zeorcode/backend/internal/judgeartifact"
 	"github.com/alonespig/zeorcode/backend/internal/model"
 	"github.com/alonespig/zeorcode/backend/internal/repository"
 	judgeapi "github.com/alonespig/zeorcode/backend/pkg/judge"
@@ -39,6 +41,8 @@ const (
 type Worker struct {
 	db          *gorm.DB
 	judgePool   *judgeapi.Pool
+	agentPool   *judgeclient.Pool
+	artifacts   *judgeartifact.Store
 	subRepo     *repository.SubmissionRepo
 	problemRepo *repository.ProblemRepo
 	contestRepo *repository.ContestRepo
@@ -49,6 +53,13 @@ type Worker struct {
 	concurrency int
 	tasks       chan mq.StreamTask  // dispatcher → workers（带 Stream 消息 id，处理完 ACK）
 	remoteTasks chan *pendingRemote // worker → 远程轮询协程
+}
+
+// UseDistributedNodes switches local-problem execution to judge-node gRPC agents.
+// Remote OJ submissions continue to use their existing adapters.
+func (w *Worker) UseDistributedNodes(pool *judgeclient.Pool, artifacts *judgeartifact.Store) {
+	w.agentPool = pool
+	w.artifacts = artifacts
 }
 
 // Repositories 汇总 Worker 使用的持久化适配器，由进程入口负责构造。
@@ -320,6 +331,9 @@ func (w *Worker) processSubmission(
 	}
 
 	lim := w.loadLimits(s.ProblemID, log)
+	if w.agentPool != nil {
+		return w.processDistributedSubmission(ctx, task, s, lim, log)
+	}
 	cases, err := w.loadCases(s.ProblemID)
 	if err != nil {
 		s.Status = judgeapi.UnknownError

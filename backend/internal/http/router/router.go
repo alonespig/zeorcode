@@ -12,23 +12,24 @@ import (
 )
 
 type HttpServer struct {
-	problemController      *handler.ProblemController
-	contestController      *handler.ContestController
-	submissionController   *handler.SubmissionController
-	postController         *handler.PostController
-	userController         *handler.UserController
-	uploadController       *handler.UploadController
-	adminController        *handler.AdminController
-	remoteController       *handler.RemoteController
-	notificationController *handler.NotificationController
-	problemSetController   *handler.ProblemSetController
-	teamController         *handler.TeamController
-	homeworkController     *handler.HomeworkController
-	agentController        *handler.AgentController
-	languageController     *handler.LanguageController
-	auth                   *service.TokenService
-	cache                  *cache.Cache
-	audit                  *service.AuditService
+	problemController       *handler.ProblemController
+	contestController       *handler.ContestController
+	submissionController    *handler.SubmissionController
+	postController          *handler.PostController
+	userController          *handler.UserController
+	uploadController        *handler.UploadController
+	adminController         *handler.AdminController
+	remoteController        *handler.RemoteController
+	notificationController  *handler.NotificationController
+	problemSetController    *handler.ProblemSetController
+	teamController          *handler.TeamController
+	homeworkController      *handler.HomeworkController
+	agentController         *handler.AgentController
+	languageController      *handler.LanguageController
+	judgeArtifactController *handler.JudgeArtifactController
+	auth                    *service.TokenService
+	cache                   *cache.Cache
+	audit                   *service.AuditService
 }
 
 func NewHttpServer(problemController *handler.ProblemController,
@@ -45,32 +46,37 @@ func NewHttpServer(problemController *handler.ProblemController,
 	homeworkController *handler.HomeworkController,
 	agentController *handler.AgentController,
 	languageController *handler.LanguageController,
+	judgeArtifactController *handler.JudgeArtifactController,
 	auth *service.TokenService,
 	c *cache.Cache,
 	audit *service.AuditService) *HttpServer {
 	return &HttpServer{
-		problemController:      problemController,
-		contestController:      contestController,
-		submissionController:   submissionController,
-		postController:         postController,
-		userController:         userController,
-		uploadController:       uploadController,
-		adminController:        adminController,
-		remoteController:       remoteController,
-		notificationController: notificationController,
-		problemSetController:   problemSetController,
-		teamController:         teamController,
-		homeworkController:     homeworkController,
-		agentController:        agentController,
-		languageController:     languageController,
-		auth:                   auth,
-		cache:                  c,
-		audit:                  audit,
+		problemController:       problemController,
+		contestController:       contestController,
+		submissionController:    submissionController,
+		postController:          postController,
+		userController:          userController,
+		uploadController:        uploadController,
+		adminController:         adminController,
+		remoteController:        remoteController,
+		notificationController:  notificationController,
+		problemSetController:    problemSetController,
+		teamController:          teamController,
+		homeworkController:      homeworkController,
+		agentController:         agentController,
+		languageController:      languageController,
+		judgeArtifactController: judgeArtifactController,
+		auth:                    auth,
+		cache:                   c,
+		audit:                   audit,
 	}
 }
 
 func (h *HttpServer) Register(r *gin.Engine) {
 	r.Use(middleware.CORSMiddleware())
+	// Judge nodes authenticate with a dedicated bearer token. Register this route
+	// before the browser-facing IP limiter so a cold cache cannot block judging.
+	r.GET("/api/internal/judge/problems/:id/artifact", h.judgeArtifactController.Download)
 	// 全局按 IP 限流：每 IP 每分钟最多 600 次，兜底防刷（Redis 挂了自动放行）
 	r.Use(middleware.RateLimit(h.cache, "global", 600, time.Minute))
 	r.Static("/uploads", "./uploads")
