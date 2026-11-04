@@ -73,7 +73,7 @@ zeorcode/
 │   ├── internal/      # handler、service、repository 与基础设施
 │   └── pkg/           # 评测、Rating、远程 OJ 等公共包
 ├── judge-node/        # 独立 Go Module：gRPC 评测节点与本机 go-judge 适配
-├── proto/             # 中心端与评测节点共用的唯一 gRPC 协议源
+├── proto/             # 唯一 gRPC 协议源；生成代码分别位于两端 internal 中
 ├── ops/               # 生产发布脚本
 └── .github/           # CI/CD 工作流与部署文档
 ```

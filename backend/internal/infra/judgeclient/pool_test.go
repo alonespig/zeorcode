@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	judgev1 "github.com/alonespig/zeorcode/backend/api/judge/v1"
+	judgev1 "github.com/alonespig/zeorcode/backend/internal/judgeproto"
 
 	"google.golang.org/grpc"
 )

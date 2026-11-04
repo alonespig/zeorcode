@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	judgev1 "github.com/alonespig/zeorcode/backend/api/judge/v1"
 	"github.com/alonespig/zeorcode/backend/internal/infra/mq"
+	judgev1 "github.com/alonespig/zeorcode/backend/internal/judgeproto"
 	"github.com/alonespig/zeorcode/backend/internal/model"
 	judgeapi "github.com/alonespig/zeorcode/backend/pkg/judge"
 

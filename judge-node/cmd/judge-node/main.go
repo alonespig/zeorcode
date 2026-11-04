@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	judgev1 "github.com/alonespig/zeorcode/judge-node/api/judge/v1"
 	"github.com/alonespig/zeorcode/judge-node/internal/judgenode"
+	judgev1 "github.com/alonespig/zeorcode/judge-node/internal/judgeproto"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"

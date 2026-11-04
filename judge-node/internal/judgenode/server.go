@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"sync/atomic"
 
-	judgev1 "github.com/alonespig/zeorcode/judge-node/api/judge/v1"
 	"github.com/alonespig/zeorcode/judge-node/internal/artifact"
 	judgeapi "github.com/alonespig/zeorcode/judge-node/internal/gojudge"
+	judgev1 "github.com/alonespig/zeorcode/judge-node/internal/judgeproto"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
