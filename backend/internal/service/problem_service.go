@@ -12,6 +12,7 @@ import (
 	"github.com/alonespig/zeorcode/backend/internal/model"
 	"github.com/alonespig/zeorcode/backend/internal/repository"
 	"github.com/alonespig/zeorcode/backend/pkg/errcode"
+	"github.com/alonespig/zeorcode/backend/pkg/judge"
 
 	"gorm.io/gorm"
 )
@@ -240,9 +241,15 @@ func (s *ProblemService) GetByID(ctx context.Context, id int64, isAdmin bool) (*
 	if err != nil {
 		return nil, err
 	}
-	result := 1
-	acceptedCount, _ := s.subRepo.GetSubmissionCount(ctx, id, &result)
-	submitCount, _ := s.subRepo.GetSubmissionCount(ctx, id, nil)
+	acceptedStatus := judge.Accepted
+	acceptedCount, err := s.subRepo.GetSubmissionCount(ctx, id, &acceptedStatus)
+	if err != nil {
+		return nil, errcode.ErrDatabase.Wrap(err)
+	}
+	submitCount, err := s.subRepo.GetSubmissionCount(ctx, id, nil)
+	if err != nil {
+		return nil, errcode.ErrDatabase.Wrap(err)
+	}
 
 	tags, samples, err := s.fetchTagsAndSamples(ctx, problem.ID)
 	if err != nil {
