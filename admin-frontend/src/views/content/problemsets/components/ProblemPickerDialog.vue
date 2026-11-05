@@ -32,7 +32,7 @@ const tagFilter = ref<number[]>([]);
 const tags = ref<TagItem[]>([]);
 const list = ref<ProblemItem[]>([]);
 const page = ref(1);
-const pageSize = 8;
+const pageSize = 10;
 const total = ref(0);
 const loading = ref(false);
 const picked = ref<{ id: string; name: string }[]>([]);
@@ -103,6 +103,12 @@ function confirm() {
   }
   visible.value = false;
 }
+
+function rowClassName({ row }: { row: ProblemItem }) {
+  if (isExisting(row.id)) return "is-existing";
+  if (isPicked(row.id)) return "is-picked";
+  return "";
+}
 </script>
 
 <template>
@@ -110,13 +116,15 @@ function confirm() {
     v-model="visible"
     title="从题库选择"
     width="min(960px, calc(100vw - 32px))"
-    top="8vh"
+    top="6vh"
+    destroy-on-close
+    class="problem-picker-dialog"
     @open="handleOpen"
   >
-    <div class="mb-4 flex flex-wrap items-center gap-2">
+    <div class="picker-toolbar">
       <el-input
         v-model="keyword"
-        class="w-64!"
+        class="keyword-input"
         placeholder="搜索题目名称或题号"
         clearable
         @keyup.enter="onSearch"
@@ -130,7 +138,7 @@ function confirm() {
         collapse-tags-tooltip
         clearable
         placeholder="按算法标签过滤"
-        class="w-72!"
+        class="tag-filter"
         @change="onSearch"
       >
         <el-option
@@ -140,60 +148,61 @@ function confirm() {
           :value="tag.id"
         />
       </el-select>
-      <el-button
-        class="ml-auto!"
-        type="primary"
-        :icon="Search"
-        @click="onSearch"
-      >
+      <el-button type="primary" :icon="Search" @click="onSearch">
         搜索
       </el-button>
     </div>
 
-    <el-table
-      v-loading="loading"
-      :data="list"
-      row-key="id"
-      border
-      max-height="420"
-    >
-      <el-table-column width="50" align="center">
-        <template #default="{ row }">
-          <el-checkbox
-            :model-value="isExisting(row.id) || isPicked(row.id)"
-            :disabled="isExisting(row.id)"
-            @change="togglePick(row)"
-          />
-        </template>
-      </el-table-column>
-      <el-table-column prop="id" label="题号" width="110" />
-      <el-table-column
-        prop="name"
-        label="题目"
-        min-width="220"
-        show-overflow-tooltip
-      />
-      <el-table-column label="难度" width="90" align="center">
-        <template #default="{ row }">
-          {{ difficultyText[row.difficulty] || "—" }}
-        </template>
-      </el-table-column>
-      <el-table-column label="标签" min-width="180">
-        <template #default="{ row }">
-          <el-tag
-            v-for="tag in row.tags"
-            :key="tag.id"
-            size="small"
-            class="mr-1"
-          >
-            {{ tag.name }}
-          </el-tag>
-          <span v-if="!row.tags?.length" class="text-gray-400">—</span>
-        </template>
-      </el-table-column>
-    </el-table>
+    <div class="picker-table-wrap">
+      <el-table
+        v-loading="loading"
+        :data="list"
+        :row-class-name="rowClassName"
+        row-key="id"
+        border
+        height="430"
+        empty-text="没有找到符合条件的题目"
+        @row-click="togglePick"
+      >
+        <el-table-column width="52" align="center">
+          <template #default="{ row }">
+            <el-checkbox
+              :model-value="isExisting(row.id) || isPicked(row.id)"
+              :disabled="isExisting(row.id)"
+              @click.stop
+              @change="togglePick(row)"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column prop="id" label="题号" width="120" />
+        <el-table-column
+          prop="name"
+          label="题目名称"
+          min-width="240"
+          show-overflow-tooltip
+        />
+        <el-table-column label="难度" width="90" align="center">
+          <template #default="{ row }">
+            {{ difficultyText[row.difficulty] || "—" }}
+          </template>
+        </el-table-column>
+        <el-table-column label="标签" min-width="200">
+          <template #default="{ row }">
+            <el-tag
+              v-for="tag in row.tags"
+              :key="tag.id"
+              size="small"
+              class="tag-item"
+            >
+              {{ tag.name }}
+            </el-tag>
+            <span v-if="!row.tags?.length" class="muted-text">—</span>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
 
-    <div class="mt-4 flex justify-center">
+    <div class="picker-pagination">
       <el-pagination
         background
         layout="prev, pager, next"
@@ -205,11 +214,94 @@ function confirm() {
     </div>
 
     <template #footer>
-      <span class="mr-auto text-sm text-gray-500">
-        已选 {{ picked.length }} 道
-      </span>
-      <el-button @click="visible = false">取消</el-button>
-      <el-button type="primary" @click="confirm">确定添加</el-button>
+      <div class="picker-footer">
+        <span class="picked-summary">本次已选 {{ picked.length }} 道</span>
+        <div class="footer-actions">
+          <el-button @click="visible = false">取消</el-button>
+          <el-button type="primary" @click="confirm">确定添加</el-button>
+        </div>
+      </div>
     </template>
   </el-dialog>
 </template>
+
+<style scoped>
+.picker-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 14px;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+}
+
+.keyword-input {
+  width: 280px;
+}
+
+.tag-filter {
+  flex: 1;
+  min-width: 260px;
+}
+
+.picker-table-wrap {
+  min-height: 430px;
+}
+
+.picker-table-wrap :deep(.el-table__row) {
+  cursor: pointer;
+}
+
+.picker-table-wrap :deep(.el-table__row.is-picked) {
+  background: var(--el-color-primary-light-9);
+}
+
+.picker-table-wrap :deep(.el-table__row.is-existing) {
+  color: var(--el-text-color-placeholder);
+  cursor: not-allowed;
+  background: var(--el-fill-color-light);
+}
+
+.tag-item {
+  margin: 2px 4px 2px 0;
+}
+
+.muted-text,
+.picked-summary {
+  color: var(--el-text-color-secondary);
+}
+
+.picker-pagination {
+  display: flex;
+  justify-content: center;
+  min-height: 32px;
+  margin-top: 16px;
+}
+
+.picker-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.picked-summary {
+  font-size: 14px;
+}
+
+.footer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (width <= 720px) {
+  .keyword-input,
+  .tag-filter {
+    flex: none;
+    width: 100%;
+  }
+}
+</style>

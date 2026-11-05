@@ -2,26 +2,59 @@
 import { computed } from "vue";
 import DOMPurify from "dompurify";
 import MarkdownIt from "markdown-it";
+import texmath from "markdown-it-texmath";
+import katex from "katex";
+import hljs from "highlight.js/lib/common";
+import "katex/dist/katex.min.css";
+import "highlight.js/styles/github.css";
 
 defineOptions({ name: "MarkdownPreview" });
 
-const props = withDefaults(defineProps<{ content?: string }>(), {
-  content: ""
-});
+const props = withDefaults(
+  defineProps<{
+    content?: string;
+    variant?: "default" | "problem";
+  }>(),
+  {
+    content: "",
+    variant: "default"
+  }
+);
 
 const markdown = new MarkdownIt({
   html: false,
   breaks: true,
-  linkify: true,
-  typographer: true
+  highlight(code, language) {
+    if (language && hljs.getLanguage(language)) {
+      return `<pre class="hljs"><code>${hljs.highlight(code, { language }).value}</code></pre>`;
+    }
+    return `<pre class="hljs"><code>${markdown.utils.escapeHtml(code)}</code></pre>`;
+  }
+}).use(texmath, {
+  engine: katex,
+  delimiters: "dollars",
+  katexOptions: { throwOnError: false }
 });
 
-const html = computed(() => DOMPurify.sanitize(markdown.render(props.content)));
+function normalizeInlineMath(content: string) {
+  return content.replace(/\$([^$\n]+?)\$/g, (_, inner: string) => {
+    return `$${inner.trim()}$`;
+  });
+}
+
+const html = computed(() => {
+  const content = normalizeInlineMath(props.content.replace(/\r\n?/g, "\n"));
+  return DOMPurify.sanitize(markdown.render(content));
+});
 </script>
 
 <template>
   <!-- MarkdownIt 禁止原始 HTML，DOMPurify 再清理一次生成结果。 -->
-  <div class="markdown-body" v-html="html" />
+  <div
+    class="markdown-body"
+    :class="{ 'markdown-body--problem': props.variant === 'problem' }"
+    v-html="html"
+  />
 </template>
 
 <style scoped>
@@ -135,5 +168,54 @@ const html = computed(() => DOMPurify.sanitize(markdown.render(props.content)));
   margin: 1.5em 0;
   border: 0;
   border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.markdown-body--problem {
+  min-height: 0;
+  font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.markdown-body--problem :deep(h1),
+.markdown-body--problem :deep(h2),
+.markdown-body--problem :deep(h3),
+.markdown-body--problem :deep(h4),
+.markdown-body--problem :deep(h5),
+.markdown-body--problem :deep(h6) {
+  margin: 1em 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  font-size: inherit;
+  font-weight: 500;
+  line-height: inherit;
+}
+
+.markdown-body--problem :deep(strong),
+.markdown-body--problem :deep(b) {
+  font-weight: 600;
+}
+
+.markdown-body--problem :deep(p),
+.markdown-body--problem :deep(ul),
+.markdown-body--problem :deep(ol),
+.markdown-body--problem :deep(blockquote),
+.markdown-body--problem :deep(pre),
+.markdown-body--problem :deep(table) {
+  margin: 0.5em 0;
+}
+
+.markdown-body--problem :deep(blockquote) {
+  padding: 0 0 0 0.8em;
+  border-left-color: var(--el-border-color);
+  background: transparent;
+  color: var(--el-text-color-secondary);
+}
+
+.markdown-body--problem :deep(.katex-display) {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 </style>

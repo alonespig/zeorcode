@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRouter, onBeforeRouteLeave } from "vue-router";
-import { ArrowLeft, Rank } from "@element-plus/icons-vue";
+import { ArrowLeft, Rank, View } from "@element-plus/icons-vue";
 import { ElMessageBox } from "element-plus";
 import { message } from "@/utils/message";
 import { getProblem, getTagList, type TagItem } from "@/api/admin/problems";
@@ -12,6 +12,7 @@ import {
   type SaveProblemSetParams
 } from "@/api/admin/problemsets";
 import ProblemPickerDialog from "./ProblemPickerDialog.vue";
+import ProblemPreviewDialog from "./ProblemPreviewDialog.vue";
 
 defineOptions({ name: "ProblemSetForm" });
 
@@ -69,6 +70,8 @@ watch(
 const pidInput = ref("");
 const addingPid = ref(false);
 const pickerVisible = ref(false);
+const previewVisible = ref(false);
+const previewProblemId = ref("");
 const existingIds = computed(() => problems.value.map(p => p.id));
 
 const dragIndex = ref(-1);
@@ -132,6 +135,11 @@ async function addProblemById() {
 
 function removeProblem(index: number) {
   problems.value.splice(index, 1);
+}
+
+function openProblemPreview(problemId: string) {
+  previewProblemId.value = problemId;
+  previewVisible.value = true;
 }
 
 function addPickedProblems(items: { id: string; name: string }[]) {
@@ -227,108 +235,122 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <div class="mb-4 flex items-center gap-3">
-      <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
-      <span class="text-base font-medium">
-        {{ isEdit ? "编辑题单" : "新建题单" }}
-      </span>
-    </div>
+  <div class="problem-set-editor">
+    <el-card v-loading="loadingDetail" class="editor-card" shadow="never">
+      <header class="editor-header">
+        <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
+        <el-button type="primary" :loading="saving" @click="save">
+          保存题单
+        </el-button>
+      </header>
 
-    <el-card v-loading="loadingDetail" shadow="never">
-      <el-form :model="form" label-width="96px" class="max-w-3xl">
-        <el-form-item label="标题" required>
-          <el-input
-            v-model="form.title"
-            maxlength="100"
-            show-word-limit
-            placeholder="题单标题"
-          />
-        </el-form-item>
-
-        <el-form-item label="标签">
-          <el-select
-            v-model="form.tagIds"
-            multiple
-            filterable
-            clearable
-            placeholder="选择标签（可多选）"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="tag in tagOptions"
-              :key="tag.id"
-              :label="tag.name"
-              :value="tag.id"
-            />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="描述">
-          <el-input
-            v-model="form.description"
-            type="textarea"
-            :rows="8"
-            placeholder="题单描述（支持 Markdown）"
-          />
-        </el-form-item>
-
-        <el-form-item label="访问方式">
-          <el-radio-group v-model="form.visibility">
-            <el-radio :value="0">公开</el-radio>
-            <el-radio :value="1">需要邀请码</el-radio>
-          </el-radio-group>
-        </el-form-item>
-
-        <el-form-item v-if="form.visibility === 1" label="邀请码">
-          <el-input
-            v-model="form.inviteCode"
-            maxlength="32"
-            :placeholder="inviteCodePlaceholder"
-            style="max-width: 240px"
-          />
-        </el-form-item>
-
-        <el-form-item label="发布状态">
-          <el-radio-group v-model="form.published">
-            <el-radio :value="1">已发布</el-radio>
-            <el-radio :value="0">草稿</el-radio>
-          </el-radio-group>
-          <div class="text-xs text-gray-400">草稿在前台完全不可见</div>
-        </el-form-item>
-
-        <el-form-item label="题目">
-          <div class="w-full">
-            <div class="mb-2 flex flex-wrap items-center gap-2">
+      <el-form :model="form" label-position="top">
+        <section class="editor-section">
+          <div class="basic-grid">
+            <el-form-item label="标题" required>
               <el-input
-                v-model="pidInput"
-                class="w-48!"
-                placeholder="输入题号，如 P1001"
-                :disabled="addingPid"
-                @keyup.enter="addProblemById"
+                v-model="form.title"
+                maxlength="100"
+                show-word-limit
+                placeholder="请输入题单标题"
               />
-              <el-button :loading="addingPid" @click="addProblemById">
-                添加
-              </el-button>
-              <el-button type="primary" @click="pickerVisible = true">
-                从题库选择
-              </el-button>
-              <span class="text-xs text-gray-400">
-                已选 {{ problems.length }} 道 · 拖动行可调整顺序
-              </span>
-            </div>
+            </el-form-item>
 
-            <div
-              v-if="problems.length"
-              class="divide-y divide-gray-200 rounded border border-gray-200"
+            <el-form-item label="标签">
+              <el-select
+                v-model="form.tagIds"
+                multiple
+                filterable
+                clearable
+                placeholder="选择标签（可多选）"
+                class="field-full"
+              >
+                <el-option
+                  v-for="tag in tagOptions"
+                  :key="tag.id"
+                  :label="tag.name"
+                  :value="tag.id"
+                />
+              </el-select>
+            </el-form-item>
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="setting-grid">
+            <el-form-item label="访问方式">
+              <el-radio-group v-model="form.visibility">
+                <el-radio :value="0">公开</el-radio>
+                <el-radio :value="1">需要邀请码</el-radio>
+              </el-radio-group>
+            </el-form-item>
+
+            <el-form-item label="发布状态">
+              <el-radio-group v-model="form.published">
+                <el-radio :value="1">已发布</el-radio>
+                <el-radio :value="0">草稿</el-radio>
+              </el-radio-group>
+              <p class="field-hint">草稿仅管理员可见</p>
+            </el-form-item>
+
+            <el-form-item
+              v-if="form.visibility === 1"
+              class="grid-full"
+              label="邀请码"
             >
+              <el-input
+                v-model="form.inviteCode"
+                maxlength="32"
+                :placeholder="inviteCodePlaceholder"
+                class="invite-code-input"
+              />
+            </el-form-item>
+          </div>
+        </section>
+
+        <section class="editor-section problem-section">
+          <div class="section-heading problem-heading">
+            <div>
+              <div class="section-title-row">
+                <h2 class="section-title">题目列表</h2>
+                <span class="problem-count">{{ problems.length }} 道</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="problem-toolbar">
+            <el-input
+              v-model="pidInput"
+              class="problem-id-input"
+              placeholder="输入题号，如 P1001"
+              :disabled="addingPid"
+              @keyup.enter="addProblemById"
+            />
+            <el-button :loading="addingPid" @click="addProblemById">
+              添加题号
+            </el-button>
+            <el-button type="primary" @click="pickerVisible = true">
+              从题库选择
+            </el-button>
+          </div>
+
+          <div v-if="problems.length" class="problem-table">
+            <div class="problem-table-header">
+              <span />
+              <span>序号</span>
+              <span>题号</span>
+              <span>题目名称</span>
+              <span>操作</span>
+            </div>
+            <div class="problem-table-body">
               <div
                 v-for="(problem, index) in problems"
                 :key="problem.id"
-                class="flex items-center gap-3 px-3 py-2"
+                class="problem-row"
                 :class="{
-                  'bg-gray-50': dragOverIndex === index && dragIndex !== index,
-                  'opacity-50': dragIndex === index
+                  'is-drag-over':
+                    dragOverIndex === index && dragIndex !== index,
+                  'is-dragging': dragIndex === index
                 }"
                 draggable="true"
                 @dragstart="onDragStart(index)"
@@ -336,39 +358,326 @@ onMounted(() => {
                 @dragend="onDragEnd"
                 @drop="onDrop(index)"
               >
-                <el-icon class="cursor-grab text-gray-400"><Rank /></el-icon>
-                <span class="w-6 text-right text-gray-400">
-                  {{ index + 1 }}
-                </span>
-                <span class="w-24 font-mono">{{ problem.id }}</span>
-                <span class="flex-1 truncate">{{ problem.name }}</span>
-                <el-button
-                  link
-                  type="danger"
-                  size="small"
-                  @click="removeProblem(index)"
-                >
-                  移除
-                </el-button>
+                <el-icon class="drag-handle"><Rank /></el-icon>
+                <span class="problem-index">{{ index + 1 }}</span>
+                <span class="problem-id">{{ problem.id }}</span>
+                <span class="problem-name">{{ problem.name }}</span>
+                <div class="problem-actions">
+                  <el-tooltip content="查看题目" placement="top">
+                    <el-button
+                      link
+                      type="primary"
+                      :icon="View"
+                      aria-label="查看题目"
+                      @click="openProblemPreview(problem.id)"
+                    />
+                  </el-tooltip>
+                  <el-button link type="danger" @click="removeProblem(index)">
+                    移除
+                  </el-button>
+                </div>
               </div>
             </div>
-            <el-empty v-else description="还没有添加题目" :image-size="60" />
           </div>
-        </el-form-item>
-      </el-form>
-    </el-card>
+          <div v-else class="problem-empty">
+            <el-empty description="还没有添加题目" :image-size="72">
+              <el-button type="primary" plain @click="pickerVisible = true">
+                从题库选择题目
+              </el-button>
+            </el-empty>
+          </div>
+        </section>
 
-    <div class="mt-4 flex items-center gap-2">
-      <el-button type="primary" :loading="saving" @click="save">
-        保存
-      </el-button>
-      <el-button :disabled="saving" @click="goBack">取消</el-button>
-    </div>
+        <section class="editor-section">
+          <el-form-item label="描述">
+            <el-input
+              v-model="form.description"
+              type="textarea"
+              :rows="6"
+              resize="vertical"
+              placeholder="介绍训练目标、适合人群或建议完成顺序（支持 Markdown）"
+            />
+          </el-form-item>
+        </section>
+      </el-form>
+
+      <div class="editor-actions">
+        <el-button :disabled="saving" @click="goBack">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="save">
+          保存题单
+        </el-button>
+      </div>
+    </el-card>
 
     <ProblemPickerDialog
       v-model="pickerVisible"
       :existing-ids="existingIds"
       @add="addPickedProblems"
     />
+    <ProblemPreviewDialog
+      v-model="previewVisible"
+      :problem-id="previewProblemId"
+    />
   </div>
 </template>
+
+<style scoped>
+.problem-set-editor {
+  min-width: 0;
+}
+
+.editor-header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.section-title,
+.section-description,
+.field-hint {
+  margin: 0;
+}
+
+.section-description,
+.field-hint {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--el-text-color-secondary);
+}
+
+.editor-card {
+  border-color: var(--el-border-color-light);
+}
+
+.editor-card :deep(.el-card__body) {
+  padding: 24px 28px 28px;
+}
+
+.editor-section {
+  width: 100%;
+}
+
+.editor-section + .editor-section {
+  margin-top: 36px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.section-title-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  color: var(--el-text-color-primary);
+}
+
+.basic-grid,
+.setting-grid {
+  display: grid;
+  gap: 24px;
+}
+
+.basic-grid :deep(.el-form-item),
+.setting-grid :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+.basic-grid {
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
+}
+
+.setting-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-full {
+  grid-column: 1 / -1;
+}
+
+.field-full {
+  width: 100%;
+}
+
+.invite-code-input {
+  width: min(360px, 100%);
+}
+
+.field-hint {
+  margin-left: 12px;
+}
+
+.problem-count {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: 4px;
+}
+
+.problem-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.problem-id-input {
+  width: 240px;
+}
+
+.problem-table,
+.problem-empty {
+  overflow: hidden;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 6px;
+}
+
+.problem-table-header,
+.problem-row {
+  display: grid;
+  grid-template-columns: 42px 64px 150px minmax(220px, 1fr) 120px;
+  align-items: center;
+  min-width: 700px;
+}
+
+.problem-table-header {
+  height: 42px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color-light);
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+
+.problem-table-body {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.problem-row {
+  min-height: 58px;
+  padding: 0 14px;
+  font-size: 15px;
+  color: var(--el-text-color-regular);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  transition:
+    background-color 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.problem-row:last-child {
+  border-bottom: 0;
+}
+
+.problem-row:hover,
+.problem-row.is-drag-over {
+  background: var(--el-fill-color-light);
+}
+
+.problem-row.is-dragging {
+  opacity: 0.55;
+}
+
+.drag-handle {
+  color: var(--el-text-color-placeholder);
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.problem-index {
+  color: var(--el-text-color-secondary);
+}
+
+.problem-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--el-color-primary);
+}
+
+.problem-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.problem-table-header > :last-child {
+  text-align: center;
+}
+
+.problem-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+.problem-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
+.problem-empty {
+  min-height: 220px;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+@media (width <= 768px) {
+  .editor-header {
+    align-items: flex-start;
+  }
+
+  .editor-card :deep(.el-card__body) {
+    padding: 20px 16px;
+  }
+
+  .basic-grid,
+  .setting-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .grid-full {
+    grid-column: auto;
+  }
+
+  .field-hint {
+    display: block;
+    width: 100%;
+    margin: 2px 0 0;
+  }
+
+  .problem-id-input {
+    width: 100%;
+  }
+
+  .problem-table {
+    overflow-x: auto;
+  }
+}
+</style>
