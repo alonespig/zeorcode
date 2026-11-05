@@ -10,8 +10,9 @@ type UserRankItem struct {
 	Index       int
 	Username    string
 	Avatar      string
-	PassCount   int64
-	SubmitCount int64
+	PassCount     int64
+	ACSubmitCount int64
+	SubmitCount   int64
 	Signature   string
 	Rating      int
 	MaxRating   int

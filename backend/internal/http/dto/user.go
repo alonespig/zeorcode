@@ -60,8 +60,9 @@ type UserInfo struct {
 	Index       int    `json:"index"`
 	Username    string `json:"username"`
 	Avatar      string `json:"avatar"`
-	PassCount   int64  `json:"count,omitempty"`
-	SubmitCount int64  `json:"submitCount,omitempty"`
+	PassCount     int64  `json:"count,omitempty"`
+	ACSubmitCount int64  `json:"acSubmitCount,omitempty"`
+	SubmitCount   int64  `json:"submitCount,omitempty"`
 	Signature   string `json:"signature,omitempty"`
 	Role        int    `json:"role,omitempty"`
 	Rating      int    `json:"rating"`

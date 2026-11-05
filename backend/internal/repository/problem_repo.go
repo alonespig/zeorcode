@@ -285,9 +285,10 @@ func (r *ProblemRepo) GetSubmissionCount(ctx context.Context, userID int64) (int
 }
 
 type UserSubmitCount struct {
-	UserID      int64 `gorm:"column:user_id" json:"userID"`
-	ACCount     int64 `gorm:"column:ac_count" json:"acCount"`
-	SubmitCount int64 `gorm:"column:submit_count" json:"submitCount"`
+	UserID        int64 `gorm:"column:user_id" json:"userID"`
+	ACCount       int64 `gorm:"column:ac_count" json:"acCount"`
+	ACSubmitCount int64 `gorm:"column:ac_submit_count" json:"acSubmitCount"`
+	SubmitCount   int64 `gorm:"column:submit_count" json:"submitCount"`
 }
 
 type UserSubmitCountFilter struct {
@@ -301,8 +302,11 @@ func (r *ProblemRepo) GetUserSubmitCount(ctx context.Context, filter *UserSubmit
 	var result []UserSubmitCount
 	var count int64
 
+	// ac_count 是该用户在该题上的 AC 次数（重复 AC 会累加）：
+	// 榜单的“通过题目数”要按 problem_id 去重；提交通过率则用 AC 次数 / 总提交次数。
 	query := r.db.WithContext(ctx).Model(&model.UserProblem{}).
-		Select("user_id, SUM(ac_count) as ac_count, SUM(submit_count) as submit_count")
+		Select("user_id, COUNT(DISTINCT CASE WHEN status = ? THEN problem_id END) as ac_count, "+
+			"SUM(ac_count) as ac_submit_count, SUM(submit_count) as submit_count", judge.Accepted)
 
 	if filter.QueryName {
 		query = query.Where("user_id IN ?", filter.UserIDs)
@@ -328,7 +332,7 @@ func (r *ProblemRepo) GetUserSubmitCount(ctx context.Context, filter *UserSubmit
 
 	err := query.Find(&result).Error
 	if err != nil {
-		return result, 0, nil
+		return result, 0, err
 	}
 	return result, count, nil
 }
