@@ -297,7 +297,13 @@ const confirm = async () => {
 .picker-pagination {
   display: flex;
   justify-content: center;
-  margin-top: 14px;
+  margin: 22px 0 10px;
+
+  :deep(.app-pagination .btn-prev),
+  :deep(.app-pagination .btn-next),
+  :deep(.app-pagination .el-pager li) {
+    margin: 0 6px;
+  }
 }
 
 .picker-actions {

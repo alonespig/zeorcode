@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { Search } from "@element-plus/icons-vue";
+import { Search, View } from "@element-plus/icons-vue";
 import {
   getProblemList,
   getTagList,
   type ProblemItem,
   type TagItem
 } from "@/api/admin/problems";
+import ProblemPreviewDialog from "./ProblemPreviewDialog.vue";
 
 defineOptions({ name: "ProblemPickerDialog" });
 
@@ -27,15 +28,20 @@ const difficultyText: Record<number, string> = {
   3: "困难"
 };
 
+const difficultyClass = (difficulty: number) =>
+  `difficulty-${difficulty || "unknown"}`;
+
 const keyword = ref("");
 const tagFilter = ref<number[]>([]);
 const tags = ref<TagItem[]>([]);
 const list = ref<ProblemItem[]>([]);
 const page = ref(1);
-const pageSize = 10;
+const pageSize = 8;
 const total = ref(0);
 const loading = ref(false);
 const picked = ref<{ id: string; name: string }[]>([]);
+const previewVisible = ref(false);
+const previewProblemId = ref("");
 
 const existingIdSet = computed(() => new Set(props.existingIds));
 
@@ -47,6 +53,11 @@ function togglePick(row: ProblemItem) {
   const index = picked.value.findIndex(p => p.id === row.id);
   if (index === -1) picked.value.push({ id: row.id, name: row.name });
   else picked.value.splice(index, 1);
+}
+
+function openPreview(id: string) {
+  previewProblemId.value = id;
+  previewVisible.value = true;
 }
 
 async function loadList(targetPage = 1) {
@@ -90,6 +101,7 @@ function handleOpen() {
   keyword.value = "";
   tagFilter.value = [];
   picked.value = [];
+  previewVisible.value = false;
   loadList(1);
   loadTags();
 }
@@ -103,12 +115,6 @@ function confirm() {
   }
   visible.value = false;
 }
-
-function rowClassName({ row }: { row: ProblemItem }) {
-  if (isExisting(row.id)) return "is-existing";
-  if (isPicked(row.id)) return "is-picked";
-  return "";
-}
 </script>
 
 <template>
@@ -116,12 +122,13 @@ function rowClassName({ row }: { row: ProblemItem }) {
     v-model="visible"
     title="从题库选择"
     width="min(960px, calc(100vw - 32px))"
-    top="6vh"
+    top="8vh"
     destroy-on-close
     class="problem-picker-dialog"
     @open="handleOpen"
+    @close="previewVisible = false"
   >
-    <div class="picker-toolbar">
+    <div class="picker-search">
       <el-input
         v-model="keyword"
         class="keyword-input"
@@ -153,58 +160,82 @@ function rowClassName({ row }: { row: ProblemItem }) {
       </el-button>
     </div>
 
-    <div class="picker-table-wrap">
-      <el-table
-        v-loading="loading"
-        :data="list"
-        :row-class-name="rowClassName"
-        row-key="id"
-        border
-        height="430"
-        empty-text="没有找到符合条件的题目"
-        @row-click="togglePick"
-      >
-        <el-table-column width="52" align="center">
-          <template #default="{ row }">
-            <el-checkbox
-              :model-value="isExisting(row.id) || isPicked(row.id)"
-              :disabled="isExisting(row.id)"
-              @click.stop
-              @change="togglePick(row)"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column prop="id" label="题号" width="120" />
-        <el-table-column
-          prop="name"
-          label="题目名称"
-          min-width="240"
-          show-overflow-tooltip
-        />
-        <el-table-column label="难度" width="90" align="center">
-          <template #default="{ row }">
-            {{ difficultyText[row.difficulty] || "—" }}
-          </template>
-        </el-table-column>
-        <el-table-column label="标签" min-width="200">
-          <template #default="{ row }">
-            <el-tag
-              v-for="tag in row.tags"
-              :key="tag.id"
-              size="small"
-              class="tag-item"
-            >
-              {{ tag.name }}
-            </el-tag>
-            <span v-if="!row.tags?.length" class="muted-text">—</span>
-          </template>
-        </el-table-column>
-      </el-table>
+    <div v-loading="loading" class="picker-table-wrap">
+      <table class="picker-table">
+        <colgroup>
+          <col style="width: 52px" />
+          <col style="width: 110px" />
+          <col style="width: 240px" />
+          <col style="width: 90px" />
+          <col />
+          <col style="width: 64px" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th />
+            <th class="center">#</th>
+            <th class="left">题目名称</th>
+            <th class="center">难度</th>
+            <th class="left">标签</th>
+            <th class="center">预览</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="row in list"
+            :key="row.id"
+            class="pick-row"
+            @click="togglePick(row)"
+          >
+            <td class="center">
+              <el-checkbox
+                :model-value="isExisting(row.id) || isPicked(row.id)"
+                :disabled="isExisting(row.id)"
+                @click.stop
+                @change="togglePick(row)"
+              />
+            </td>
+            <td class="center problem-id">{{ row.id }}</td>
+            <td class="left problem-name">{{ row.name }}</td>
+            <td class="center">
+              <span class="difficulty" :class="difficultyClass(row.difficulty)">
+                {{ difficultyText[row.difficulty] || "-" }}
+              </span>
+            </td>
+            <td class="left tag-cell">
+              <el-tag
+                v-for="tag in row.tags"
+                :key="tag.id"
+                size="small"
+                type="primary"
+              >
+                {{ tag.name }}
+              </el-tag>
+              <span v-if="!row.tags?.length" class="muted-text">—</span>
+            </td>
+            <td class="center">
+              <el-tooltip content="查看题目内容" placement="top">
+                <el-button
+                  text
+                  type="primary"
+                  :icon="View"
+                  :aria-label="`查看题目：${row.name}`"
+                  @click.stop="openPreview(row.id)"
+                />
+              </el-tooltip>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-if="!loading && !list.length" class="picker-empty">
+        没有找到符合条件的题目
+      </div>
     </div>
 
     <div class="picker-pagination">
       <el-pagination
         background
+        size="small"
         layout="prev, pager, next"
         :total="total"
         :page-size="pageSize"
@@ -215,7 +246,7 @@ function rowClassName({ row }: { row: ProblemItem }) {
 
     <template #footer>
       <div class="picker-footer">
-        <span class="picked-summary">本次已选 {{ picked.length }} 道</span>
+        <span class="picked-summary">已选 {{ picked.length }} 道</span>
         <div class="footer-actions">
           <el-button @click="visible = false">取消</el-button>
           <el-button type="primary" @click="confirm">确定添加</el-button>
@@ -223,19 +254,20 @@ function rowClassName({ row }: { row: ProblemItem }) {
       </div>
     </template>
   </el-dialog>
+
+  <ProblemPreviewDialog
+    v-model="previewVisible"
+    :problem-id="previewProblemId"
+  />
 </template>
 
 <style scoped>
-.picker-toolbar {
+.picker-search {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-  padding: 12px;
   margin-bottom: 14px;
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
 }
 
 .keyword-input {
@@ -243,53 +275,142 @@ function rowClassName({ row }: { row: ProblemItem }) {
 }
 
 .tag-filter {
-  flex: 1;
-  min-width: 260px;
+  width: 300px;
 }
 
 .picker-table-wrap {
-  min-height: 430px;
+  min-height: 180px;
+  overflow-x: auto;
 }
 
-.picker-table-wrap :deep(.el-table__row) {
+.picker-table {
+  width: 100%;
+  font-size: 14px;
+  color: #1f2937;
+  table-layout: fixed;
+  border-collapse: collapse;
+  background: var(--el-bg-color);
+}
+
+.picker-table th,
+.picker-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.picker-table th {
+  height: 46px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  letter-spacing: 0.025em;
+  background: #f7f8fa;
+}
+
+.picker-table .center {
+  text-align: center;
+}
+
+.picker-table .left {
+  text-align: left;
+}
+
+.picker-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.picker-table tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+
+.picker-table tbody tr:hover {
+  background: #eff6ff;
+}
+
+.picker-table .pick-row {
   cursor: pointer;
 }
 
-.picker-table-wrap :deep(.el-table__row.is-picked) {
-  background: var(--el-color-primary-light-9);
+.picker-table .problem-id,
+.picker-table .problem-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.picker-table-wrap :deep(.el-table__row.is-existing) {
+.picker-table .problem-id {
+  font-variant-numeric: tabular-nums;
+}
+
+.picker-table .tag-cell {
+  white-space: normal;
+}
+
+.picker-table .tag-cell :deep(.el-tag) {
+  margin: 2px 5px 2px 0;
+}
+
+.difficulty {
+  font-weight: 500;
+}
+
+.difficulty-1 {
+  color: #059669;
+}
+
+.difficulty-2 {
+  color: #d97706;
+}
+
+.difficulty-3 {
+  color: #dc2626;
+}
+
+.difficulty-unknown {
   color: var(--el-text-color-placeholder);
-  cursor: not-allowed;
-  background: var(--el-fill-color-light);
 }
 
-.tag-item {
-  margin: 2px 4px 2px 0;
-}
-
-.muted-text,
-.picked-summary {
+.muted-text {
   color: var(--el-text-color-secondary);
+}
+
+.picker-empty {
+  padding: 48px 0;
+  font-size: 14px;
+  color: var(--el-text-color-secondary);
+  text-align: center;
 }
 
 .picker-pagination {
   display: flex;
   justify-content: center;
-  min-height: 32px;
-  margin-top: 16px;
+  margin: 22px 0 10px;
+}
+
+.picker-pagination :deep(.el-pagination) {
+  --el-pagination-button-bg-color: #f1f3f5;
+  --el-pagination-button-disabled-bg-color: #f6f7f8;
+  --el-pagination-border-radius: 2px;
+  --el-pagination-item-gap: 0;
+}
+
+.picker-pagination :deep(.btn-prev),
+.picker-pagination :deep(.btn-next),
+.picker-pagination :deep(.el-pager li) {
+  margin: 0 6px;
+  font-size: 13px;
 }
 
 .picker-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   width: 100%;
 }
 
 .picked-summary {
-  font-size: 14px;
+  margin-right: auto;
+  font-size: 13px;
+  color: #4b5563;
 }
 
 .footer-actions {
@@ -297,10 +418,14 @@ function rowClassName({ row }: { row: ProblemItem }) {
   gap: 8px;
 }
 
-@media (width <= 720px) {
+@media (width <= 680px) {
+  .picker-search {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .keyword-input,
   .tag-filter {
-    flex: none;
     width: 100%;
   }
 }
