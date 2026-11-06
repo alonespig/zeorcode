@@ -7,8 +7,21 @@
         <ul class="flex gap-8 max-lg:flex-wrap max-lg:gap-3 max-md:grid max-md:grid-cols-2 max-md:gap-2">
           <li class="max-md:col-span-2">
             <span class="text-sm text-gray-600">状态：</span>
-            <el-select v-model="filters.status" placeholder="全部" clearable class="w-45! max-md:w-full!">
-              <el-option v-for="item in statusList" :key="item.id" :label="item.name" :value="item.id" />
+            <el-select v-model="filters.status" placeholder="全部" clearable class="w-56! max-md:w-full!"
+              popper-class="status-filter-popper">
+              <template #label="{ label, value }">
+                <span class="status-option" :class="statusClass(value)">
+                  <span class="status-text">{{ label }}</span>
+                </span>
+              </template>
+              <el-option v-for="item in statusList" :key="item.id" :label="item.name" :value="item.id">
+                <span class="status-option" :class="statusClass(item.id)">
+                  <span class="status-text">{{ item.name }}</span>
+                  <el-icon v-if="filters.status === item.id" class="status-check" :size="14">
+                    <Check />
+                  </el-icon>
+                </span>
+              </el-option>
             </el-select>
           </li>
           <li class="max-md:col-span-2">
@@ -104,7 +117,8 @@ import { ref, reactive, watch, computed, onBeforeUnmount } from 'vue'
 import { getSubmit, rejudgeSubmission, getSubmitDetail } from '@/api/user'
 import {
   PendingCode, AcceptedCode, MemoryLimitExceededCode, TimeLimitExceededCode,
-  RuntimeErrorCode, WrongAnswerCode, CompileErrorCode, UnknownErrorCode, JUDGE_STATUS_TEXT
+  RuntimeErrorCode, WrongAnswerCode, CompileErrorCode, UnknownErrorCode, JUDGE_STATUS_TEXT,
+  JUDGE_STATUS_CLASS
 } from '@/constants/index'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
@@ -112,7 +126,7 @@ import { formatTime, formatMemory } from '@/utils/format'
 import FTag from "@/components/FTag.vue";
 import UserName from "@/components/UserName.vue";
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, User } from '@element-plus/icons-vue'
+import { Search, Refresh, User, Check } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -139,6 +153,8 @@ const statusList = [
   CompileErrorCode,
   UnknownErrorCode,
 ].map(id => ({ id, name: JUDGE_STATUS_TEXT[id] }));
+
+const statusClass = (id) => JUDGE_STATUS_CLASS[id] || 'unknown'
 
 // 从路由中读取参数
 const page = computed(() => Number(route.query.page || 1))
@@ -269,5 +285,59 @@ watch(
 
 .submission-table :deep(.el-table__cell) {
   text-align: center;
+}
+
+.status-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.status-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-check {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: inherit;
+}
+
+:global(.el-select__popper.status-filter-popper) {
+  padding: 4px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 12%);
+}
+
+:global(.status-filter-popper .el-select-dropdown__list) {
+  padding: 0;
+}
+
+:global(.status-filter-popper .el-select-dropdown__item) {
+  height: 34px;
+  margin: 2px 0;
+  padding: 0 10px;
+  border-radius: 6px;
+  line-height: 34px;
+}
+
+:global(.status-filter-popper .el-select-dropdown__item.is-hovering) {
+  background: #f5f7fa;
+}
+
+:global(.status-filter-popper .el-select-dropdown__item.is-selected) {
+  background: #eff6ff;
+}
+
+:global(.status-filter-popper .el-select-dropdown__item.is-selected .status-text) {
+  font-weight: 600;
 }
 </style>
