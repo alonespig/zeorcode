@@ -264,5 +264,8 @@ onMounted(() => {
 <style scoped>
 .problemset-list {
   padding-top: 8px;
+  padding-right: 0;
+  padding-left: 0;
+  overflow: hidden;
 }
 </style>
