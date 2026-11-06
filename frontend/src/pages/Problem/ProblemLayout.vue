@@ -1,5 +1,5 @@
 <template>
-  <div class="problem-page mx-auto max-w-[1300px] px-10 py-4 max-md:px-3">
+  <div class="problem-page mx-auto max-w-[1390px] px-6 pt-2 pb-4 max-md:px-3">
     <div class="flex items-start gap-5 max-lg:flex-col max-lg:items-stretch max-lg:gap-4">
       <!-- 左：主内容区，随子路由切换 -->
       <div class="min-w-0 flex-1 max-lg:order-2 max-lg:w-full">
