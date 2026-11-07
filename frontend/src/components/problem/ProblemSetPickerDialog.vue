@@ -1,12 +1,13 @@
 <script setup>
 import { computed, ref } from "vue";
-import { Lock, Search } from "@element-plus/icons-vue";
+import { Lock, Search, View } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import {
   getProblemSetDetail,
   getProblemSetList,
   unlockProblemSet,
 } from "@/api/problemset";
+import ProblemPreviewDialog from "@/components/problem/ProblemPreviewDialog.vue";
 
 const props = defineProps({
   modelValue: {
@@ -38,7 +39,14 @@ const activeId = ref("");
 const detail = ref(null);
 const inviteCode = ref("");
 const unlocking = ref(false);
+const previewVisible = ref(false);
+const previewProblemId = ref("");
 let detailRequestId = 0;
+
+const openPreview = (id) => {
+  previewProblemId.value = String(id);
+  previewVisible.value = true;
+};
 
 const isExisting = (id) => existingIdSet.value.has(String(id));
 const importableProblems = computed(() =>
@@ -217,10 +225,19 @@ const confirm = () => {
           <el-table v-else :data="detail.problems || []" height="410" class="problemset-table">
             <el-table-column type="index" label="#" width="54" align="center" />
             <el-table-column prop="id" label="题号" width="110" align="center" />
-            <el-table-column prop="name" label="题目" min-width="220" show-overflow-tooltip />
-            <el-table-column label="状态" width="88" align="center">
+            <el-table-column prop="name" label="题目" min-width="220">
               <template #default="{ row }">
-                <span v-if="isExisting(row.id)" class="existing-label">已添加</span>
+                <span class="problemset-problem-name">{{ row.name }}</span>
+                <el-tag v-if="isExisting(row.id)" size="small" type="info" effect="plain"
+                  class="existing-tag">已添加</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="72" align="center">
+              <template #default="{ row }">
+                <el-tooltip content="查看题目" placement="top">
+                  <el-button link type="primary" :icon="View" aria-label="查看题目"
+                    @click="openPreview(row.id)" />
+                </el-tooltip>
               </template>
             </el-table-column>
             <template #empty>
@@ -231,6 +248,8 @@ const confirm = () => {
         <el-empty v-else-if="!detailLoading" description="请选择题单" :image-size="72" />
       </main>
     </div>
+
+    <ProblemPreviewDialog v-model="previewVisible" :problem-id="previewProblemId" />
 
     <template #footer>
       <div class="picker-footer">
@@ -381,9 +400,12 @@ const confirm = () => {
   gap: 8px;
 }
 
-.existing-label {
-  color: #94a3b8;
-  font-size: 12px;
+.problemset-problem-name {
+  margin-right: 8px;
+}
+
+.existing-tag {
+  vertical-align: 1px;
 }
 
 .picker-footer {
