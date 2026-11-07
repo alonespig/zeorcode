@@ -2,21 +2,23 @@
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
-import { ArrowDown, ArrowLeft, ArrowUp, Plus } from "@element-plus/icons-vue";
+import { ArrowLeft, Plus, Rank, View } from "@element-plus/icons-vue";
 import { createHomework, getHomeworkDetail, updateHomework } from "@/api/team";
 import { getProblem } from "@/api/problems";
 import ProblemPickerDialog from "@/components/problem/ProblemPickerDialog.vue";
+import ProblemPreviewDialog from "@/components/problem/ProblemPreviewDialog.vue";
 import ProblemSetPickerDialog from "@/components/problem/ProblemSetPickerDialog.vue";
 
 const route = useRoute();
 const router = useRouter();
 
 const isEdit = computed(() => Boolean(route.params.hid));
-const pageTitle = computed(() => isEdit.value ? "编辑作业" : "布置作业");
 const loading = ref(false);
 const saving = ref(false);
 const pickerVisible = ref(false);
 const problemSetPickerVisible = ref(false);
+const previewVisible = ref(false);
+const previewProblemId = ref("");
 const queryPid = ref("");
 const problemList = ref([]);
 const form = ref(blankForm());
@@ -87,14 +89,37 @@ const addPickedProblems = (problems) => {
   });
 };
 
-const moveProblem = (index, offset) => {
-  const target = index + offset;
-  if (target < 0 || target >= problemList.value.length) return;
-  const [problem] = problemList.value.splice(index, 1);
-  problemList.value.splice(target, 0, problem);
+const removeProblem = (index) => problemList.value.splice(index, 1);
+
+const openPreview = (id) => {
+  previewProblemId.value = String(id);
+  previewVisible.value = true;
 };
 
-const removeProblem = (index) => problemList.value.splice(index, 1);
+const dragIndex = ref(-1);
+const dragOverIndex = ref(-1);
+
+const onDragStart = (index) => {
+  dragIndex.value = index;
+};
+
+const onDragOver = (index) => {
+  dragOverIndex.value = index;
+};
+
+const onDragEnd = () => {
+  dragIndex.value = -1;
+  dragOverIndex.value = -1;
+};
+
+const onDrop = (index) => {
+  const from = dragIndex.value;
+  if (from !== -1 && from !== index) {
+    const [moved] = problemList.value.splice(from, 1);
+    problemList.value.splice(index, 0, moved);
+  }
+  onDragEnd();
+};
 
 const save = async () => {
   if (!form.value.title.trim()) {
@@ -137,15 +162,19 @@ watch(() => route.params.hid, loadEditor, { immediate: true });
 <template>
   <div v-loading="loading" class="homework-editor-page">
     <section class="f-panel editor-shell">
-      <header class="editor-heading">
-        <el-button text :icon="ArrowLeft" class="back-button" @click="backToList">返回作业列表</el-button>
-        <h2>{{ pageTitle }}</h2>
+      <header class="editor-header">
+        <el-button :icon="ArrowLeft" @click="backToList">返回</el-button>
+        <el-button type="primary" :loading="saving" @click="save">
+          {{ isEdit ? "保存修改" : "布置作业" }}
+        </el-button>
       </header>
 
       <el-form :model="form" label-position="top" class="editor-form">
         <section class="editor-section">
-          <h3 class="section-title">基本信息</h3>
-          <div class="basic-fields">
+          <div class="section-heading">
+            <h2 class="section-title">基本信息</h2>
+          </div>
+          <div class="basic-grid">
             <el-form-item label="作业名称" required>
               <el-input v-model="form.title" maxlength="100" show-word-limit placeholder="请输入作业名称" />
             </el-form-item>
@@ -157,69 +186,81 @@ watch(() => route.params.hid, loadEditor, { immediate: true });
           </div>
         </section>
 
-        <section class="editor-section problem-section">
-          <h3 class="section-title">题目配置</h3>
+        <section class="editor-section">
+          <div class="section-heading">
+            <div class="section-title-row">
+              <h2 class="section-title">题目列表</h2>
+              <span class="problem-count">{{ problemList.length }} 道</span>
+            </div>
+          </div>
+
           <div class="problem-toolbar">
             <el-input v-model="queryPid" placeholder="输入题号，如 L101" class="problem-id-input"
               @keyup.enter="addProblem" />
             <el-button :icon="Plus" @click="addProblem">添加</el-button>
-            <el-button type="primary" plain @click="pickerVisible = true">从题库选择</el-button>
-            <el-button type="primary" plain @click="problemSetPickerVisible = true">从题单导入</el-button>
+            <el-button type="primary" @click="pickerVisible = true">从题库选择</el-button>
+            <el-button @click="problemSetPickerVisible = true">从题单导入</el-button>
           </div>
 
-          <el-table v-if="problemList.length" :data="problemList" class="problem-table">
-            <el-table-column label="#" width="64" align="center">
-              <template #default="{ $index }">{{ $index + 1 }}</template>
-            </el-table-column>
-            <el-table-column prop="id" label="题号" width="130" align="center" />
-            <el-table-column label="题目" min-width="240">
-              <template #default="{ row }">
-                <span class="font-medium text-gray-800">{{ row.name }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="170" align="center">
-              <template #default="{ $index }">
+          <div v-if="problemList.length" class="problem-table">
+            <div class="problem-table-header">
+              <span />
+              <span>序号</span>
+              <span>题号</span>
+              <span>题目名称</span>
+              <span>操作</span>
+            </div>
+            <div class="problem-table-body">
+              <div v-for="(problem, index) in problemList" :key="problem.id" class="problem-row" :class="{
+                'is-drag-over': dragOverIndex === index && dragIndex !== index,
+                'is-dragging': dragIndex === index,
+              }" draggable="true" @dragstart="onDragStart(index)" @dragover.prevent="onDragOver(index)"
+                @dragend="onDragEnd" @drop="onDrop(index)">
+                <el-icon class="drag-handle"><Rank /></el-icon>
+                <span class="problem-index">{{ index + 1 }}</span>
+                <span class="problem-id">{{ problem.id }}</span>
+                <span class="problem-name">{{ problem.name }}</span>
                 <div class="problem-actions">
-                  <el-tooltip content="上移" placement="top">
-                    <el-button link :icon="ArrowUp" :disabled="$index === 0" aria-label="上移题目"
-                      @click="moveProblem($index, -1)" />
+                  <el-tooltip content="查看题目" placement="top">
+                    <el-button link type="primary" :icon="View" aria-label="查看题目"
+                      @click="openPreview(problem.id)" />
                   </el-tooltip>
-                  <el-tooltip content="下移" placement="top">
-                    <el-button link :icon="ArrowDown" :disabled="$index === problemList.length - 1"
-                      aria-label="下移题目" @click="moveProblem($index, 1)" />
-                  </el-tooltip>
-                  <span class="problem-actions__divider"></span>
-                  <el-button link type="danger" @click="removeProblem($index)">移除</el-button>
+                  <el-button link type="danger" @click="removeProblem(index)">移除</el-button>
                 </div>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-empty v-else description="还没有添加题目" :image-size="64">
-            <el-button type="primary" plain @click="pickerVisible = true">从题库选择</el-button>
-            <el-button type="primary" plain @click="problemSetPickerVisible = true">从题单导入</el-button>
-          </el-empty>
+              </div>
+            </div>
+          </div>
+          <div v-else class="problem-empty">
+            <el-empty description="还没有添加题目" :image-size="72">
+              <el-button type="primary" plain @click="pickerVisible = true">从题库选择</el-button>
+              <el-button type="primary" plain @click="problemSetPickerVisible = true">从题单导入</el-button>
+            </el-empty>
+          </div>
         </section>
 
         <section class="editor-section">
-          <h3 class="section-title">作业说明</h3>
+          <div class="section-heading">
+            <h2 class="section-title">作业说明</h2>
+          </div>
           <el-form-item class="description-field">
             <MdEditor v-model="form.description" height="280px" editor-id="homework-page-editor" />
           </el-form-item>
         </section>
-
-        <div class="editor-actions">
-          <el-button @click="backToList">取消</el-button>
-          <el-button type="primary" :loading="saving" @click="save">
-            {{ isEdit ? "保存修改" : "布置作业" }}
-          </el-button>
-        </div>
       </el-form>
+
+      <div class="editor-actions">
+        <el-button @click="backToList">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="save">
+          {{ isEdit ? "保存修改" : "布置作业" }}
+        </el-button>
+      </div>
     </section>
 
     <ProblemPickerDialog v-model="pickerVisible" :existing-problem-ids="existingProblemIds"
       @add="addPickedProblems" />
     <ProblemSetPickerDialog v-model="problemSetPickerVisible" :existing-problem-ids="existingProblemIds"
       @add="addPickedProblems" />
+    <ProblemPreviewDialog v-model="previewVisible" :problem-id="previewProblemId" />
   </div>
 </template>
 
@@ -229,53 +270,66 @@ watch(() => route.params.hid, loadEditor, { immediate: true });
 }
 
 .editor-shell {
+  padding: 24px 28px 28px;
   overflow: hidden;
 }
 
-.editor-heading {
-  padding: 16px 22px 20px;
-  border-bottom: 1px solid #e8edf3;
-}
-
-.back-button {
-  margin-left: -10px;
-  color: #64748b;
-}
-
-.editor-heading h2 {
-  margin-top: 8px;
-  color: #172033;
-  font-size: 22px;
-  font-weight: 650;
-  line-height: 1.35;
-}
-
-.editor-form {
-  display: block;
-}
-
-.editor-section {
-  padding: 22px 24px 24px;
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .editor-section + .editor-section {
-  border-top: 1px solid #eef2f6;
+  margin-top: 36px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .section-title {
-  margin-bottom: 18px;
-  color: #1f2937;
-  font-size: 16px;
+  margin: 0;
+  color: var(--el-text-color-primary);
+  font-size: 14px;
   font-weight: 600;
+  line-height: 22px;
 }
 
-.basic-fields {
+.problem-count {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: 4px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  font-size: 12px;
+}
+
+.basic-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.9fr);
-  gap: 20px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
+  gap: 24px;
 }
 
-.basic-fields :deep(.el-date-editor) {
+.basic-grid :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+.basic-grid :deep(.el-date-editor) {
   width: 100%;
 }
 
@@ -287,66 +341,133 @@ watch(() => route.params.hid, loadEditor, { immediate: true });
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 14px;
 }
 
 .problem-id-input {
-  width: 220px;
+  width: 240px;
 }
 
-.problem-table {
-  border: 1px solid #e8edf3;
-  border-radius: 4px;
+.problem-table,
+.problem-empty {
+  overflow: hidden;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 6px;
+}
+
+.problem-table-header,
+.problem-row {
+  display: grid;
+  grid-template-columns: 42px 64px 150px minmax(220px, 1fr) 120px;
+  align-items: center;
+  min-width: 700px;
+}
+
+.problem-table-header {
+  height: 42px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--el-border-color-light);
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color-light);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.problem-table-body {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.problem-row {
+  min-height: 58px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  color: var(--el-text-color-regular);
+  font-size: 15px;
+  transition: background-color 0.16s ease, opacity 0.16s ease;
+}
+
+.problem-row:last-child {
+  border-bottom: 0;
+}
+
+.problem-row:hover,
+.problem-row.is-drag-over {
+  background: var(--el-fill-color-light);
+}
+
+.problem-row.is-dragging {
+  opacity: 0.55;
+}
+
+.drag-handle {
+  color: var(--el-text-color-placeholder);
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.problem-index {
+  color: var(--el-text-color-secondary);
+}
+
+.problem-id {
+  color: var(--el-color-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.problem-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.problem-table-header > :last-child {
+  text-align: center;
 }
 
 .problem-actions {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .problem-actions :deep(.el-button + .el-button) {
   margin-left: 0;
 }
 
-.problem-actions__divider {
-  width: 1px;
-  height: 14px;
-  background: #e2e8f0;
+.problem-empty {
+  min-height: 220px;
 }
 
 .editor-actions {
-  position: sticky;
-  z-index: 10;
-  bottom: 0;
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 16px;
-  padding: 14px 18px;
-  border-top: 1px solid #dfe6ef;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 -5px 14px rgba(15, 23, 42, 0.04);
-  backdrop-filter: blur(8px);
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
 }
 
-@media (max-width: 760px) {
-  .editor-actions {
-    align-items: center;
+@media (max-width: 768px) {
+  .editor-shell {
+    padding: 20px 16px;
   }
 
-  .basic-fields {
-    grid-template-columns: 1fr;
-  }
-
-  .editor-section {
-    padding: 18px 16px 20px;
+  .basic-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .problem-id-input {
     width: 100%;
+  }
+
+  .problem-table {
+    overflow-x: auto;
   }
 }
 </style>
