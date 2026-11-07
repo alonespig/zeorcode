@@ -117,7 +117,8 @@ import { ref, reactive, watch, computed, onBeforeUnmount } from 'vue'
 import { getSubmit, rejudgeSubmission, getSubmitDetail } from '@/api/user'
 import {
   PendingCode, AcceptedCode, MemoryLimitExceededCode, TimeLimitExceededCode,
-  RuntimeErrorCode, WrongAnswerCode, CompileErrorCode, UnknownErrorCode, JUDGE_STATUS_TEXT,
+  RuntimeErrorCode, WrongAnswerCode, CompileErrorCode, UnknownErrorCode,
+  PresentationErrorCode, JUDGE_STATUS_TEXT,
   JUDGE_STATUS_CLASS
 } from '@/constants/index'
 import { useRoute, useRouter } from 'vue-router'
@@ -146,10 +147,11 @@ const filters = reactive({
 
 const statusList = [
   AcceptedCode,
-  MemoryLimitExceededCode,
-  TimeLimitExceededCode,
-  RuntimeErrorCode,
+  PresentationErrorCode,
   WrongAnswerCode,
+  TimeLimitExceededCode,
+  MemoryLimitExceededCode,
+  RuntimeErrorCode,
   CompileErrorCode,
   UnknownErrorCode,
 ].map(id => ({ id, name: JUDGE_STATUS_TEXT[id] }));
