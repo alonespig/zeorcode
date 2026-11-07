@@ -19,7 +19,11 @@ defineOptions({ name: "ProblemSetForm" });
 const props = defineProps<{
   /** 编辑时传入题单对外 id；新建时不传 */
   problemSetId?: number;
+  /** 抽屉等嵌入式场景：隐藏页面自带的头部和底部操作 */
+  embedded?: boolean;
 }>();
+
+const emit = defineEmits<{ (e: "saved"): void }>();
 
 interface ProblemSetFormModel {
   title: string;
@@ -204,7 +208,8 @@ async function save() {
     }
     message("已保存", { type: "success" });
     dirty.value = false;
-    router.push("/content/problemsets");
+    emit("saved");
+    if (!props.embedded) router.push("/content/problemsets");
   } catch {
     // 错误信息已由 http 拦截器统一提示
   } finally {
@@ -215,6 +220,8 @@ async function save() {
 function goBack() {
   router.push("/content/problemsets");
 }
+
+defineExpose({ save, saving });
 
 onBeforeRouteLeave(async () => {
   if (!dirty.value) return true;
@@ -236,8 +243,8 @@ onMounted(() => {
 
 <template>
   <div class="problem-set-editor">
-    <el-card v-loading="loadingDetail" class="editor-card" shadow="never">
-      <header class="editor-header">
+    <el-card v-loading="loadingDetail" class="editor-card" :class="{ 'editor-card--embedded': embedded }" shadow="never">
+      <header v-if="!embedded" class="editor-header">
         <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
         <el-button type="primary" :loading="saving" @click="save">
           保存题单
@@ -401,7 +408,7 @@ onMounted(() => {
         </section>
       </el-form>
 
-      <div class="editor-actions">
+      <div v-if="!embedded" class="editor-actions">
         <el-button :disabled="saving" @click="goBack">取消</el-button>
         <el-button type="primary" :loading="saving" @click="save">
           保存题单
@@ -449,6 +456,15 @@ onMounted(() => {
 
 .editor-card {
   border-color: var(--el-border-color-light);
+}
+
+.editor-card--embedded {
+  border: 0;
+  background: transparent;
+}
+
+.editor-card--embedded :deep(.el-card__body) {
+  padding: 0;
 }
 
 .editor-card :deep(.el-card__body) {
