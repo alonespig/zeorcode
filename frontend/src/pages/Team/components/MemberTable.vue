@@ -13,12 +13,12 @@ const emit = defineEmits(["remove"]);
   <el-table :data="members" row-key="uid" class="member-table" aria-label="团队成员列表">
     <el-table-column label="账号" min-width="260">
       <template #default="{ row }">
-        <div class="member-account">
+        <router-link class="member-account" :to="{ name: 'User', params: { id: row.uid } }">
           <el-avatar :size="34" :src="row.avatar || undefined" class="member-avatar">
             {{ (row.realName || row.username || '?').slice(0, 1) }}
           </el-avatar>
           <span class="member-username" :title="row.username">{{ row.username }}</span>
-        </div>
+        </router-link>
       </template>
     </el-table-column>
     <el-table-column label="姓名" min-width="140" show-overflow-tooltip>
@@ -64,6 +64,13 @@ const emit = defineEmits(["remove"]);
   display: flex;
   align-items: center;
   gap: 12px;
+  width: fit-content;
+  color: inherit;
+  text-decoration: none;
+}
+
+.member-account:hover .member-username {
+  color: var(--el-color-primary);
 }
 
 .member-avatar {
