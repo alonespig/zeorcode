@@ -63,26 +63,31 @@
         @current-change="loadList" />
     </div>
 
+    <HomeworkDrawer :key="drawerKey" v-model="editVisible" :team-id="route.params.id" :homework-id="editingId"
+      @saved="loadList" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, inject, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus } from "@element-plus/icons-vue";
 import { getHomeworkList, deleteHomework } from "@/api/team";
 import CapsuleProgress from "@/components/homework/CapsuleProgress.vue";
+import HomeworkDrawer from "@/pages/Team/homework/HomeworkDrawer.vue";
 
 const team = inject("team");
 const route = useRoute();
-const router = useRouter();
 
 const list = ref([]);
 const hasActions = computed(() => list.value.some((homework) => homework.canEdit || homework.canDelete));
 const total = ref(0);
 const page = ref(1);
 const pageSize = 10;
+const editVisible = ref(false);
+const editingId = ref("");
+const drawerKey = ref(0);
 
 const statusMeta = (s) => ({
   0: { text: "未开始", type: "warning" },
@@ -108,11 +113,15 @@ const loadList = async () => {
 };
 
 const openCreate = () => {
-  router.push({ name: "HomeworkCreate", params: { id: route.params.id } });
+  editingId.value = "";
+  drawerKey.value += 1;
+  editVisible.value = true;
 };
 
 const openEdit = (row) => {
-  router.push({ name: "HomeworkEdit", params: { id: route.params.id, hid: row.id } });
+  editingId.value = row.id;
+  drawerKey.value += 1;
+  editVisible.value = true;
 };
 
 const remove = async (row) => {
