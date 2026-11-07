@@ -12,6 +12,8 @@ import (
 	einomodel "github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 	"github.com/spf13/viper"
+
+	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
 )
 
 var ErrDisabled = errors.New("ai model is not configured")
@@ -75,11 +77,21 @@ func (c *Client) Generate(ctx context.Context, system string, history []Message)
 	if !c.Enabled() {
 		return "", ErrDisabled
 	}
+	start := time.Now()
 	messages := buildMessages(system, history)
 	result, err := c.model.Generate(ctx, messages)
 	if err != nil {
+		logger.Infow("llm generate finished",
+			"model", c.name,
+			"totalMS", time.Since(start).Milliseconds(),
+			"err", err,
+		)
 		return "", err
 	}
+	logger.Infow("llm generate finished",
+		"model", c.name,
+		"totalMS", time.Since(start).Milliseconds(),
+	)
 	return strings.TrimSpace(result.Content), nil
 }
 
@@ -90,8 +102,22 @@ func (c *Client) Stream(ctx context.Context, system string, history []Message, o
 	if !c.Enabled() {
 		return "", ErrDisabled
 	}
+	start := time.Now()
+	firstToken := time.Duration(0)
+	deltas := 0
+	finish := func(err error) {
+		logger.Infow("llm stream finished",
+			"model", c.name,
+			"firstTokenMS", firstToken.Milliseconds(),
+			"totalMS", time.Since(start).Milliseconds(),
+			"deltas", deltas,
+			"err", err,
+		)
+	}
+
 	reader, err := c.model.Stream(ctx, buildMessages(system, history))
 	if err != nil {
+		finish(err)
 		return "", err
 	}
 	defer reader.Close()
@@ -100,17 +126,24 @@ func (c *Client) Stream(ctx context.Context, system string, history []Message, o
 	for {
 		chunk, recvErr := reader.Recv()
 		if errors.Is(recvErr, io.EOF) {
+			finish(nil)
 			break
 		}
 		if recvErr != nil {
+			finish(recvErr)
 			return "", recvErr
 		}
 		if chunk == nil || chunk.Content == "" {
 			continue
 		}
+		if deltas == 0 {
+			firstToken = time.Since(start)
+		}
+		deltas++
 		answer.WriteString(chunk.Content)
 		if onDelta != nil {
 			if err := onDelta(chunk.Content); err != nil {
+				finish(err)
 				return "", err
 			}
 		}
