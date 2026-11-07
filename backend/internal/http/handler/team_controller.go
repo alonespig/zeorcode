@@ -27,7 +27,7 @@ func NewTeamController(teamSrv *service.TeamService) *TeamController {
 }
 
 // List GET /api/team 团队列表（mine=1 只看我加入的，visibility=0/1 筛选公开度）
-func (t *TeamController) List(c *gin.Context) (any, error) {
+func (t *TeamController) List(c *gin.Context) (*dto.TeamListResp, error) {
 	var req dto.TeamListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -46,7 +46,7 @@ func (t *TeamController) List(c *gin.Context) (any, error) {
 }
 
 // Detail GET /api/team/:id
-func (t *TeamController) Detail(c *gin.Context) (any, error) {
+func (t *TeamController) Detail(c *gin.Context) (*dto.TeamDetailResp, error) {
 	id, err := t.resolveTeamID(c)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (t *TeamController) Detail(c *gin.Context) (any, error) {
 }
 
 // Create POST /api/team
-func (t *TeamController) Create(c *gin.Context) (any, error) {
+func (t *TeamController) Create(c *gin.Context) (gin.H, error) {
 	var req dto.SaveTeamReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -76,7 +76,7 @@ func (t *TeamController) Create(c *gin.Context) (any, error) {
 }
 
 // Update PUT /api/team/:id
-func (t *TeamController) Update(c *gin.Context) (any, error) {
+func (t *TeamController) Update(c *gin.Context) (gin.H, error) {
 	id, err := t.resolveTeamID(c)
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func (t *TeamController) Update(c *gin.Context) (any, error) {
 }
 
 // Delete DELETE /api/team/:id 解散团队
-func (t *TeamController) Delete(c *gin.Context) (any, error) {
+func (t *TeamController) Delete(c *gin.Context) (gin.H, error) {
 	id, err := t.resolveTeamID(c)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (t *TeamController) Delete(c *gin.Context) (any, error) {
 }
 
 // Join POST /api/team/:id/join
-func (t *TeamController) Join(c *gin.Context) (any, error) {
+func (t *TeamController) Join(c *gin.Context) (gin.H, error) {
 	id, err := t.resolveTeamID(c)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (t *TeamController) Join(c *gin.Context) (any, error) {
 }
 
 // Quit POST /api/team/:id/quit
-func (t *TeamController) Quit(c *gin.Context) (any, error) {
+func (t *TeamController) Quit(c *gin.Context) (gin.H, error) {
 	id, err := t.resolveTeamID(c)
 	if err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ func (t *TeamController) Quit(c *gin.Context) (any, error) {
 }
 
 // ListMembers GET /api/team/:id/member
-func (t *TeamController) ListMembers(c *gin.Context) (any, error) {
+func (t *TeamController) ListMembers(c *gin.Context) (*dto.TeamMemberListResp, error) {
 	id, err := t.resolveTeamID(c)
 	if err != nil {
 		return nil, err
@@ -184,7 +184,7 @@ func (t *TeamController) DownloadStudentImportTemplate(c *gin.Context) {
 }
 
 // ImportStudents POST /api/team/:id/member/import，multipart 字段名为 file。
-func (t *TeamController) ImportStudents(c *gin.Context) (any, error) {
+func (t *TeamController) ImportStudents(c *gin.Context) (*dto.TeamStudentImportResp, error) {
 	id, err := t.resolveTeamID(c)
 	if err != nil {
 		return nil, err
@@ -220,7 +220,7 @@ func (t *TeamController) ImportStudents(c *gin.Context) (any, error) {
 }
 
 // ImportStudentsManual POST /api/team/:id/member/import/manual，手动粘贴学生名单。
-func (t *TeamController) ImportStudentsManual(c *gin.Context) (any, error) {
+func (t *TeamController) ImportStudentsManual(c *gin.Context) (*dto.TeamStudentImportResp, error) {
 	id, err := t.resolveTeamID(c)
 	if err != nil {
 		return nil, err
@@ -241,7 +241,7 @@ func (t *TeamController) ImportStudentsManual(c *gin.Context) (any, error) {
 }
 
 // SetMemberRole PUT /api/team/:id/member/:uid/role 设置/取消团队管理员（:uid 为对外用户号）
-func (t *TeamController) SetMemberRole(c *gin.Context) (any, error) {
+func (t *TeamController) SetMemberRole(c *gin.Context) (gin.H, error) {
 	id, err := t.resolveTeamID(c)
 	if err != nil {
 		return nil, err
@@ -265,7 +265,7 @@ func (t *TeamController) SetMemberRole(c *gin.Context) (any, error) {
 }
 
 // RemoveMember DELETE /api/team/:id/member/:uid（:uid 为对外用户号）
-func (t *TeamController) RemoveMember(c *gin.Context) (any, error) {
+func (t *TeamController) RemoveMember(c *gin.Context) (gin.H, error) {
 	id, err := t.resolveTeamID(c)
 	if err != nil {
 		return nil, err

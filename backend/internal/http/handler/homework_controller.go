@@ -24,7 +24,7 @@ func NewHomeworkController(hwSrv *service.HomeworkService) *HomeworkController {
 }
 
 // ListByTeam GET /api/team/:id/homework
-func (h *HomeworkController) ListByTeam(c *gin.Context) (any, error) {
+func (h *HomeworkController) ListByTeam(c *gin.Context) (*dto.HomeworkListResp, error) {
 	teamID, err := h.resolveTeamID(c)
 	if err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func (h *HomeworkController) ListByTeam(c *gin.Context) (any, error) {
 }
 
 // Create POST /api/team/:id/homework 布置作业
-func (h *HomeworkController) Create(c *gin.Context) (any, error) {
+func (h *HomeworkController) Create(c *gin.Context) (gin.H, error) {
 	teamID, err := h.resolveTeamID(c)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (h *HomeworkController) Create(c *gin.Context) (any, error) {
 }
 
 // Detail GET /api/homework/:hid
-func (h *HomeworkController) Detail(c *gin.Context) (any, error) {
+func (h *HomeworkController) Detail(c *gin.Context) (*dto.HomeworkDetailResp, error) {
 	id, err := h.resolveHomeworkID(c)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (h *HomeworkController) Detail(c *gin.Context) (any, error) {
 
 // Problem GET /api/homework/:hid/problem/:problemID
 // 在作业权限与开始时间约束下返回单题题面。
-func (h *HomeworkController) Problem(c *gin.Context) (any, error) {
+func (h *HomeworkController) Problem(c *gin.Context) (*dto.ProblemDetailResp, error) {
 	id, err := h.resolveHomeworkID(c)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (h *HomeworkController) Problem(c *gin.Context) (any, error) {
 }
 
 // Update PUT /api/homework/:hid 仅布置者本人可改
-func (h *HomeworkController) Update(c *gin.Context) (any, error) {
+func (h *HomeworkController) Update(c *gin.Context) (gin.H, error) {
 	id, err := h.resolveHomeworkID(c)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func (h *HomeworkController) Update(c *gin.Context) (any, error) {
 }
 
 // Delete DELETE /api/homework/:hid
-func (h *HomeworkController) Delete(c *gin.Context) (any, error) {
+func (h *HomeworkController) Delete(c *gin.Context) (gin.H, error) {
 	id, err := h.resolveHomeworkID(c)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (h *HomeworkController) Delete(c *gin.Context) (any, error) {
 }
 
 // Submit POST /api/homework/:hid/submit
-func (h *HomeworkController) Submit(c *gin.Context) (any, error) {
+func (h *HomeworkController) Submit(c *gin.Context) (gin.H, error) {
 	id, err := h.resolveHomeworkID(c)
 	if err != nil {
 		return nil, err
@@ -152,7 +152,7 @@ func (h *HomeworkController) Submit(c *gin.Context) (any, error) {
 }
 
 // Rank GET /api/homework/:hid/rank IOI 排行榜
-func (h *HomeworkController) Rank(c *gin.Context) (any, error) {
+func (h *HomeworkController) Rank(c *gin.Context) (*dto.HomeworkRankResp, error) {
 	id, err := h.resolveHomeworkID(c)
 	if err != nil {
 		return nil, err
@@ -166,7 +166,7 @@ func (h *HomeworkController) Rank(c *gin.Context) (any, error) {
 
 // Submissions GET /api/homework/:hid/submission
 // 普通成员只拿到自己的；团队管理员及以上拿到全部。
-func (h *HomeworkController) Submissions(c *gin.Context) (any, error) {
+func (h *HomeworkController) Submissions(c *gin.Context) (*dto.HomeworkSubmissionListResp, error) {
 	id, err := h.resolveHomeworkID(c)
 	if err != nil {
 		return nil, err
@@ -184,7 +184,7 @@ func (h *HomeworkController) Submissions(c *gin.Context) (any, error) {
 
 // SubmissionDetail GET /api/homework/:hid/submission/:sid
 // 普通成员只能查看自己的代码，团队管理者可以查看全部成员代码。
-func (h *HomeworkController) SubmissionDetail(c *gin.Context) (any, error) {
+func (h *HomeworkController) SubmissionDetail(c *gin.Context) (*dto.HomeworkSubmissionDetailResp, error) {
 	id, err := h.resolveHomeworkID(c)
 	if err != nil {
 		return nil, err

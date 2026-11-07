@@ -36,7 +36,7 @@ func NewUserController(userSrv *service.UserService,
 }
 
 // GenerateCaptcha GET /api/captcha 生成一次性登录图形验证码。
-func (u *UserController) GenerateCaptcha(c *gin.Context) (any, error) {
+func (u *UserController) GenerateCaptcha(c *gin.Context) (*dto.CaptchaResp, error) {
 	resp, err := u.captchaSrv.Generate(c.Request.Context())
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func (u *UserController) resolveUserPK(c *gin.Context) (int64, error) {
 }
 
 // RatingHistory GET /api/user/:id/rating 某用户 rating + 变化历史（公开）
-func (u *UserController) RatingHistory(c *gin.Context) (any, error) {
+func (u *UserController) RatingHistory(c *gin.Context) (*dto.RatingHistoryResp, error) {
 	id, err := u.resolveUserPK(c)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (u *UserController) RatingHistory(c *gin.Context) (any, error) {
 }
 
 // ContestHistory GET /api/user/:id/contest-history 用户参赛记录（公开）
-func (u *UserController) ContestHistory(c *gin.Context) (any, error) {
+func (u *UserController) ContestHistory(c *gin.Context) (*dto.ContestHistoryResp, error) {
 	id, err := u.resolveUserPK(c)
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (u *UserController) ContestHistory(c *gin.Context) (any, error) {
 }
 
 // RatingRank GET /api/user/rating-rank 按 rating 排名（公开）
-func (u *UserController) RatingRank(c *gin.Context) (any, error) {
+func (u *UserController) RatingRank(c *gin.Context) (*dto.UserRank, error) {
 	var req dto.UserRankReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -98,7 +98,7 @@ func (u *UserController) RatingRank(c *gin.Context) (any, error) {
 	return toUserRankListResp(resp), nil
 }
 
-func (u *UserController) CreateUser(c *gin.Context) (any, error) {
+func (u *UserController) CreateUser(c *gin.Context) (gin.H, error) {
 	var req dto.CreateUserReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -110,7 +110,7 @@ func (u *UserController) CreateUser(c *gin.Context) (any, error) {
 }
 
 // SendVerifyCode POST /api/verify-code 发送邮箱验证码（注册/找回密码/换绑）
-func (u *UserController) SendVerifyCode(c *gin.Context) (any, error) {
+func (u *UserController) SendVerifyCode(c *gin.Context) (gin.H, error) {
 	var req dto.SendCodeReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -122,7 +122,7 @@ func (u *UserController) SendVerifyCode(c *gin.Context) (any, error) {
 }
 
 // ResetPassword POST /api/reset-password 通过邮箱验证码重置密码
-func (u *UserController) ResetPassword(c *gin.Context) (any, error) {
+func (u *UserController) ResetPassword(c *gin.Context) (gin.H, error) {
 	var req dto.ResetPasswordReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -151,7 +151,7 @@ func (u *UserController) ChangePassword(c *gin.Context) {
 }
 
 // BindEmail PUT /api/user/email 换绑/绑定邮箱（需登录）
-func (u *UserController) BindEmail(c *gin.Context) (any, error) {
+func (u *UserController) BindEmail(c *gin.Context) (gin.H, error) {
 	v, _ := c.Get("userID")
 	userID, _ := v.(int64)
 	var req dto.BindEmailReq
@@ -164,7 +164,7 @@ func (u *UserController) BindEmail(c *gin.Context) (any, error) {
 	return nil, nil
 }
 
-func (u *UserController) Rank(c *gin.Context) (any, error) {
+func (u *UserController) Rank(c *gin.Context) (*dto.UserRank, error) {
 	var req dto.UserRankReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -176,7 +176,7 @@ func (u *UserController) Rank(c *gin.Context) (any, error) {
 	return toUserRankListResp(resp), nil
 }
 
-func (u *UserController) GetUserInfo(c *gin.Context) (any, error) {
+func (u *UserController) GetUserInfo(c *gin.Context) (*dto.UserInfoResp, error) {
 	v, _ := c.Get("userID")
 	userID, _ := v.(int64)
 	resp, err := u.userSrv.UserInfo(c.Request.Context(), userID)
@@ -187,7 +187,7 @@ func (u *UserController) GetUserInfo(c *gin.Context) (any, error) {
 }
 
 // UpdateUserInfo PUT /api/user/info 更新当前登录用户的资料
-func (u *UserController) UpdateUserInfo(c *gin.Context) (any, error) {
+func (u *UserController) UpdateUserInfo(c *gin.Context) (gin.H, error) {
 	v, _ := c.Get("userID")
 	userID, _ := v.(int64)
 	var req dto.UpdateProfileReq
@@ -219,7 +219,7 @@ func (u *UserController) Login(c *gin.Context) {
 
 // Session GET /api/session 同步服务端 Cookie 登录态。
 // 路由使用 JWTAuthOptional，因此游客也会得到明确的 authenticated=false。
-func (u *UserController) Session(c *gin.Context) (any, error) {
+func (u *UserController) Session(c *gin.Context) (*dto.SessionResp, error) {
 	v, exists := c.Get("userID")
 	userID, ok := v.(int64)
 	if !exists || !ok || userID <= 0 {
@@ -252,7 +252,7 @@ func (u *UserController) Logout(c *gin.Context) {
 	response.SuccessEmpty(c)
 }
 
-func (u *UserController) GetUserRecent7DaysPassCount(c *gin.Context) (any, error) {
+func (u *UserController) GetUserRecent7DaysPassCount(c *gin.Context) (*dto.DailyAcceptedCountResp, error) {
 	userID, err := u.resolveUserPK(c)
 	if err != nil {
 		return nil, err
@@ -264,7 +264,7 @@ func (u *UserController) GetUserRecent7DaysPassCount(c *gin.Context) (any, error
 	return toDailyAcceptedCountResp(resp), nil
 }
 
-func (u *UserController) UserProfile(c *gin.Context) (any, error) {
+func (u *UserController) UserProfile(c *gin.Context) (*dto.UserProfile, error) {
 	userID, err := u.resolveUserPK(c)
 	if err != nil {
 		return nil, err

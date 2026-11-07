@@ -53,7 +53,7 @@ func (p *ProblemController) DownloadProblemArchive(c *gin.Context) {
 	}
 }
 
-func (p *ProblemController) ImportProblemArchive(c *gin.Context) (any, error) {
+func (p *ProblemController) ImportProblemArchive(c *gin.Context) (*service.ProblemArchiveImportResult, error) {
 	const multipartOverheadAllowance int64 = 1 << 20
 	c.Request.Body = http.MaxBytesReader(
 		c.Writer,
@@ -86,7 +86,7 @@ func (p *ProblemController) ImportProblemArchive(c *gin.Context) (any, error) {
 	return p.problemSrv.ImportProblemArchive(c.Request.Context(), zr)
 }
 
-func (p *ProblemController) CreateProblem(c *gin.Context) (any, error) {
+func (p *ProblemController) CreateProblem(c *gin.Context) (gin.H, error) {
 	var req dto.CreateProblemReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -107,7 +107,7 @@ func (p *ProblemController) resolveProblemPK(c *gin.Context) (int64, error) {
 	return p.problemSrv.ResolveID(c.Request.Context(), displayID)
 }
 
-func (p *ProblemController) UpdateProblem(c *gin.Context) (any, error) {
+func (p *ProblemController) UpdateProblem(c *gin.Context) (gin.H, error) {
 	pk, err := p.resolveProblemPK(c)
 	if err != nil {
 		return nil, err
@@ -124,7 +124,7 @@ func (p *ProblemController) UpdateProblem(c *gin.Context) (any, error) {
 	return gin.H{"id": problemID}, nil
 }
 
-func (p *ProblemController) List(c *gin.Context) (any, error) {
+func (p *ProblemController) List(c *gin.Context) (*dto.ProblemListResp, error) {
 	var req dto.ProblemListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -143,7 +143,7 @@ func (p *ProblemController) List(c *gin.Context) (any, error) {
 	return toProblemListResp(resp), nil
 }
 
-func (p *ProblemController) GetProblemDetail(c *gin.Context) (any, error) {
+func (p *ProblemController) GetProblemDetail(c *gin.Context) (*dto.ProblemDetailResp, error) {
 	pk, err := p.resolveProblemPK(c)
 	if err != nil {
 		return nil, err
@@ -158,7 +158,7 @@ func (p *ProblemController) GetProblemDetail(c *gin.Context) (any, error) {
 	return toProblemDetailResp(resp), nil
 }
 
-func (p *ProblemController) GetProblemForEdit(c *gin.Context) (any, error) {
+func (p *ProblemController) GetProblemForEdit(c *gin.Context) (*dto.ProblemModel, error) {
 	pk, err := p.resolveProblemPK(c)
 	if err != nil {
 		return nil, err
@@ -170,7 +170,7 @@ func (p *ProblemController) GetProblemForEdit(c *gin.Context) (any, error) {
 	return toProblemForEdit(resp), nil
 }
 
-func (p *ProblemController) GetTagList(c *gin.Context) (any, error) {
+func (p *ProblemController) GetTagList(c *gin.Context) (gin.H, error) {
 	resp, err := p.problemSrv.GetTagList(c.Request.Context())
 	if err != nil {
 		return nil, err
@@ -178,7 +178,7 @@ func (p *ProblemController) GetTagList(c *gin.Context) (any, error) {
 	return gin.H{"tags": toTagItems(resp.Tags)}, nil
 }
 
-func (p *ProblemController) GetAdminTagList(c *gin.Context) (any, error) {
+func (p *ProblemController) GetAdminTagList(c *gin.Context) (gin.H, error) {
 	tags, err := p.problemSrv.GetAdminTagList(c.Request.Context())
 	if err != nil {
 		return nil, err
@@ -186,7 +186,7 @@ func (p *ProblemController) GetAdminTagList(c *gin.Context) (any, error) {
 	return gin.H{"tags": toAdminTagItems(tags)}, nil
 }
 
-func (p *ProblemController) CreateTag(c *gin.Context) (any, error) {
+func (p *ProblemController) CreateTag(c *gin.Context) (*dto.TagItem, error) {
 	var req dto.SaveTagReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -198,7 +198,7 @@ func (p *ProblemController) CreateTag(c *gin.Context) (any, error) {
 	return toTagItem(tag), nil
 }
 
-func (p *ProblemController) UpdateTag(c *gin.Context) (any, error) {
+func (p *ProblemController) UpdateTag(c *gin.Context) (*dto.TagItem, error) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || id <= 0 {
 		return nil, errcode.ErrInvalidParams.WithMsg("非法标签 ID")
@@ -214,7 +214,7 @@ func (p *ProblemController) UpdateTag(c *gin.Context) (any, error) {
 	return toTagItem(tag), nil
 }
 
-func (p *ProblemController) DeleteTag(c *gin.Context) (any, error) {
+func (p *ProblemController) DeleteTag(c *gin.Context) (gin.H, error) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || id <= 0 {
 		return nil, errcode.ErrInvalidParams.WithMsg("非法标签 ID")
@@ -249,7 +249,7 @@ type TestDataPreview struct {
 	Truncated bool   `json:"truncated"`
 }
 
-func (p *ProblemController) ListFiles(c *gin.Context) (any, error) {
+func (p *ProblemController) ListFiles(c *gin.Context) ([]FileInfo, error) {
 	pk, err := p.resolveProblemPK(c)
 	if err != nil {
 		return nil, err
@@ -274,7 +274,7 @@ func (p *ProblemController) ListFiles(c *gin.Context) (any, error) {
 	return files, nil
 }
 
-func (p *ProblemController) GetFileContent(c *gin.Context) (any, error) {
+func (p *ProblemController) GetFileContent(c *gin.Context) (*TestDataPreview, error) {
 	pk, err := p.resolveProblemPK(c)
 	if err != nil {
 		return nil, err
@@ -294,7 +294,7 @@ func (p *ProblemController) GetFileContent(c *gin.Context) (any, error) {
 		return nil, errcode.ErrInternal.Wrap(err)
 	}
 
-	return TestDataPreview{
+	return &TestDataPreview{
 		Name:      name,
 		Size:      size,
 		Content:   content,
@@ -338,7 +338,7 @@ func readTestDataPreview(dir, name string) (content string, size int64, truncate
 	return string(data), info.Size(), truncated, nil
 }
 
-func (p *ProblemController) UploadFile(c *gin.Context) (any, error) {
+func (p *ProblemController) UploadFile(c *gin.Context) (gin.H, error) {
 	pk, err := p.resolveProblemPK(c)
 	if err != nil {
 		return nil, err
@@ -509,7 +509,7 @@ func countTestcasePairs(dir string) (pairs int, missing []string) {
 
 // UploadTestcaseZip 上传测试点压缩包(zip)：只提取 N.in/N.out（取 basename，天然扁平化 + 防路径穿越），
 // 解压到临时目录 → 配对校验 → 原子替换该题测试数据目录。
-func (p *ProblemController) UploadTestcaseZip(c *gin.Context) (any, error) {
+func (p *ProblemController) UploadTestcaseZip(c *gin.Context) (gin.H, error) {
 	pk, err := p.resolveProblemPK(c)
 	if err != nil {
 		return nil, err
@@ -621,7 +621,7 @@ type DeleteReq struct {
 	Files []string `json:"files"`
 }
 
-func (p *ProblemController) DeleteFiles(c *gin.Context) (any, error) {
+func (p *ProblemController) DeleteFiles(c *gin.Context) (gin.H, error) {
 	pk, err := p.resolveProblemPK(c)
 	if err != nil {
 		return nil, err

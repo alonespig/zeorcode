@@ -25,7 +25,7 @@ func notifUID(c *gin.Context) int64 {
 }
 
 // List GET /api/notifications?type=&page=&pageSize=
-func (n *NotificationController) List(c *gin.Context) (any, error) {
+func (n *NotificationController) List(c *gin.Context) (*dto.NotificationListResp, error) {
 	uid := notifUID(c)
 	if uid == 0 {
 		return nil, errcode.ErrUnauthorized
@@ -46,7 +46,7 @@ func (n *NotificationController) List(c *gin.Context) (any, error) {
 }
 
 // UnreadCount GET /api/notifications/unread-count
-func (n *NotificationController) UnreadCount(c *gin.Context) (any, error) {
+func (n *NotificationController) UnreadCount(c *gin.Context) (*dto.UnreadCountResp, error) {
 	uid := notifUID(c)
 	if uid == 0 {
 		return nil, errcode.ErrUnauthorized
@@ -59,7 +59,7 @@ func (n *NotificationController) UnreadCount(c *gin.Context) (any, error) {
 }
 
 // MarkRead POST /api/notifications/read  body: {id} 单条 / {type} 该类型 / 空 全部
-func (n *NotificationController) MarkRead(c *gin.Context) (any, error) {
+func (n *NotificationController) MarkRead(c *gin.Context) (gin.H, error) {
 	uid := notifUID(c)
 	if uid == 0 {
 		return nil, errcode.ErrUnauthorized
@@ -70,7 +70,7 @@ func (n *NotificationController) MarkRead(c *gin.Context) (any, error) {
 }
 
 // Broadcast POST /api/admin/notifications  管理员广播系统通知
-func (n *NotificationController) Broadcast(c *gin.Context) (any, error) {
+func (n *NotificationController) Broadcast(c *gin.Context) (gin.H, error) {
 	var req dto.BroadcastReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -84,7 +84,7 @@ func (n *NotificationController) Broadcast(c *gin.Context) (any, error) {
 	})
 }
 
-func (n *NotificationController) BroadcastHistory(c *gin.Context) (any, error) {
+func (n *NotificationController) BroadcastHistory(c *gin.Context) (*dto.BroadcastHistoryResp, error) {
 	var req dto.PageForm
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)

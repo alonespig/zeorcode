@@ -19,7 +19,7 @@ func NewLanguageController(languageService *service.LanguageService) *LanguageCo
 	return &LanguageController{service: languageService}
 }
 
-func (h *LanguageController) List(c *gin.Context) (any, error) {
+func (h *LanguageController) List(c *gin.Context) ([]dto.LanguageItem, error) {
 	langs, err := h.service.ListEnabled(c.Request.Context())
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func (h *LanguageController) List(c *gin.Context) (any, error) {
 	return toLanguageItems(langs), nil
 }
 
-func (h *LanguageController) AdminList(c *gin.Context) (any, error) {
+func (h *LanguageController) AdminList(c *gin.Context) ([]dto.LanguageItem, error) {
 	langs, err := h.service.AdminList(c.Request.Context())
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (h *LanguageController) AdminList(c *gin.Context) (any, error) {
 	return toLanguageItems(langs), nil
 }
 
-func (h *LanguageController) Create(c *gin.Context) (any, error) {
+func (h *LanguageController) Create(c *gin.Context) (*dto.LanguageItem, error) {
 	var req dto.SaveLanguageReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -49,7 +49,7 @@ func (h *LanguageController) Create(c *gin.Context) (any, error) {
 	return toLanguageItem(language), nil
 }
 
-func (h *LanguageController) Update(c *gin.Context) (any, error) {
+func (h *LanguageController) Update(c *gin.Context) (gin.H, error) {
 	id, err := languageID(c)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (h *LanguageController) Update(c *gin.Context) (any, error) {
 	})
 }
 
-func (h *LanguageController) Delete(c *gin.Context) (any, error) {
+func (h *LanguageController) Delete(c *gin.Context) (gin.H, error) {
 	id, err := languageID(c)
 	if err != nil {
 		return nil, err

@@ -30,7 +30,7 @@ func NewAdminController(userSrv *service.UserService, dashboardSrv *service.Dash
 }
 
 // Dashboard GET /api/admin/dashboard 后台工作台聚合数据。
-func (a *AdminController) Dashboard(c *gin.Context) (any, error) {
+func (a *AdminController) Dashboard(c *gin.Context) (*dto.DashboardOverviewResp, error) {
 	result, err := a.dashboardSrv.Overview(c.Request.Context())
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func (a *AdminController) Dashboard(c *gin.Context) (any, error) {
 	return toDashboardOverviewResp(result), nil
 }
 
-func (a *AdminController) AuditLogs(c *gin.Context) (any, error) {
+func (a *AdminController) AuditLogs(c *gin.Context) (*dto.AuditLogListResp, error) {
 	var req dto.AuditLogListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -63,7 +63,7 @@ func (a *AdminController) AuditLogs(c *gin.Context) (any, error) {
 }
 
 // ListUsers GET /api/admin/users?page=&pageSize=
-func (a *AdminController) ListUsers(c *gin.Context) (any, error) {
+func (a *AdminController) ListUsers(c *gin.Context) (*dto.AdminUserListResp, error) {
 	var req dto.AdminUserListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -89,7 +89,7 @@ func (a *AdminController) DownloadUserImportTemplate(c *gin.Context) {
 }
 
 // ImportUsers POST /api/admin/users/import，multipart 字段名为 file。
-func (a *AdminController) ImportUsers(c *gin.Context) (any, error) {
+func (a *AdminController) ImportUsers(c *gin.Context) (*dto.BatchCreateUsersResp, error) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxAdminUserImportFileSize+(1<<20))
 	fh, err := c.FormFile("file")
 	if err != nil {
@@ -115,7 +115,7 @@ func (a *AdminController) ImportUsers(c *gin.Context) (any, error) {
 }
 
 // JudgeStatus GET /api/admin/judge/status 评测机健康面板：现场探活各实例
-func (a *AdminController) JudgeStatus(c *gin.Context) (any, error) {
+func (a *AdminController) JudgeStatus(c *gin.Context) (gin.H, error) {
 	urls := viper.GetStringSlice("judge.urls")
 	if len(urls) == 0 {
 		if u := viper.GetString("judge.url"); u != "" {
@@ -126,7 +126,7 @@ func (a *AdminController) JudgeStatus(c *gin.Context) (any, error) {
 }
 
 // SetUserStatus PUT /api/admin/users/:id/status 封禁/解封用户（:id 为对外用户号）
-func (a *AdminController) SetUserStatus(c *gin.Context) (any, error) {
+func (a *AdminController) SetUserStatus(c *gin.Context) (gin.H, error) {
 	uid, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		return nil, errcode.ErrInvalidParams.WithMsg("非法用户号")
@@ -142,7 +142,7 @@ func (a *AdminController) SetUserStatus(c *gin.Context) (any, error) {
 }
 
 // SetUserRole PUT /api/admin/users/:id/role 修改用户角色（:id 为对外用户号）
-func (a *AdminController) SetUserRole(c *gin.Context) (any, error) {
+func (a *AdminController) SetUserRole(c *gin.Context) (gin.H, error) {
 	uid, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		return nil, errcode.ErrInvalidParams.WithMsg("非法用户号")

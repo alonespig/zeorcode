@@ -30,7 +30,7 @@ func NewUploadController() *UploadController {
 	return &UploadController{}
 }
 
-func (u *UploadController) UploadImage(c *gin.Context) (any, error) {
+func (u *UploadController) UploadImage(c *gin.Context) (gin.H, error) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxImageUploadSize+(1<<20))
 	file, err := c.FormFile("file")
 	if err != nil {

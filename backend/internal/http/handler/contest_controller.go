@@ -20,7 +20,7 @@ func NewContestController(contestSrv *service.ContestService) *ContestController
 	return &ContestController{contestSrv: contestSrv}
 }
 
-func (c *ContestController) Create(ctx *gin.Context) (any, error) {
+func (c *ContestController) Create(ctx *gin.Context) (*dto.CreateContestResp, error) {
 	var form dto.CreateContestReq
 	if err := ctx.ShouldBindJSON(&form); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -32,7 +32,7 @@ func (c *ContestController) Create(ctx *gin.Context) (any, error) {
 	return toCreateContestResult(resp), nil
 }
 
-func (c *ContestController) EditContest(ctx *gin.Context) (any, error) {
+func (c *ContestController) EditContest(ctx *gin.Context) (*dto.EditContestResp, error) {
 	contestID, err := c.resolveAdminContestID(ctx)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (c *ContestController) EditContest(ctx *gin.Context) (any, error) {
 	return toEditContestResp(resp), nil
 }
 
-func (c *ContestController) Update(ctx *gin.Context) (any, error) {
+func (c *ContestController) Update(ctx *gin.Context) (*dto.CreateContestResp, error) {
 	var form dto.UpdateContestReq
 	if err := ctx.ShouldBindJSON(&form); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -60,7 +60,7 @@ func (c *ContestController) Update(ctx *gin.Context) (any, error) {
 	return toCreateContestResult(resp), nil
 }
 
-func (c *ContestController) AdminList(ctx *gin.Context) (any, error) {
+func (c *ContestController) AdminList(ctx *gin.Context) (*dto.ContestListResp, error) {
 	var req dto.AdminContestListForm
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -72,7 +72,7 @@ func (c *ContestController) AdminList(ctx *gin.Context) (any, error) {
 	return toContestListResp(resp), nil
 }
 
-func (c *ContestController) SetArchived(ctx *gin.Context) (any, error) {
+func (c *ContestController) SetArchived(ctx *gin.Context) (gin.H, error) {
 	contestID, err := c.resolveAdminContestID(ctx)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func (c *ContestController) SetArchived(ctx *gin.Context) (any, error) {
 	return nil, c.contestSrv.SetContestArchived(ctx.Request.Context(), contestID, req.Archived)
 }
 
-func (c *ContestController) List(ctx *gin.Context) (any, error) {
+func (c *ContestController) List(ctx *gin.Context) (*dto.ContestListResp, error) {
 	// 允许匿名浏览：未登录时 userID=0，isRegistered 一律 false
 	var userID int64
 	if v, exists := ctx.Get("userID"); exists {
@@ -102,7 +102,7 @@ func (c *ContestController) List(ctx *gin.Context) (any, error) {
 	return toContestListResp(resp), nil
 }
 
-func (c *ContestController) JoinContest(ctx *gin.Context) (any, error) {
+func (c *ContestController) JoinContest(ctx *gin.Context) (gin.H, error) {
 	var form dto.JoinContestReq
 	if err := ctx.ShouldBindJSON(&form); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -125,7 +125,7 @@ func (c *ContestController) JoinContest(ctx *gin.Context) (any, error) {
 	return nil, nil
 }
 
-func (c *ContestController) GetContestDetail(ctx *gin.Context) (any, error) {
+func (c *ContestController) GetContestDetail(ctx *gin.Context) (*dto.ContestDetailResp, error) {
 	id, err := c.resolveContestID(ctx)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func (c *ContestController) GetContestDetail(ctx *gin.Context) (any, error) {
 	return toContestDetailResp(resp), nil
 }
 
-func (c *ContestController) GetContestDesc(ctx *gin.Context) (any, error) {
+func (c *ContestController) GetContestDesc(ctx *gin.Context) (*dto.ContestDesc, error) {
 	id, err := c.resolveContestID(ctx)
 	if err != nil {
 		return nil, err
@@ -153,7 +153,7 @@ func (c *ContestController) GetContestDesc(ctx *gin.Context) (any, error) {
 	return toContestDescResp(contest), nil
 }
 
-func (c *ContestController) GetContestProblemList(ctx *gin.Context) (any, error) {
+func (c *ContestController) GetContestProblemList(ctx *gin.Context) (*dto.ContestProblemListResp, error) {
 	contestID, err := c.resolveContestID(ctx)
 	if err != nil {
 		return nil, err
@@ -169,7 +169,7 @@ func (c *ContestController) GetContestProblemList(ctx *gin.Context) (any, error)
 	return toContestProblemListResp(resp), nil
 }
 
-func (c *ContestController) GetContestProblem(ctx *gin.Context) (any, error) {
+func (c *ContestController) GetContestProblem(ctx *gin.Context) (*dto.ContestProblemResp, error) {
 	contestID, err := c.resolveContestID(ctx)
 	if err != nil {
 		return nil, err
@@ -187,7 +187,7 @@ func (c *ContestController) GetContestProblem(ctx *gin.Context) (any, error) {
 	return toContestProblemDetailResp(resp), nil
 }
 
-func (c *ContestController) Submit(ctx *gin.Context) (any, error) {
+func (c *ContestController) Submit(ctx *gin.Context) (gin.H, error) {
 	var form dto.ContestSubmitReq
 	if err := ctx.ShouldBindJSON(&form); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -209,7 +209,7 @@ func (c *ContestController) Submit(ctx *gin.Context) (any, error) {
 	return gin.H{"submissionID": subID}, nil
 }
 
-func (c *ContestController) GetContestSubmitInfo(ctx *gin.Context) (any, error) {
+func (c *ContestController) GetContestSubmitInfo(ctx *gin.Context) (*dto.ContestSubmitResp, error) {
 	contestID, err := c.resolveContestID(ctx)
 	if err != nil {
 		return nil, err
@@ -231,7 +231,7 @@ func (c *ContestController) GetContestSubmitInfo(ctx *gin.Context) (any, error) 
 	return toContestSubmitInfoResp(resp), nil
 }
 
-func (c *ContestController) GetContestSubmissions(ctx *gin.Context) (any, error) {
+func (c *ContestController) GetContestSubmissions(ctx *gin.Context) (*dto.ContestSubmissionListResp, error) {
 	userIDStr, exists := ctx.Get("userID")
 	if !exists {
 		return nil, errcode.ErrUnauthorized
@@ -253,7 +253,7 @@ func (c *ContestController) GetContestSubmissions(ctx *gin.Context) (any, error)
 	return toContestSubmissionListResp(resp), nil
 }
 
-func (c *ContestController) GetContestRank(ctx *gin.Context) (any, error) {
+func (c *ContestController) GetContestRank(ctx *gin.Context) (*dto.ContestRankResp, error) {
 	contestID, err := c.resolveContestID(ctx)
 	if err != nil {
 		return nil, err
@@ -269,7 +269,7 @@ func (c *ContestController) GetContestRank(ctx *gin.Context) (any, error) {
 
 // RecomputeContest POST /api/admin/contest/:id/recompute
 // 管理员从 submissions 明细整场重算比赛榜（重判后修正、或榜单漂移时手动重建）。
-func (c *ContestController) RecomputeContest(ctx *gin.Context) (any, error) {
+func (c *ContestController) RecomputeContest(ctx *gin.Context) (gin.H, error) {
 	contestID, err := c.resolveAdminContestID(ctx)
 	if err != nil {
 		return nil, err
@@ -278,7 +278,7 @@ func (c *ContestController) RecomputeContest(ctx *gin.Context) (any, error) {
 }
 
 // GetMyContestRank GET /api/contest/:id/myrank 当前用户在该比赛的名次
-func (c *ContestController) GetMyContestRank(ctx *gin.Context) (any, error) {
+func (c *ContestController) GetMyContestRank(ctx *gin.Context) (*dto.MyContestRankResp, error) {
 	contestID, err := c.resolveContestID(ctx)
 	if err != nil {
 		return nil, err

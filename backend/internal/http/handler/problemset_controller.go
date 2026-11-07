@@ -18,7 +18,7 @@ func NewProblemSetController(setSrv *service.ProblemSetService) *ProblemSetContr
 }
 
 // List GET /api/problemset 前台题单列表。管理员可见草稿，其他用户只见已发布题单。
-func (p *ProblemSetController) List(c *gin.Context) (any, error) {
+func (p *ProblemSetController) List(c *gin.Context) (*dto.ProblemSetListResp, error) {
 	var req dto.ProblemSetListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -31,7 +31,7 @@ func (p *ProblemSetController) List(c *gin.Context) (any, error) {
 }
 
 // Detail GET /api/problemset/:id
-func (p *ProblemSetController) Detail(c *gin.Context) (any, error) {
+func (p *ProblemSetController) Detail(c *gin.Context) (*dto.ProblemSetDetailResp, error) {
 	id, err := p.resolveProblemSetID(c)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (p *ProblemSetController) Detail(c *gin.Context) (any, error) {
 }
 
 // Rank GET /api/problemset/:id/rank
-func (p *ProblemSetController) Rank(c *gin.Context) (any, error) {
+func (p *ProblemSetController) Rank(c *gin.Context) (*dto.ProblemSetRankResp, error) {
 	id, err := p.resolveProblemSetID(c)
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func (p *ProblemSetController) Rank(c *gin.Context) (any, error) {
 }
 
 // Unlock POST /api/problemset/:id/unlock 提交邀请码解锁
-func (p *ProblemSetController) Unlock(c *gin.Context) (any, error) {
+func (p *ProblemSetController) Unlock(c *gin.Context) (gin.H, error) {
 	id, err := p.resolveProblemSetID(c)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (p *ProblemSetController) Unlock(c *gin.Context) (any, error) {
 }
 
 // AdminList GET /api/admin/problemset 后台列表（含草稿）
-func (p *ProblemSetController) AdminList(c *gin.Context) (any, error) {
+func (p *ProblemSetController) AdminList(c *gin.Context) (*dto.ProblemSetListResp, error) {
 	var req dto.ProblemSetListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -94,7 +94,7 @@ func (p *ProblemSetController) AdminList(c *gin.Context) (any, error) {
 }
 
 // AdminCreate POST /api/admin/problemset
-func (p *ProblemSetController) AdminCreate(c *gin.Context) (any, error) {
+func (p *ProblemSetController) AdminCreate(c *gin.Context) (gin.H, error) {
 	var req dto.SaveProblemSetReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -111,7 +111,7 @@ func (p *ProblemSetController) AdminCreate(c *gin.Context) (any, error) {
 }
 
 // AdminUpdate PUT /api/admin/problemset/:id
-func (p *ProblemSetController) AdminUpdate(c *gin.Context) (any, error) {
+func (p *ProblemSetController) AdminUpdate(c *gin.Context) (gin.H, error) {
 	id, err := p.resolveProblemSetID(c)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (p *ProblemSetController) AdminUpdate(c *gin.Context) (any, error) {
 }
 
 // AdminDelete DELETE /api/admin/problemset/:id
-func (p *ProblemSetController) AdminDelete(c *gin.Context) (any, error) {
+func (p *ProblemSetController) AdminDelete(c *gin.Context) (gin.H, error) {
 	id, err := p.resolveProblemSetID(c)
 	if err != nil {
 		return nil, err

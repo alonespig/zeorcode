@@ -18,7 +18,7 @@ func NewPostController(postSrv *service.PostService) *PostController {
 	return &PostController{postSrv: postSrv}
 }
 
-func (p *PostController) ListPosts(c *gin.Context) (any, error) {
+func (p *PostController) ListPosts(c *gin.Context) (*dto.PostListResp, error) {
 	var req dto.PostListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -33,7 +33,7 @@ func (p *PostController) ListPosts(c *gin.Context) (any, error) {
 }
 
 // ReviewListPending GET /api/admin/posts/pending 审核队列（超管）
-func (p *PostController) ReviewListPending(c *gin.Context) (any, error) {
+func (p *PostController) ReviewListPending(c *gin.Context) (*dto.PostListResp, error) {
 	var req dto.PageForm
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -46,7 +46,7 @@ func (p *PostController) ReviewListPending(c *gin.Context) (any, error) {
 }
 
 // ReviewPost PUT /api/admin/posts/:id/review 通过/拒绝帖子（超管）
-func (p *PostController) ReviewPost(c *gin.Context) (any, error) {
+func (p *PostController) ReviewPost(c *gin.Context) (gin.H, error) {
 	id, err := parseInt64Param(c, "id")
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (p *PostController) ReviewPost(c *gin.Context) (any, error) {
 	return nil, p.postSrv.ReviewPost(c.Request.Context(), id, req.Status, req.Reason)
 }
 
-func (p *PostController) CreatePost(c *gin.Context) (any, error) {
+func (p *PostController) CreatePost(c *gin.Context) (*dto.CreatePostResp, error) {
 	var req dto.CreatePostReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -74,7 +74,7 @@ func (p *PostController) CreatePost(c *gin.Context) (any, error) {
 	return toCreatePostResult(resp), nil
 }
 
-func (p *PostController) GetPost(c *gin.Context) (any, error) {
+func (p *PostController) GetPost(c *gin.Context) (*dto.PostDetailResp, error) {
 	id, err := parseInt64Param(c, "id")
 	if err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func (p *PostController) GetPost(c *gin.Context) (any, error) {
 	return toPostDetailResp(resp), nil
 }
 
-func (p *PostController) UpdatePost(c *gin.Context) (any, error) {
+func (p *PostController) UpdatePost(c *gin.Context) (gin.H, error) {
 	id, err := parseInt64Param(c, "id")
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (p *PostController) UpdatePost(c *gin.Context) (any, error) {
 	return nil, p.postSrv.UpdatePost(c.Request.Context(), id, toUpdatePostParams(req), userID, role)
 }
 
-func (p *PostController) DeletePost(c *gin.Context) (any, error) {
+func (p *PostController) DeletePost(c *gin.Context) (gin.H, error) {
 	id, err := parseInt64Param(c, "id")
 	if err != nil {
 		return nil, err
@@ -116,7 +116,7 @@ func (p *PostController) DeletePost(c *gin.Context) (any, error) {
 	return nil, p.postSrv.DeletePost(c.Request.Context(), id, userID, role)
 }
 
-func (p *PostController) ToggleLike(c *gin.Context) (any, error) {
+func (p *PostController) ToggleLike(c *gin.Context) (*dto.TogglePostLikeResp, error) {
 	id, err := parseInt64Param(c, "id")
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func (p *PostController) ToggleLike(c *gin.Context) (any, error) {
 	return toToggleLikeResult(resp), nil
 }
 
-func (p *PostController) ListComments(c *gin.Context) (any, error) {
+func (p *PostController) ListComments(c *gin.Context) (*dto.PostCommentListResp, error) {
 	id, err := parseInt64Param(c, "id")
 	if err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ func (p *PostController) ListComments(c *gin.Context) (any, error) {
 }
 
 // ToggleCommentLike POST /api/comments/:cid/like
-func (p *PostController) ToggleCommentLike(c *gin.Context) (any, error) {
+func (p *PostController) ToggleCommentLike(c *gin.Context) (*dto.TogglePostLikeResp, error) {
 	cid, err := parseInt64Param(c, "cid")
 	if err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func (p *PostController) ToggleCommentLike(c *gin.Context) (any, error) {
 	return toToggleLikeResult(resp), nil
 }
 
-func (p *PostController) CreateComment(c *gin.Context) (any, error) {
+func (p *PostController) CreateComment(c *gin.Context) (gin.H, error) {
 	id, err := parseInt64Param(c, "id")
 	if err != nil {
 		return nil, err
@@ -179,7 +179,7 @@ func (p *PostController) CreateComment(c *gin.Context) (any, error) {
 	return nil, p.postSrv.CreateComment(c.Request.Context(), id, userID, toCreateCommentParams(req))
 }
 
-func (p *PostController) DeleteComment(c *gin.Context) (any, error) {
+func (p *PostController) DeleteComment(c *gin.Context) (gin.H, error) {
 	id, err := parseInt64Param(c, "cid")
 	if err != nil {
 		return nil, err

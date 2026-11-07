@@ -21,7 +21,7 @@ func NewAgentController(agentService *service.AgentService) *AgentController {
 	return &AgentController{service: agentService}
 }
 
-func (h *AgentController) ListConversations(c *gin.Context) (any, error) {
+func (h *AgentController) ListConversations(c *gin.Context) (*dto.AgentConversationListResp, error) {
 	var req dto.AgentConversationListReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -37,7 +37,7 @@ func (h *AgentController) ListConversations(c *gin.Context) (any, error) {
 	return toAgentConversationListResp(resp), nil
 }
 
-func (h *AgentController) CreateConversation(c *gin.Context) (any, error) {
+func (h *AgentController) CreateConversation(c *gin.Context) (*dto.AgentConversationItem, error) {
 	var req dto.CreateAgentConversationReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -50,10 +50,11 @@ func (h *AgentController) CreateConversation(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return toAgentConversationResp(*resp), nil
+	item := toAgentConversationResp(*resp)
+	return &item, nil
 }
 
-func (h *AgentController) ConversationDetail(c *gin.Context) (any, error) {
+func (h *AgentController) ConversationDetail(c *gin.Context) (*dto.AgentConversationDetailResp, error) {
 	conversationID, err := parsePublicIDParam(c, "id", "对话")
 	if err != nil {
 		return nil, err
@@ -69,7 +70,7 @@ func (h *AgentController) ConversationDetail(c *gin.Context) (any, error) {
 	return toAgentConversationDetailResp(resp), nil
 }
 
-func (h *AgentController) UpdateConversation(c *gin.Context) (any, error) {
+func (h *AgentController) UpdateConversation(c *gin.Context) (gin.H, error) {
 	conversationID, err := parsePublicIDParam(c, "id", "对话")
 	if err != nil {
 		return nil, err

@@ -23,7 +23,7 @@ func NewSubmissionController(s *service.SubmissionService, runSrv *service.CodeR
 	return &SubmissionController{subSrv: s, runSrv: runSrv, contestSrv: contestSrv, mq: m}
 }
 
-func (s *SubmissionController) Create(c *gin.Context) (any, error) {
+func (s *SubmissionController) Create(c *gin.Context) (gin.H, error) {
 	var req dto.SubmitCodeReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -45,7 +45,7 @@ func (s *SubmissionController) Create(c *gin.Context) (any, error) {
 	return gin.H{"submissionID": subID}, nil
 }
 
-func (s *SubmissionController) Run(c *gin.Context) (any, error) {
+func (s *SubmissionController) Run(c *gin.Context) (*dto.RunCodeResp, error) {
 	const maxRequestBytes = 8 * 1024 * 1024
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxRequestBytes)
 
@@ -71,7 +71,7 @@ func (s *SubmissionController) Run(c *gin.Context) (any, error) {
 	return toCodeRunResp(result), nil
 }
 
-func (s *SubmissionController) GetSubmissionList(c *gin.Context) (any, error) {
+func (s *SubmissionController) GetSubmissionList(c *gin.Context) (*dto.SubmitListResp, error) {
 	var req dto.SubmissionListForm
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -86,7 +86,7 @@ func (s *SubmissionController) GetSubmissionList(c *gin.Context) (any, error) {
 	return toSubmissionListResp(resp), nil
 }
 
-func (s *SubmissionController) GetSubmissionByID(c *gin.Context) (any, error) {
+func (s *SubmissionController) GetSubmissionByID(c *gin.Context) (*dto.SubmissionResp, error) {
 	publicID, err := parsePublicIDParam(c, "id", "提交")
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (s *SubmissionController) GetSubmissionByID(c *gin.Context) (any, error) {
 }
 
 // Rejudge POST /api/admin/submission/:id/rejudge 单条重判（超管）
-func (s *SubmissionController) Rejudge(c *gin.Context) (any, error) {
+func (s *SubmissionController) Rejudge(c *gin.Context) (gin.H, error) {
 	publicID, err := parsePublicIDParam(c, "id", "提交")
 	if err != nil {
 		return nil, err
@@ -117,7 +117,7 @@ func (s *SubmissionController) Rejudge(c *gin.Context) (any, error) {
 }
 
 // RejudgeContest POST /api/admin/contest/:id/rejudge 整场重判（超管）
-func (s *SubmissionController) RejudgeContest(c *gin.Context) (any, error) {
+func (s *SubmissionController) RejudgeContest(c *gin.Context) (gin.H, error) {
 	publicID, err := parsePublicIDParam(c, "id", "比赛")
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (s *SubmissionController) RejudgeContest(c *gin.Context) (any, error) {
 }
 
 // RejudgeContestProblem POST /api/admin/contest/:id/problem/:pid/rejudge 某比赛某题全部重判（超管）
-func (s *SubmissionController) RejudgeContestProblem(c *gin.Context) (any, error) {
+func (s *SubmissionController) RejudgeContestProblem(c *gin.Context) (gin.H, error) {
 	publicID, err := parsePublicIDParam(c, "id", "比赛")
 	if err != nil {
 		return nil, err

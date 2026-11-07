@@ -19,12 +19,12 @@ func NewRemoteController(srv *service.RemoteService) *RemoteController {
 }
 
 // ListOJ GET /api/remote/oj  支持的远程 OJ 列表
-func (c *RemoteController) ListOJ(ctx *gin.Context) (any, error) {
+func (c *RemoteController) ListOJ(ctx *gin.Context) (gin.H, error) {
 	return gin.H{"list": c.remoteSrv.ListOJ(ctx.Request.Context())}, nil
 }
 
 // GetRemoteProblem GET /api/remote/problem?oj=HDU&pid=1000
-func (c *RemoteController) GetRemoteProblem(ctx *gin.Context) (any, error) {
+func (c *RemoteController) GetRemoteProblem(ctx *gin.Context) (*dto.RemoteProblemResp, error) {
 	oj := ctx.Query("oj")
 	pid := ctx.Query("pid")
 	if oj == "" || pid == "" {
@@ -38,7 +38,7 @@ func (c *RemoteController) GetRemoteProblem(ctx *gin.Context) (any, error) {
 }
 
 // ListAccounts GET /api/admin/remote-account
-func (c *RemoteController) ListAccounts(ctx *gin.Context) (any, error) {
+func (c *RemoteController) ListAccounts(ctx *gin.Context) (gin.H, error) {
 	list, err := c.remoteSrv.ListAccounts(ctx.Request.Context())
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (c *RemoteController) ListAccounts(ctx *gin.Context) (any, error) {
 }
 
 // CreateAccount POST /api/admin/remote-account
-func (c *RemoteController) CreateAccount(ctx *gin.Context) (any, error) {
+func (c *RemoteController) CreateAccount(ctx *gin.Context) (gin.H, error) {
 	var req dto.CreateRemoteAccountReq
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
@@ -60,7 +60,7 @@ func (c *RemoteController) CreateAccount(ctx *gin.Context) (any, error) {
 }
 
 // UpdateAccount PUT /api/admin/remote-account/:id
-func (c *RemoteController) UpdateAccount(ctx *gin.Context) (any, error) {
+func (c *RemoteController) UpdateAccount(ctx *gin.Context) (gin.H, error) {
 	id, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
 	if err != nil {
 		return nil, errcode.ErrInvalidParams.WithMsg("非法 id")
@@ -73,7 +73,7 @@ func (c *RemoteController) UpdateAccount(ctx *gin.Context) (any, error) {
 }
 
 // DeleteAccount DELETE /api/admin/remote-account/:id
-func (c *RemoteController) DeleteAccount(ctx *gin.Context) (any, error) {
+func (c *RemoteController) DeleteAccount(ctx *gin.Context) (gin.H, error) {
 	id, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
 	if err != nil {
 		return nil, errcode.ErrInvalidParams.WithMsg("非法 id")
