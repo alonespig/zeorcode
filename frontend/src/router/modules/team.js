@@ -9,6 +9,12 @@ export const teamRoutes = {
       component: () => import("@/pages/Team/index.vue"),
     },
     {
+      path: "create",
+      name: "TeamCreate",
+      meta: { title: "创建团队", requiresAdmin: true },
+      component: () => import("@/pages/Team/Create.vue"),
+    },
+    {
       // 团队布局：横幅 + tab（概览/作业/成员），子路由注入 team 数据
       path: ":id",
       component: () => import("@/pages/Team/TeamLayout.vue"),

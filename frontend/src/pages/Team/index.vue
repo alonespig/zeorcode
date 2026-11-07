@@ -2,10 +2,9 @@
 import { onMounted, ref, shallowRef } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { createTeam, getTeamList, joinTeam } from "@/api/team";
+import { getTeamList, joinTeam } from "@/api/team";
 import TeamCard from "@/pages/Team/components/TeamCard.vue";
 import TeamFilterPanel from "@/pages/Team/components/TeamFilterPanel.vue";
-import SquareImageCropper from "@/components/upload/SquareImageCropper.vue";
 import { useUserStore } from "@/stores/user";
 
 const router = useRouter();
@@ -19,17 +18,10 @@ const q = ref("");
 const mine = ref(false);
 const visibility = shallowRef(null);
 
-const createVisible = ref(false);
-const creating = ref(false);
-const createForm = ref(blankTeam());
 const joinVisible = ref(false);
 const joining = ref(false);
 const joinTarget = ref(null);
 const inviteCode = ref("");
-
-function blankTeam() {
-  return { name: "", coverUrl: "", description: "", visibility: 0, inviteCode: "" };
-}
 
 const toggleMine = () => {
   if (!userStore.isLogin) return;
@@ -116,34 +108,7 @@ const submitJoin = async () => {
 };
 
 const openCreate = () => {
-  createForm.value = blankTeam();
-  createVisible.value = true;
-};
-
-const submitCreate = async () => {
-  if (!createForm.value.name.trim()) {
-    ElMessage.warning("请填写团队名称");
-    return;
-  }
-  if (createForm.value.visibility === 1 && !createForm.value.inviteCode.trim()) {
-    ElMessage.warning("非公开团队必须设置邀请码");
-    return;
-  }
-  creating.value = true;
-  try {
-    const res = await createTeam({
-      ...createForm.value,
-      name: createForm.value.name.trim(),
-      inviteCode: createForm.value.inviteCode.trim(),
-    });
-    ElMessage.success("创建成功");
-    createVisible.value = false;
-    router.push(`/team/${res.data.id}`);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    creating.value = false;
-  }
+  router.push({ name: "TeamCreate" });
 };
 
 onMounted(loadList);
@@ -183,44 +148,6 @@ onMounted(loadList);
         @current-change="loadList" />
     </div>
 
-    <!-- 创建团队 -->
-    <el-drawer v-model="createVisible" title="创建团队" direction="rtl" size="min(900px, 92vw)"
-      :close-on-click-modal="false">
-      <el-form :model="createForm" label-position="top">
-        <el-form-item label="团队名称" required>
-          <el-input v-model="createForm.name" maxlength="60" show-word-limit placeholder="团队名称" />
-        </el-form-item>
-        <el-form-item label="团队封面">
-          <SquareImageCropper
-            v-model="createForm.coverUrl"
-            title="裁剪团队封面"
-            remove-text="移除封面"
-            success-message="团队封面已上传"
-            file-prefix="team-cover"
-            preview-alt="团队封面预览"
-          />
-        </el-form-item>
-        <el-form-item label="团队简介">
-          <MdEditor v-model="createForm.description" height="200px" editor-id="team-create-editor" />
-        </el-form-item>
-        <el-form-item label="公开度">
-          <el-radio-group v-model="createForm.visibility">
-            <el-radio :value="0">公开（任何人可加入）</el-radio>
-            <el-radio :value="1">非公开（需邀请码）</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item v-if="createForm.visibility === 1" label="邀请码">
-          <el-input v-model="createForm.inviteCode" maxlength="32" placeholder="非公开团队必填" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="drawer-footer">
-          <el-button @click="createVisible = false">取消</el-button>
-          <el-button type="primary" :loading="creating" @click="submitCreate">创建</el-button>
-        </div>
-      </template>
-    </el-drawer>
-
     <!-- 加入非公开团队 -->
     <el-dialog v-model="joinVisible" title="加入团队" width="420px">
       <p class="mb-4 text-sm text-gray-600">「{{ joinTarget?.name }}」需要邀请码才能加入。</p>
@@ -235,12 +162,6 @@ onMounted(loadList);
 
 <style scoped>
 .team-list.page-container { max-width: 1200px; padding-top: 8px; padding-bottom: 24px; }
-.drawer-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 14px 0 6px;
-}
 .team-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .empty-panel { padding: 28px 0; }
 @media (max-width: 1040px) {
