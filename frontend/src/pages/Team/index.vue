@@ -184,9 +184,9 @@ onMounted(loadList);
     </div>
 
     <!-- 创建团队 -->
-    <el-dialog v-model="createVisible" title="创建团队" width="min(920px, calc(100vw - 32px))"
+    <el-drawer v-model="createVisible" title="创建团队" direction="rtl" size="min(900px, 92vw)"
       :close-on-click-modal="false">
-      <el-form :model="createForm" label-width="80px">
+      <el-form :model="createForm" label-position="top">
         <el-form-item label="团队名称" required>
           <el-input v-model="createForm.name" maxlength="60" show-word-limit placeholder="团队名称" />
         </el-form-item>
@@ -201,7 +201,7 @@ onMounted(loadList);
           />
         </el-form-item>
         <el-form-item label="团队简介">
-          <MdEditor v-model="createForm.description" height="160px" editor-id="team-create-editor" />
+          <MdEditor v-model="createForm.description" height="200px" editor-id="team-create-editor" />
         </el-form-item>
         <el-form-item label="公开度">
           <el-radio-group v-model="createForm.visibility">
@@ -210,14 +210,16 @@ onMounted(loadList);
           </el-radio-group>
         </el-form-item>
         <el-form-item v-if="createForm.visibility === 1" label="邀请码">
-          <el-input v-model="createForm.inviteCode" maxlength="32" placeholder="非公开团队必填" class="w-52!" />
+          <el-input v-model="createForm.inviteCode" maxlength="32" placeholder="非公开团队必填" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="createVisible = false">取消</el-button>
-        <el-button type="primary" :loading="creating" @click="submitCreate">创建</el-button>
+        <div class="drawer-footer">
+          <el-button @click="createVisible = false">取消</el-button>
+          <el-button type="primary" :loading="creating" @click="submitCreate">创建</el-button>
+        </div>
       </template>
-    </el-dialog>
+    </el-drawer>
 
     <!-- 加入非公开团队 -->
     <el-dialog v-model="joinVisible" title="加入团队" width="420px">
@@ -233,6 +235,12 @@ onMounted(loadList);
 
 <style scoped>
 .team-list.page-container { max-width: 1200px; padding-top: 8px; padding-bottom: 24px; }
+.drawer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 0 6px;
+}
 .team-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .empty-panel { padding: 28px 0; }
 @media (max-width: 1040px) {
