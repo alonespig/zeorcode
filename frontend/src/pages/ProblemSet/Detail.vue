@@ -5,7 +5,7 @@ import { EditPen, Lock } from "@element-plus/icons-vue";
 import { getProblemSetDetail } from "@/api/problemset";
 import { useUserStore } from "@/stores/user";
 import { tagStyle } from "@/utils/tag";
-import ProblemSetEditDrawer from "./components/ProblemSetEditDrawer.vue";
+import ProblemSetDrawer from "./components/ProblemSetDrawer.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -113,7 +113,7 @@ watch(
         </router-view>
       </div>
 
-      <ProblemSetEditDrawer v-model="editVisible" :problem-set-id="detail.id" @saved="loadDetail" />
+      <ProblemSetDrawer v-model="editVisible" :problem-set-id="detail.id" @saved="loadDetail" />
     </template>
   </div>
 </template>

@@ -1,5 +1,5 @@
 <template>
-  <el-drawer v-model="visible" title="编辑题单" direction="rtl" size="min(960px, 92vw)"
+  <el-drawer v-model="visible" :title="isEdit ? '编辑题单' : '新建题单'" direction="rtl" size="min(960px, 92vw)"
     :close-on-click-modal="false">
     <el-form v-loading="loading" :model="form" label-position="top" class="edit-form">
       <section class="edit-section">
@@ -29,7 +29,8 @@
           </el-form-item>
         </div>
         <el-form-item v-if="form.visibility === 1" label="邀请码">
-          <el-input v-model="form.inviteCode" maxlength="32" placeholder="留空则保留原邀请码" />
+          <el-input v-model="form.inviteCode" maxlength="32"
+            :placeholder="isEdit ? '留空则保留原邀请码' : '请输入邀请码'" />
         </el-form-item>
       </section>
 
@@ -87,7 +88,9 @@
     <template #footer>
       <div class="drawer-footer">
         <el-button @click="visible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="save">
+          {{ isEdit ? "保存" : "创建" }}
+        </el-button>
       </div>
     </template>
 
@@ -101,7 +104,7 @@
 import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { Plus, Search, View } from "@element-plus/icons-vue";
-import { getProblemSetDetail, updateProblemSet } from "@/api/problemset";
+import { createProblemSet, getProblemSetDetail, updateProblemSet } from "@/api/problemset";
 import { getProblem, getTags } from "@/api/problems";
 import MdEditor from "@/components/MdEditor.vue";
 import ProblemPickerDialog from "@/components/problem/ProblemPickerDialog.vue";
@@ -117,6 +120,8 @@ const visible = computed({
   get: () => props.modelValue,
   set: (value) => emit("update:modelValue", value),
 });
+
+const isEdit = computed(() => Boolean(props.problemSetId));
 
 const loading = ref(false);
 const saving = ref(false);
@@ -135,13 +140,16 @@ function blankForm() {
 const existingProblemIds = computed(() => problemList.value.map((problem) => problem.id));
 
 const load = async () => {
-  if (!props.problemSetId) return;
+  form.value = blankForm();
+  problemList.value = [];
+  queryPid.value = "";
   loading.value = true;
   try {
-    const [detailRes, tagsRes] = await Promise.all([
-      getProblemSetDetail(props.problemSetId),
-      getTags().catch(() => ({ data: { tags: [] } })),
-    ]);
+    const tagsRes = await getTags().catch(() => ({ data: { tags: [] } }));
+    tagList.value = tagsRes.data?.tags || [];
+    if (!isEdit.value) return;
+
+    const detailRes = await getProblemSetDetail(props.problemSetId);
     const detail = detailRes.data || {};
     form.value = {
       title: detail.title || "",
@@ -155,8 +163,6 @@ const load = async () => {
       id: problem.id,
       name: problem.name,
     }));
-    tagList.value = tagsRes.data?.tags || [];
-    queryPid.value = "";
   } catch (err) {
     console.error(err);
   } finally {
@@ -218,6 +224,10 @@ const save = async () => {
     ElMessage.warning("请填写标题");
     return;
   }
+  if (!isEdit.value && form.value.visibility === 1 && !form.value.inviteCode.trim()) {
+    ElMessage.warning("选择邀请码可见时必须填写邀请码");
+    return;
+  }
   const payload = {
     title: form.value.title.trim(),
     description: form.value.description,
@@ -229,8 +239,13 @@ const save = async () => {
   };
   saving.value = true;
   try {
-    await updateProblemSet(props.problemSetId, payload);
-    ElMessage.success("题单已保存");
+    if (isEdit.value) {
+      await updateProblemSet(props.problemSetId, payload);
+      ElMessage.success("题单已保存");
+    } else {
+      await createProblemSet(payload);
+      ElMessage.success("题单已创建");
+    }
     emit("saved");
     visible.value = false;
   } catch (err) {
