@@ -1,14 +1,18 @@
 <script setup>
-import { computed, shallowRef, watch } from "vue";
+import { computed, ref, shallowRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Lock } from "@element-plus/icons-vue";
+import { EditPen, Lock } from "@element-plus/icons-vue";
 import { getProblemSetDetail } from "@/api/problemset";
+import { useUserStore } from "@/stores/user";
 import { tagStyle } from "@/utils/tag";
+import ProblemSetEditDrawer from "./components/ProblemSetEditDrawer.vue";
 
 const route = useRoute();
 const router = useRouter();
+const userStore = useUserStore();
 const detail = shallowRef(null);
 const loading = shallowRef(false);
+const editVisible = ref(false);
 let detailSeq = 0;
 
 const tabs = computed(() => {
@@ -37,6 +41,10 @@ const loadDetail = async () => {
   }
 };
 
+const openEdit = () => {
+  if (detail.value) editVisible.value = true;
+};
+
 watch(
   () => route.params.id,
   loadDetail,
@@ -56,26 +64,29 @@ watch(
   <div class="problemset-detail page-container" v-loading="loading">
     <template v-if="detail">
       <div class="f-panel">
-        <div class="px-5 py-4">
-          <h1 class="flex items-center gap-2 text-xl font-semibold text-gray-800">
-            {{ detail.title }}
-            <el-tooltip v-if="detail.visibility === 1" content="需要邀请码" placement="top">
-              <el-icon class="text-gray-400" :size="16">
-                <Lock />
-              </el-icon>
-            </el-tooltip>
-          </h1>
-          <div class="mt-2.5 flex flex-wrap items-center gap-2 text-[12.5px] text-gray-400">
-            <el-tag v-for="tag in detail.tags" :key="tag.id" effect="light" :style="tagStyle(tag)">
-              {{ tag.name }}
-            </el-tag>
-            <span v-if="detail.tags?.length" class="text-gray-300">·</span>
-            <span>共 <b class="text-gray-700">{{ detail.problemCount }}</b> 题</span>
-            <span class="text-gray-300">·</span>
-            <span>{{ detail.author || "-" }}</span>
-            <span class="text-gray-300">·</span>
-            <span>更新于 {{ detail.updatedAt }}</span>
+        <div class="flex items-start justify-between gap-4 px-5 py-4">
+          <div class="min-w-0">
+            <h1 class="flex items-center gap-2 text-xl font-semibold text-gray-800">
+              {{ detail.title }}
+              <el-tooltip v-if="detail.visibility === 1" content="需要邀请码" placement="top">
+                <el-icon class="text-gray-400" :size="16">
+                  <Lock />
+                </el-icon>
+              </el-tooltip>
+            </h1>
+            <div class="mt-2.5 flex flex-wrap items-center gap-2 text-[12.5px] text-gray-400">
+              <el-tag v-for="tag in detail.tags" :key="tag.id" effect="light" :style="tagStyle(tag)">
+                {{ tag.name }}
+              </el-tag>
+              <span v-if="detail.tags?.length" class="text-gray-300">·</span>
+              <span>共 <b class="text-gray-700">{{ detail.problemCount }}</b> 题</span>
+              <span class="text-gray-300">·</span>
+              <span>{{ detail.author || "-" }}</span>
+              <span class="text-gray-300">·</span>
+              <span>更新于 {{ detail.updatedAt }}</span>
+            </div>
           </div>
+          <el-button v-if="userStore.isAdmin" type="primary" :icon="EditPen" @click="openEdit">编辑</el-button>
         </div>
 
         <nav class="flex items-center gap-6 border-t border-gray-100 px-5" aria-label="题单导航">
@@ -101,6 +112,8 @@ watch(
           />
         </router-view>
       </div>
+
+      <ProblemSetEditDrawer v-model="editVisible" :problem-set-id="detail.id" @saved="loadDetail" />
     </template>
   </div>
 </template>
