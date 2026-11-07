@@ -11,7 +11,3 @@ export const getUnreadCount = () =>
 // 标已读：{id} 单条 / {type} 该类型 / 空 全部
 export const markNotificationRead = (data) =>
   request({ url: '/notifications/read', method: 'post', data })
-
-// 管理员广播系统通知
-export const broadcastNotification = (data) =>
-  request({ url: '/admin/notifications', method: 'post', data })

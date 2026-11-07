@@ -10,7 +10,6 @@ import { problemRoutes } from "./modules/problem"
 import { problemSetRoutes } from "./modules/problemset"
 import { teamRoutes } from "./modules/team"
 import { submissionRoutes } from "./modules/submission"
-import { adminRoutes } from "./modules/admin"
 import { postRoutes } from "./modules/post"
 
 const routes = [
@@ -81,7 +80,6 @@ const routes = [
           },
         ],
       },
-      adminRoutes,
     ],
   },
   {
