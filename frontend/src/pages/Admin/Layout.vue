@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from "vue";
 import { useRoute } from "vue-router";
 import {
   Bell,
@@ -11,8 +12,23 @@ import {
   Setting,
   User,
 } from "@element-plus/icons-vue";
+import { useUserStore } from "@/stores/user";
 
 const route = useRoute();
+const userStore = useUserStore();
+
+const menuItems = computed(() =>
+  [
+    { path: "/admin/users", label: "用户管理", icon: User, permission: "user.read" },
+    { path: "/admin/post-review", label: "帖子审核", icon: DocumentChecked, permission: "post.review" },
+    { path: "/admin/problemset", label: "题单管理", icon: Collection, permission: "problemset.read" },
+    { path: "/admin/tags", label: "算法标签", icon: PriceTag, permission: "tag.read" },
+    { path: "/admin/languages", label: "编程语言", icon: Cpu, permission: "judge.language.read" },
+    { path: "/admin/judge", label: "评测机状态", icon: Monitor, permission: "judge.node.read" },
+    { path: "/admin/remote", label: "远程账号", icon: Cloudy, permission: "judge.remote.read" },
+    { path: "/admin/notice", label: "系统通知", icon: Bell, permission: "notification.send" },
+  ].filter(item => userStore.can(item.permission))
+);
 </script>
 
 <template>
@@ -26,53 +42,15 @@ const route = useRoute();
         <span>管理后台</span>
       </div>
       <el-menu :default-active="route.path" router class="side-menu">
-        <el-menu-item index="/admin/users">
+        <el-menu-item
+          v-for="item in menuItems"
+          :key="item.path"
+          :index="item.path"
+        >
           <el-icon>
-            <User />
+            <component :is="item.icon" />
           </el-icon>
-          <span>用户管理</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/post-review">
-          <el-icon>
-            <DocumentChecked />
-          </el-icon>
-          <span>帖子审核</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/problemset">
-          <el-icon>
-            <Collection />
-          </el-icon>
-          <span>题单管理</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/tags">
-          <el-icon>
-            <PriceTag />
-          </el-icon>
-          <span>算法标签</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/languages">
-          <el-icon>
-            <Cpu />
-          </el-icon>
-          <span>编程语言</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/judge">
-          <el-icon>
-            <Monitor />
-          </el-icon>
-          <span>评测机状态</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/remote">
-          <el-icon>
-            <Cloudy />
-          </el-icon>
-          <span>远程账号</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/notice">
-          <el-icon>
-            <Bell />
-          </el-icon>
-          <span>系统通知</span>
+          <span>{{ item.label }}</span>
         </el-menu-item>
       </el-menu>
     </aside>

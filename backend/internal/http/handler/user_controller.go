@@ -238,6 +238,7 @@ func (u *UserController) Session(c *gin.Context) (any, error) {
 		Authenticated: true,
 		User:          &user,
 		Avatar:        loginResp.Avatar,
+		Permissions:   loginResp.Permissions,
 	}, nil
 }
 

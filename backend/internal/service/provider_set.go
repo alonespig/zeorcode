@@ -20,4 +20,5 @@ var ServerSet = wire.NewSet(
 	NewLanguageService,
 	NewDashboardService,
 	NewAuditService,
+	NewPermissionService,
 )

@@ -16,11 +16,12 @@ import (
 
 // HomeworkController 团队作业接口
 type HomeworkController struct {
-	hwSrv *service.HomeworkService
+	hwSrv       *service.HomeworkService
+	permissions *service.PermissionService
 }
 
-func NewHomeworkController(hwSrv *service.HomeworkService) *HomeworkController {
-	return &HomeworkController{hwSrv: hwSrv}
+func NewHomeworkController(hwSrv *service.HomeworkService, permissions *service.PermissionService) *HomeworkController {
+	return &HomeworkController{hwSrv: hwSrv, permissions: permissions}
 }
 
 // ListByTeam GET /api/team/:id/homework
@@ -34,7 +35,7 @@ func (h *HomeworkController) ListByTeam(c *gin.Context) (any, error) {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
 	resp, err := h.hwSrv.ListByTeam(c.Request.Context(), teamID,
-		optionalCurrentUserID(c), isAdminFromCtx(c), page.Page, page.PageSize)
+		optionalCurrentUserID(c), isSiteTeamManager(c, h.permissions), page.Page, page.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -51,11 +52,11 @@ func (h *HomeworkController) Create(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	userID, role, err := requireCurrentUser(c)
+	userID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
-	id, err := h.hwSrv.Save(c.Request.Context(), teamID, 0, toSaveHomeworkParams(req), userID, role == 1)
+	id, err := h.hwSrv.Save(c.Request.Context(), teamID, 0, toSaveHomeworkParams(req), userID, isSiteTeamManager(c, h.permissions))
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +69,7 @@ func (h *HomeworkController) Detail(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := h.hwSrv.Detail(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c))
+	resp, err := h.hwSrv.Detail(c.Request.Context(), id, optionalCurrentUserID(c), isSiteTeamManager(c, h.permissions))
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +88,7 @@ func (h *HomeworkController) Problem(c *gin.Context) (any, error) {
 		return nil, errcode.ErrInvalidParams.WithMsg("非法题号")
 	}
 	resp, err := h.hwSrv.ProblemDetail(c.Request.Context(), id, problemID,
-		optionalCurrentUserID(c), isAdminFromCtx(c))
+		optionalCurrentUserID(c), isSiteTeamManager(c, h.permissions))
 	if err != nil {
 		return nil, err
 	}
@@ -104,11 +105,11 @@ func (h *HomeworkController) Update(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	userID, role, err := requireCurrentUser(c)
+	userID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := h.hwSrv.Save(c.Request.Context(), 0, id, toSaveHomeworkParams(req), userID, role == 1); err != nil {
+	if _, err := h.hwSrv.Save(c.Request.Context(), 0, id, toSaveHomeworkParams(req), userID, isSiteTeamManager(c, h.permissions)); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -120,11 +121,11 @@ func (h *HomeworkController) Delete(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	userID, role, err := requireCurrentUser(c)
+	userID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
-	if err := h.hwSrv.Delete(c.Request.Context(), id, userID, role == 1); err != nil {
+	if err := h.hwSrv.Delete(c.Request.Context(), id, userID, isSiteTeamManager(c, h.permissions)); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -140,11 +141,11 @@ func (h *HomeworkController) Submit(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	userID, role, err := requireCurrentUser(c)
+	userID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
-	subID, err := h.hwSrv.Submit(c.Request.Context(), id, toHomeworkSubmitParams(req), userID, role == 1)
+	subID, err := h.hwSrv.Submit(c.Request.Context(), id, toHomeworkSubmitParams(req), userID, isSiteTeamManager(c, h.permissions))
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +158,7 @@ func (h *HomeworkController) Rank(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := h.hwSrv.Rank(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c))
+	resp, err := h.hwSrv.Rank(c.Request.Context(), id, optionalCurrentUserID(c), isSiteTeamManager(c, h.permissions))
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +176,7 @@ func (h *HomeworkController) Submissions(c *gin.Context) (any, error) {
 	if err := c.ShouldBindQuery(&q); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	resp, err := h.hwSrv.Submissions(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c), toHomeworkSubmissionQueryParams(q))
+	resp, err := h.hwSrv.Submissions(c.Request.Context(), id, optionalCurrentUserID(c), isSiteTeamManager(c, h.permissions), toHomeworkSubmissionQueryParams(q))
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +195,7 @@ func (h *HomeworkController) SubmissionDetail(c *gin.Context) (any, error) {
 		return nil, err
 	}
 	resp, err := h.hwSrv.SubmissionDetail(c.Request.Context(), id, publicID,
-		optionalCurrentUserID(c), isAdminFromCtx(c))
+		optionalCurrentUserID(c), isSiteTeamManager(c, h.permissions))
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +210,7 @@ func (h *HomeworkController) ExportRank(c *gin.Context) {
 		c.String(400, "非法作业编号")
 		return
 	}
-	rank, err := h.hwSrv.Rank(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c))
+	rank, err := h.hwSrv.Rank(c.Request.Context(), id, optionalCurrentUserID(c), isSiteTeamManager(c, h.permissions))
 	if err != nil {
 		var appErr *errcode.AppErr
 		if errors.As(err, &appErr) {

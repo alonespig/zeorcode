@@ -16,14 +16,55 @@ export const useUserStore = defineStore("admin-user", () => {
   const initialized = shallowRef(false);
 
   const authenticated = computed(() => user.value !== null);
-  const isAdmin = computed(() => user.value?.role === 1);
+  const permissions = computed(() => new Set(user.value?.permissions ?? []));
+  const isSuperAdmin = computed(() => user.value?.role === 2);
+  const isAdmin = computed(() => (user.value?.role ?? 0) >= 1);
   const avatar = computed(() => user.value?.avatar || "");
   const username = computed(() => user.value?.username || "");
   const nickname = computed(() => user.value?.username || "");
 
-  function setUser(value: AdminUser | null, avatarOverride?: string) {
+  function can(permission?: string): boolean {
+    if (!permission) return true;
+    if (isSuperAdmin.value) return true;
+    return permissions.value.has(permission);
+  }
+
+  function canAny(list: string[]): boolean {
+    return list.some(permission => can(permission));
+  }
+
+  /** 登录后默认落点：第一个有权限访问的页面。 */
+  const defaultPath = computed(() => {
+    const candidates: Array<[string, string]> = [
+      ["/dashboard", "dashboard.read"],
+      ["/content/problems", "problem.read"],
+      ["/content/problemsets", "problemset.read"],
+      ["/content/contests", "contest.read"],
+      ["/content/post-review", "post.review"],
+      ["/content/tags", "tag.read"],
+      ["/judge/submissions", "submission.read"],
+      ["/judge/nodes", "judge.node.read"],
+      ["/judge/languages", "judge.language.read"],
+      ["/judge/remote-accounts", "judge.remote.read"],
+      ["/users", "user.read"],
+      ["/notifications", "notification.send"],
+      ["/audit", "audit.read"]
+    ];
+    const matched = candidates.find(([, permission]) => can(permission));
+    return matched?.[0] ?? "/access-denied";
+  });
+
+  function setUser(
+    value: AdminUser | null,
+    avatarOverride?: string,
+    permissionsOverride?: string[]
+  ) {
     user.value = value
-      ? { ...value, avatar: avatarOverride || value.avatar || "" }
+      ? {
+          ...value,
+          avatar: avatarOverride || value.avatar || "",
+          permissions: permissionsOverride ?? value.permissions ?? []
+        }
       : null;
   }
 
@@ -41,7 +82,11 @@ export const useUserStore = defineStore("admin-user", () => {
         clearSession();
         return false;
       }
-      setUser(session.user, session.avatar);
+      setUser(
+        session.user,
+        session.avatar,
+        session.permissions ?? session.user.permissions
+      );
       initialized.value = true;
       return true;
     } catch {
@@ -54,7 +99,11 @@ export const useUserStore = defineStore("admin-user", () => {
     const response = await loginApi(params);
     if (!response.data?.user) throw new Error("登录响应缺少用户信息");
 
-    setUser(response.data.user, response.data.avatar);
+    setUser(
+      response.data.user,
+      response.data.avatar,
+      response.data.user.permissions
+    );
     initialized.value = true;
     if (!isAdmin.value) {
       await logoutApi().catch(() => undefined);
@@ -79,6 +128,11 @@ export const useUserStore = defineStore("admin-user", () => {
     initialized,
     authenticated,
     isAdmin,
+    isSuperAdmin,
+    permissions,
+    can,
+    canAny,
+    defaultPath,
     avatar,
     username,
     nickname,

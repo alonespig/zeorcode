@@ -91,7 +91,7 @@
         </el-table-column>
         <el-table-column prop="language" label="语言" width="100" />
         <el-table-column prop="createdAt" label="提交时间" width="180" />
-        <el-table-column v-if="userStore.isAdmin" label="操作" width="140">
+        <el-table-column v-if="userStore.can('submission.rejudge')" label="操作" width="140">
           <template #default="{ row }">
             <el-button type="primary" @click="handleRejudge(row)">
               <el-icon>

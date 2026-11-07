@@ -15,7 +15,7 @@ func NewDashboardService(repo *repository.DashboardRepo) *DashboardService {
 	return &DashboardService{repo: repo}
 }
 
-func (s *DashboardService) Overview(ctx context.Context) (*DashboardOverview, error) {
+func (s *DashboardService) Overview(ctx context.Context, includeRecentSubmissions bool) (*DashboardOverview, error) {
 	now := time.Now()
 	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	trendStart := dayStart.AddDate(0, 0, -6)
@@ -28,9 +28,14 @@ func (s *DashboardService) Overview(ctx context.Context) (*DashboardOverview, er
 	if err != nil {
 		return nil, err
 	}
-	recentRows, err := s.repo.RecentSubmissions(ctx, 8)
-	if err != nil {
-		return nil, err
+	// 只有拥有提交查看权限的管理员才返回最近提交明细，
+	// 否则工作台权限会泄露比赛/作业/隐藏题的用户名与判题状态。
+	recentRows := make([]repository.DashboardRecentSubmission, 0)
+	if includeRecentSubmissions {
+		recentRows, err = s.repo.RecentSubmissions(ctx, 8)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	trendByDate := make(map[string]int64, len(trendRows))

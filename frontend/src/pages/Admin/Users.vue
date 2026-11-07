@@ -29,9 +29,11 @@
           <el-tooltip content="不能修改自己的角色" placement="top" :disabled="row.id !== currentUserId">
             <span>
               <el-select :model-value="row.role" size="small" style="width: 110px"
-                :disabled="row._roleBusy || row.id === currentUserId" @change="(val) => changeRole(row, val)">
+                :disabled="row._roleBusy || row.id === currentUserId || !userStore.isSuperAdmin"
+                @change="(val) => changeRole(row, val)">
                 <el-option :value="0" label="普通用户" />
                 <el-option :value="1" label="管理员" />
+                <el-option :value="2" label="超级管理员" />
               </el-select>
             </span>
           </el-tooltip>
@@ -54,7 +56,7 @@
       </el-table-column>
       <el-table-column label="操作" width="100" fixed="right">
         <template #default="{ row }">
-          <el-button v-if="row.role !== 1" :type="row.status === 1 ? 'success' : 'danger'" size="small" link
+          <el-button v-if="row.role === 0" :type="row.status === 1 ? 'success' : 'danger'" size="small" link
             :loading="row._busy" @click="toggleBan(row)">
             {{ row.status === 1 ? '解封' : '封禁' }}
           </el-button>
@@ -141,11 +143,12 @@ const toggleBan = async (row) => {
 };
 
 const changeRole = async (row, newRole) => {
-  const toAdmin = newRole === 1;
+  const roleLabel =
+    { 0: "普通用户", 1: "管理员", 2: "超级管理员" }[newRole] || "该角色";
   try {
     await ElMessageBox.confirm(
-      `确认将用户「${row.username}」${toAdmin ? "设为管理员" : "降为普通用户"}？该用户会被立即踢下线，需重新登录后新权限才生效。`,
-      toAdmin ? "设为管理员" : "取消管理员",
+      `确认将用户「${row.username}」设为${roleLabel}？该用户会被立即踢下线，需重新登录后新权限才生效。`,
+      "修改角色",
       { type: "warning" }
     );
   } catch {
@@ -155,7 +158,7 @@ const changeRole = async (row, newRole) => {
   try {
     await setUserRole(row.id, newRole);
     row.role = newRole;
-    ElMessage.success(toAdmin ? "已设为管理员" : "已降为普通用户");
+    ElMessage.success(`已设为${roleLabel}`);
   } catch (err) {
     console.error(err);
   } finally {

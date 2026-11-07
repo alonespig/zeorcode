@@ -17,7 +17,7 @@
                 selectedTags.length }}</span>
           </el-button>
           <el-button v-if="q || selectedTags.length" type="info" plain :icon="Refresh" @click="handleReset">重置</el-button>
-          <el-button v-permission="['admin']" :icon="Edit" @click="goCreate">创建题目</el-button>
+          <el-button v-permission="'problem.write'" :icon="Edit" @click="goCreate">创建题目</el-button>
         </div>
       </div>
 

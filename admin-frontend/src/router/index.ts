@@ -88,16 +88,17 @@ router.beforeEach(async (to, from) => {
     return false;
   }
 
+  const userStore = useUserStoreHook();
+  if (!userStore.initialized) await userStore.restoreSession();
+
+  // 菜单依赖权限，必须等会话恢复后再生成。
   const permissionStore = usePermissionStoreHook();
   if (permissionStore.wholeMenus.length === 0) {
     permissionStore.handleWholeMenus([]);
   }
 
-  const userStore = useUserStoreHook();
-  if (!userStore.initialized) await userStore.restoreSession();
-
   if (to.path === "/login") {
-    return userStore.isAdmin ? "/dashboard" : true;
+    return userStore.isAdmin ? userStore.defaultPath : true;
   }
 
   if (!userStore.authenticated) {
@@ -109,6 +110,11 @@ router.beforeEach(async (to, from) => {
   }
 
   if (!userStore.isAdmin) {
+    return to.path === "/access-denied" ? true : "/access-denied";
+  }
+
+  const requiredPermission = to.meta?.permission as string | undefined;
+  if (requiredPermission && !userStore.can(requiredPermission)) {
     return to.path === "/access-denied" ? true : "/access-denied";
   }
 

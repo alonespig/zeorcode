@@ -139,6 +139,15 @@ router.beforeEach((to, from, next) => {
     next('/')
     return
   }
+  if (to.meta.permission && !userStore.can(to.meta.permission)) {
+    const fallback = userStore.adminHome
+    if (fallback && fallback !== '/404' && fallback !== to.path) {
+      next(fallback)
+    } else {
+      next('/404')
+    }
+    return
+  }
   next()
 })
 

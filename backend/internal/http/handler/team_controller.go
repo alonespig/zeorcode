@@ -19,11 +19,12 @@ const teamTimeLayout = "2006-01-02 15:04:05"
 
 // TeamController 团队与成员接口
 type TeamController struct {
-	teamSrv *service.TeamService
+	teamSrv     *service.TeamService
+	permissions *service.PermissionService
 }
 
-func NewTeamController(teamSrv *service.TeamService) *TeamController {
-	return &TeamController{teamSrv: teamSrv}
+func NewTeamController(teamSrv *service.TeamService, permissions *service.PermissionService) *TeamController {
+	return &TeamController{teamSrv: teamSrv, permissions: permissions}
 }
 
 // List GET /api/team 团队列表（mine=1 只看我加入的，visibility=0/1 筛选公开度）
@@ -51,7 +52,7 @@ func (t *TeamController) Detail(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := t.teamSrv.Detail(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c))
+	resp, err := t.teamSrv.Detail(c.Request.Context(), id, optionalCurrentUserID(c), isSiteTeamManager(c, t.permissions))
 	if err != nil {
 		return nil, err
 	}
@@ -85,11 +86,11 @@ func (t *TeamController) Update(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	userID, role, err := requireCurrentUser(c)
+	userID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
-	if err := t.teamSrv.Update(c.Request.Context(), id, toSaveTeamParams(req), userID, role == 1); err != nil {
+	if err := t.teamSrv.Update(c.Request.Context(), id, toSaveTeamParams(req), userID, isSiteTeamManager(c, t.permissions)); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -101,11 +102,11 @@ func (t *TeamController) Delete(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	userID, role, err := requireCurrentUser(c)
+	userID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
-	if err := t.teamSrv.Delete(c.Request.Context(), id, userID, role == 1); err != nil {
+	if err := t.teamSrv.Delete(c.Request.Context(), id, userID, isSiteTeamManager(c, t.permissions)); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -152,7 +153,7 @@ func (t *TeamController) ListMembers(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := t.teamSrv.ListMembers(c.Request.Context(), id, optionalCurrentUserID(c), isAdminFromCtx(c))
+	resp, err := t.teamSrv.ListMembers(c.Request.Context(), id, optionalCurrentUserID(c), isSiteTeamManager(c, t.permissions))
 	if err != nil {
 		return nil, err
 	}
@@ -168,12 +169,12 @@ func (t *TeamController) DownloadStudentImportTemplate(c *gin.Context) {
 		response.Fail(c, err)
 		return
 	}
-	actorID, role, err := requireCurrentUser(c)
+	actorID, _, err := requireCurrentUser(c)
 	if err != nil {
 		response.Fail(c, err)
 		return
 	}
-	data, err := t.teamSrv.StudentImportTemplate(c.Request.Context(), id, actorID, role == 1)
+	data, err := t.teamSrv.StudentImportTemplate(c.Request.Context(), id, actorID, isSiteTeamManager(c, t.permissions))
 	if err != nil {
 		response.Fail(c, err)
 		return
@@ -189,7 +190,7 @@ func (t *TeamController) ImportStudents(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	actorID, role, err := requireCurrentUser(c)
+	actorID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +213,7 @@ func (t *TeamController) ImportStudents(c *gin.Context) (any, error) {
 	}
 	defer file.Close()
 
-	resp, err := t.teamSrv.ImportStudents(c.Request.Context(), id, actorID, role == 1, file)
+	resp, err := t.teamSrv.ImportStudents(c.Request.Context(), id, actorID, isSiteTeamManager(c, t.permissions), file)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +226,7 @@ func (t *TeamController) ImportStudentsManual(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	actorID, role, err := requireCurrentUser(c)
+	actorID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +234,7 @@ func (t *TeamController) ImportStudentsManual(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	resp, err := t.teamSrv.ImportStudentsManual(c.Request.Context(), id, actorID, role == 1, req.Text)
+	resp, err := t.teamSrv.ImportStudentsManual(c.Request.Context(), id, actorID, isSiteTeamManager(c, t.permissions), req.Text)
 	if err != nil {
 		return nil, err
 	}
@@ -254,11 +255,11 @@ func (t *TeamController) SetMemberRole(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	actorID, role, err := requireCurrentUser(c)
+	actorID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
-	if err := t.teamSrv.SetMemberRole(c.Request.Context(), id, uid, actorID, role == 1, req.Role); err != nil {
+	if err := t.teamSrv.SetMemberRole(c.Request.Context(), id, uid, actorID, isSiteTeamManager(c, t.permissions), req.Role); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -274,11 +275,11 @@ func (t *TeamController) RemoveMember(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	actorID, role, err := requireCurrentUser(c)
+	actorID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
-	if err := t.teamSrv.RemoveMember(c.Request.Context(), id, uid, actorID, role == 1); err != nil {
+	if err := t.teamSrv.RemoveMember(c.Request.Context(), id, uid, actorID, isSiteTeamManager(c, t.permissions)); err != nil {
 		return nil, err
 	}
 	return nil, nil

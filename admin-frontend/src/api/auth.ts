@@ -18,6 +18,7 @@ export interface AdminUser {
   username: string;
   role: number;
   avatar?: string;
+  permissions?: string[];
 }
 
 export interface LoginResult {
@@ -29,6 +30,7 @@ export interface SessionResult {
   authenticated: boolean;
   user?: AdminUser;
   avatar?: string;
+  permissions?: string[];
 }
 
 export interface CaptchaResult {

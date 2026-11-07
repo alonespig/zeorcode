@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/middleware"
 	"github.com/alonespig/zeorcode/backend/internal/http/response"
 
@@ -30,7 +31,7 @@ func (h *HttpServer) initPostRouter(r *gin.Engine) {
 
 	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
-		admin.GET("/posts/pending", response.Wrap(h.postController.ReviewListPending))
-		admin.PUT("/posts/:id/review", response.Wrap(h.postController.ReviewPost))
+		admin.GET("/posts/pending", middleware.RequirePermission(h.permissions, authz.PostReview), response.Wrap(h.postController.ReviewListPending))
+		admin.PUT("/posts/:id/review", middleware.RequirePermission(h.permissions, authz.PostReview), response.Wrap(h.postController.ReviewPost))
 	}
 }

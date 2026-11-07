@@ -29,6 +29,7 @@ type HttpServer struct {
 	auth                   *service.TokenService
 	cache                  *cache.Cache
 	audit                  *service.AuditService
+	permissions            *service.PermissionService
 }
 
 func NewHttpServer(problemController *handler.ProblemController,
@@ -47,7 +48,8 @@ func NewHttpServer(problemController *handler.ProblemController,
 	languageController *handler.LanguageController,
 	auth *service.TokenService,
 	c *cache.Cache,
-	audit *service.AuditService) *HttpServer {
+	audit *service.AuditService,
+	permissions *service.PermissionService) *HttpServer {
 	return &HttpServer{
 		problemController:      problemController,
 		contestController:      contestController,
@@ -66,6 +68,7 @@ func NewHttpServer(problemController *handler.ProblemController,
 		auth:                   auth,
 		cache:                  c,
 		audit:                  audit,
+		permissions:            permissions,
 	}
 }
 

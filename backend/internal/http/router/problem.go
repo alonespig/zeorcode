@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/middleware"
 	"github.com/alonespig/zeorcode/backend/internal/http/response"
 
@@ -21,24 +22,29 @@ func (h *HttpServer) initProblemRouter(r *gin.Engine) {
 	// 管理员接口
 	admin := r.Group("/api", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
-		admin.GET("/admin/problem-archive", h.problemController.DownloadProblemArchive)
-		admin.POST("/admin/problem-archive", response.Wrap(h.problemController.ImportProblemArchive))
-		admin.POST("/problems", response.Wrap(h.problemController.CreateProblem))
-		admin.PUT("/problems/:id", response.Wrap(h.problemController.UpdateProblem))
-		admin.GET("/problems/:id/edit", response.Wrap(h.problemController.GetProblemForEdit))
-		admin.GET("/problems/:id/testdata", response.Wrap(h.problemController.ListFiles))
-		admin.GET("/problems/:id/testdata/content", response.Wrap(h.problemController.GetFileContent))
-		admin.POST("/problems/:id/testdata", response.Wrap(h.problemController.UploadFile))
-		admin.POST("/problems/:id/testdata/zip", response.Wrap(h.problemController.UploadTestcaseZip))
-		admin.DELETE("/problems/:id/testdata", response.Wrap(h.problemController.DeleteFiles))
-		admin.GET("/problems/:id/testdata/download", h.problemController.DownloadFiles)
+		archive := middleware.RequirePermission(h.permissions, authz.ProblemArchive)
+		write := middleware.RequirePermission(h.permissions, authz.ProblemWrite)
+
+		admin.GET("/admin/problem-archive", archive, h.problemController.DownloadProblemArchive)
+		admin.POST("/admin/problem-archive", archive, response.Wrap(h.problemController.ImportProblemArchive))
+		admin.POST("/problems", write, response.Wrap(h.problemController.CreateProblem))
+		admin.PUT("/problems/:id", write, response.Wrap(h.problemController.UpdateProblem))
+		admin.GET("/problems/:id/edit", write, response.Wrap(h.problemController.GetProblemForEdit))
+		admin.GET("/problems/:id/testdata", write, response.Wrap(h.problemController.ListFiles))
+		admin.GET("/problems/:id/testdata/content", write, response.Wrap(h.problemController.GetFileContent))
+		admin.POST("/problems/:id/testdata", write, response.Wrap(h.problemController.UploadFile))
+		admin.POST("/problems/:id/testdata/zip", write, response.Wrap(h.problemController.UploadTestcaseZip))
+		admin.DELETE("/problems/:id/testdata", write, response.Wrap(h.problemController.DeleteFiles))
+		admin.GET("/problems/:id/testdata/download", write, h.problemController.DownloadFiles)
 	}
 
+	tagRead := middleware.RequirePermission(h.permissions, authz.TagRead)
+	tagWrite := middleware.RequirePermission(h.permissions, authz.TagWrite)
 	tagAdmin := r.Group("/api/admin/tags", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
-		tagAdmin.GET("", response.Wrap(h.problemController.GetAdminTagList))
-		tagAdmin.POST("", response.Wrap(h.problemController.CreateTag))
-		tagAdmin.PUT("/:id", response.Wrap(h.problemController.UpdateTag))
-		tagAdmin.DELETE("/:id", response.Wrap(h.problemController.DeleteTag))
+		tagAdmin.GET("", tagRead, response.Wrap(h.problemController.GetAdminTagList))
+		tagAdmin.POST("", tagWrite, response.Wrap(h.problemController.CreateTag))
+		tagAdmin.PUT("/:id", tagWrite, response.Wrap(h.problemController.UpdateTag))
+		tagAdmin.DELETE("/:id", tagWrite, response.Wrap(h.problemController.DeleteTag))
 	}
 }

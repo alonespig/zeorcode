@@ -51,7 +51,7 @@ func TestIsProblemSetIntent(t *testing.T) {
 func TestStartProblemSetWorkflowRequiresAdmin(t *testing.T) {
 	service := &AgentService{}
 	state := &agentConversationState{}
-	reply, err := service.startProblemSetWorkflow(state, false)
+	reply, err := service.startProblemSetWorkflow(state, AgentCapabilities{})
 	if err != nil {
 		t.Fatalf("startProblemSetWorkflow() error = %v", err)
 	}
@@ -59,7 +59,7 @@ func TestStartProblemSetWorkflowRequiresAdmin(t *testing.T) {
 		t.Fatalf("unexpected non-admin result: state=%+v reply=%+v", state, reply)
 	}
 
-	reply, err = service.startProblemSetWorkflow(state, true)
+	reply, err = service.startProblemSetWorkflow(state, AgentCapabilities{ManageProblemSets: true})
 	if err != nil {
 		t.Fatalf("startProblemSetWorkflow() error = %v", err)
 	}

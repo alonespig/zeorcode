@@ -10,8 +10,9 @@ const (
 
 // 用户角色
 const (
-	RoleNormal = 0 // 普通用户
-	RoleAdmin  = 1 // 管理员
+	RoleNormal     = 0 // 普通用户
+	RoleAdmin      = 1 // 管理员（权限由 admin_permissions 逐项分配）
+	RoleSuperAdmin = 2 // 超级管理员（拥有全部权限）
 )
 
 type User struct {
@@ -19,7 +20,7 @@ type User struct {
 	// UID 对外用户号（8 位随机数，注册时生成）。公开接口/URL 一律用它，隐藏自增主键防枚举；
 	// 内部 FK（提交/比赛/rating 等）与 JWT 仍用 ID。0 表示尚未回填（迁移前的老数据）。
 	UID       int64   `gorm:"uniqueIndex"`
-	Role      int     `gorm:"default:0"` // 0 普通用户 / 1 管理员（RoleNormal / RoleAdmin）
+	Role      int     `gorm:"default:0"` // 0 普通用户 / 1 管理员 / 2 超级管理员（RoleNormal / RoleAdmin / RoleSuperAdmin）
 	Username  string  `gorm:"unique;not null"`
 	StudentNo *string `gorm:"type:varchar(32);uniqueIndex"` // 学号；教师/管理员可为空
 	RealName  string  `gorm:"type:varchar(64);not null"`    // 校内真实姓名，由注册或管理员维护

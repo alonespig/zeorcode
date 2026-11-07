@@ -8,13 +8,44 @@ export const useUserStore = defineStore("user",()=>{
   const user = ref(null)
   const postLogoutAccess = ref(sessionStorage.getItem(POST_LOGOUT_ACCESS_KEY) === '1')
   const isLogin = computed(() => user.value !== null)
-  const isAdmin = computed(() => user.value?.role === 1 || false)
+  const isAdmin = computed(() => (user.value?.role ?? 0) >= 1)
+  const isSuperAdmin = computed(() => user.value?.role === 2)
+  const permissions = computed(() => new Set(user.value?.permissions ?? []))
+  const hasAdminAccess = computed(
+    () => isSuperAdmin.value || permissions.value.size > 0
+  )
+
+  const can = (permission) => {
+    if (!permission) return true
+    if (isSuperAdmin.value) return true
+    return permissions.value.has(permission)
+  }
+
+  const ADMIN_HOME_ROUTES = [
+    ['/admin/users', 'user.read'],
+    ['/admin/post-review', 'post.review'],
+    ['/admin/problemset', 'problemset.read'],
+    ['/admin/tags', 'tag.read'],
+    ['/admin/languages', 'judge.language.read'],
+    ['/admin/judge', 'judge.node.read'],
+    ['/admin/remote', 'judge.remote.read'],
+    ['/admin/notice', 'notification.send'],
+  ]
+
+  const adminHome = computed(() => {
+    const matched = ADMIN_HOME_ROUTES.find(([, permission]) => can(permission))
+    return matched?.[0] ?? '/404'
+  })
 
   const setLogin = (data) => {
-    user.value = data?.user || null
-    if (data?.avatar) {
-      user.value = { ...user.value, avatar: data.avatar }
-    }
+    const base = data?.user || null
+    user.value = base
+      ? {
+          ...base,
+          avatar: data?.avatar || base.avatar || '',
+          permissions: data?.permissions ?? base.permissions ?? [],
+        }
+      : null
     localStorage.setItem('user', JSON.stringify(user.value))
     postLogoutAccess.value = false
     sessionStorage.removeItem(POST_LOGOUT_ACCESS_KEY)
@@ -43,7 +74,11 @@ export const useUserStore = defineStore("user",()=>{
         localLogout()
         return false
       }
-      setLogin({ user: res.data.user, avatar: res.data.avatar })
+      setLogin({
+        user: res.data.user,
+        avatar: res.data.avatar,
+        permissions: res.data.permissions,
+      })
       return true
     } catch {
       // 无法确认服务端身份时按未登录处理，避免展示过期的管理员权限。
@@ -74,6 +109,11 @@ export const useUserStore = defineStore("user",()=>{
   return {
     user,
     isAdmin,
+    isSuperAdmin,
+    hasAdminAccess,
+    permissions,
+    can,
+    adminHome,
     isLogin,
     postLogoutAccess,
     setLogin,

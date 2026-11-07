@@ -217,7 +217,7 @@ func (s *AgentService) UpdateConversation(ctx context.Context, publicID, userID 
 
 // StreamTurn executes one user turn and emits transport-neutral events. The
 // HTTP handler owns SSE framing; the service owns authorization and state.
-func (s *AgentService) StreamTurn(ctx context.Context, conversationPublicID, userID int64, isSiteAdmin bool,
+func (s *AgentService) StreamTurn(ctx context.Context, conversationPublicID, userID int64, caps AgentCapabilities,
 	req *AgentTurnParams, emit AgentEventEmitter) error {
 	if req.Type == "message" {
 		req.Content = strings.TrimSpace(req.Content)
@@ -273,7 +273,7 @@ func (s *AgentService) StreamTurn(ctx context.Context, conversationPublicID, use
 		}
 	}
 
-	reply, err := s.processTurn(ctx, conversation, run, &state, userID, isSiteAdmin, req, emit)
+	reply, err := s.processTurn(ctx, conversation, run, &state, userID, caps, req, emit)
 	if err != nil {
 		_ = s.repo.FinishRun(ctx, run.ID, model.AgentRunFailed, appErrorCode(err))
 		return err
@@ -317,24 +317,24 @@ func (s *AgentService) StreamTurn(ctx context.Context, conversationPublicID, use
 }
 
 func (s *AgentService) processTurn(ctx context.Context, conversation *model.AgentConversation, run *model.AgentRun,
-	state *agentConversationState, userID int64, isSiteAdmin bool, req *AgentTurnParams,
+	state *agentConversationState, userID int64, caps AgentCapabilities, req *AgentTurnParams,
 	emit AgentEventEmitter) (agentReply, error) {
 	switch req.Type {
 	case "action_approval":
-		return s.approveAction(ctx, conversation, state, userID, isSiteAdmin, req)
+		return s.approveAction(ctx, conversation, state, userID, caps, req)
 	case "action_rejection":
 		return s.rejectAction(ctx, conversation, state, req)
 	case "interaction_response":
-		return s.resumeInteraction(ctx, conversation, run, state, userID, isSiteAdmin, req)
+		return s.resumeInteraction(ctx, conversation, run, state, userID, caps, req)
 	case "message":
-		return s.processMessage(ctx, conversation, state, userID, isSiteAdmin, run.PublicID, req.Content, emit)
+		return s.processMessage(ctx, conversation, state, userID, caps, run.PublicID, req.Content, emit)
 	default:
 		return agentReply{}, errcode.ErrInvalidParams.WithMsg("不支持的消息类型")
 	}
 }
 
 func (s *AgentService) processMessage(ctx context.Context, conversation *model.AgentConversation,
-	state *agentConversationState, userID int64, isSiteAdmin bool, runPublicID int64, content string,
+	state *agentConversationState, userID int64, caps AgentCapabilities, runPublicID int64, content string,
 	emit AgentEventEmitter) (agentReply, error) {
 	if state.ActiveWorkflow != "" {
 		if isCancelMessage(content) {
@@ -344,10 +344,10 @@ func (s *AgentService) processMessage(ctx context.Context, conversation *model.A
 		return agentReply{Content: "当前任务正在等待你的选择。请使用上一条消息中的选项；如果不想继续，可以回复“取消”。"}, nil
 	}
 	if isProblemSetIntent(content) {
-		return s.startProblemSetWorkflow(state, isSiteAdmin)
+		return s.startProblemSetWorkflow(state, caps)
 	}
 	if isHomeworkIntent(content) {
-		return s.startHomeworkWorkflow(ctx, state, userID, isSiteAdmin)
+		return s.startHomeworkWorkflow(ctx, state, userID, caps)
 	}
 
 	_ = emit(AgentEvent{Type: "tool.started", Data: map[string]any{"label": "正在思考"}})
@@ -394,8 +394,8 @@ func (s *AgentService) processMessage(ctx context.Context, conversation *model.A
 	return agentReply{Content: answer, ContentStreamed: true}, nil
 }
 
-func (s *AgentService) startHomeworkWorkflow(ctx context.Context, state *agentConversationState, userID int64, isSiteAdmin bool) (agentReply, error) {
-	teams, err := s.repo.ListManageableTeams(ctx, userID, isSiteAdmin)
+func (s *AgentService) startHomeworkWorkflow(ctx context.Context, state *agentConversationState, userID int64, caps AgentCapabilities) (agentReply, error) {
+	teams, err := s.repo.ListManageableTeams(ctx, userID, caps.ManageTeams)
 	if err != nil {
 		return agentReply{}, errcode.ErrDatabase.Wrap(err)
 	}
@@ -428,12 +428,12 @@ func (s *AgentService) startHomeworkWorkflow(ctx context.Context, state *agentCo
 }
 
 func (s *AgentService) resumeInteraction(ctx context.Context, conversation *model.AgentConversation, run *model.AgentRun,
-	state *agentConversationState, userID int64, isSiteAdmin bool, req *AgentTurnParams) (agentReply, error) {
+	state *agentConversationState, userID int64, caps AgentCapabilities, req *AgentTurnParams) (agentReply, error) {
 	if state.ActiveWorkflow == "" || state.PendingRequestID == 0 || req.RequestID != state.PendingRequestID {
 		return agentReply{}, errcode.ErrAgentInteractionExpired
 	}
 	if state.ActiveWorkflow == agentWorkflowProblemSet {
-		return s.resumeProblemSetInteraction(ctx, conversation, run, state, isSiteAdmin, req)
+		return s.resumeProblemSetInteraction(ctx, conversation, run, state, caps, req)
 	}
 	if state.ActiveWorkflow != agentWorkflowHomework || state.Homework == nil {
 		return agentReply{}, errcode.ErrAgentInteractionExpired
@@ -444,7 +444,7 @@ func (s *AgentService) resumeInteraction(ctx context.Context, conversation *mode
 		if err != nil {
 			return agentReply{}, errcode.ErrInvalidParams.WithMsg("请选择有效团队").Wrap(err)
 		}
-		teams, err := s.repo.ListManageableTeams(ctx, userID, isSiteAdmin)
+		teams, err := s.repo.ListManageableTeams(ctx, userID, caps.ManageTeams)
 		if err != nil {
 			return agentReply{}, errcode.ErrDatabase.Wrap(err)
 		}
@@ -801,9 +801,9 @@ func (s *AgentService) buildHomeworkPreview(ctx context.Context, conversation *m
 }
 
 func (s *AgentService) approveAction(ctx context.Context, conversation *model.AgentConversation,
-	state *agentConversationState, userID int64, isSiteAdmin bool, req *AgentTurnParams) (agentReply, error) {
+	state *agentConversationState, userID int64, caps AgentCapabilities, req *AgentTurnParams) (agentReply, error) {
 	if state.ActiveWorkflow == agentWorkflowProblemSet {
-		return s.approveProblemSetAction(ctx, conversation, state, userID, isSiteAdmin, req)
+		return s.approveProblemSetAction(ctx, conversation, state, userID, caps, req)
 	}
 	if state.ActiveWorkflow != agentWorkflowHomework || state.Step != agentStepConfirm || state.Homework == nil ||
 		req.ActionID == 0 || req.ActionID != state.Homework.ActionPublicID || req.DraftVersion != state.Homework.Version {
@@ -844,7 +844,7 @@ func (s *AgentService) approveAction(ctx context.Context, conversation *model.Ag
 	}
 	homeworkParams := SaveHomeworkParams{Title: draft.Title, Description: draft.Description,
 		StartTime: draft.StartTime, EndTime: draft.EndTime, Problems: problems}
-	homeworkPublicID, err := s.homeworkSrv.CreateFromAgent(ctx, draft.TeamID, homeworkParams, userID, isSiteAdmin, action.ID)
+	homeworkPublicID, err := s.homeworkSrv.CreateFromAgent(ctx, draft.TeamID, homeworkParams, userID, caps.ManageTeams, action.ID)
 	if err != nil {
 		_ = s.repo.FinishAction(ctx, action.ID, model.AgentActionFailed, 0, appErrorCode(err))
 		return agentReply{}, err

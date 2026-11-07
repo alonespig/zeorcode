@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/dto"
 	"github.com/alonespig/zeorcode/backend/internal/service"
 	"github.com/alonespig/zeorcode/backend/pkg/errcode"
@@ -10,11 +11,12 @@ import (
 
 // ProblemSetController 题单接口（前台只读 + 后台管理）
 type ProblemSetController struct {
-	setSrv *service.ProblemSetService
+	setSrv      *service.ProblemSetService
+	permissions *service.PermissionService
 }
 
-func NewProblemSetController(setSrv *service.ProblemSetService) *ProblemSetController {
-	return &ProblemSetController{setSrv: setSrv}
+func NewProblemSetController(setSrv *service.ProblemSetService, permissions *service.PermissionService) *ProblemSetController {
+	return &ProblemSetController{setSrv: setSrv, permissions: permissions}
 }
 
 // List GET /api/problemset 前台题单列表。管理员可见草稿，其他用户只见已发布题单。
@@ -23,7 +25,10 @@ func (p *ProblemSetController) List(c *gin.Context) (any, error) {
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	resp, err := p.setSrv.List(c.Request.Context(), toProblemSetListParams(req), optionalUserIDPtr(c), isAdminFromCtx(c))
+	resp, err := p.setSrv.List(
+		c.Request.Context(), toProblemSetListParams(req), optionalUserIDPtr(c),
+		hasAnyPermission(c, p.permissions, authz.ProblemSetRead),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +41,10 @@ func (p *ProblemSetController) Detail(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := p.setSrv.Detail(c.Request.Context(), id, optionalUserIDPtr(c), isAdminFromCtx(c))
+	resp, err := p.setSrv.Detail(
+		c.Request.Context(), id, optionalUserIDPtr(c),
+		hasAnyPermission(c, p.permissions, authz.ProblemSetRead),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +61,10 @@ func (p *ProblemSetController) Rank(c *gin.Context) (any, error) {
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	resp, err := p.setSrv.Rank(c.Request.Context(), id, toProblemSetRankParams(req), optionalUserIDPtr(c), isAdminFromCtx(c))
+	resp, err := p.setSrv.Rank(
+		c.Request.Context(), id, toProblemSetRankParams(req), optionalUserIDPtr(c),
+		hasAnyPermission(c, p.permissions, authz.ProblemSetRead),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -159,8 +170,3 @@ func optionalUserIDPtr(c *gin.Context) *int64 {
 	return &userID
 }
 
-func isAdminFromCtx(c *gin.Context) bool {
-	roleVal, _ := c.Get("role")
-	role, _ := roleVal.(int)
-	return role == 1
-}

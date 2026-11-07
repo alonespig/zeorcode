@@ -3,7 +3,9 @@ package handler
 import (
 	"strconv"
 
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/dto"
+	"github.com/alonespig/zeorcode/backend/internal/model"
 	"github.com/alonespig/zeorcode/backend/internal/service"
 	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
@@ -11,11 +13,21 @@ import (
 )
 
 type PostController struct {
-	postSrv *service.PostService
+	postSrv     *service.PostService
+	permissions *service.PermissionService
 }
 
-func NewPostController(postSrv *service.PostService) *PostController {
-	return &PostController{postSrv: postSrv}
+func NewPostController(postSrv *service.PostService, permissions *service.PermissionService) *PostController {
+	return &PostController{postSrv: postSrv, permissions: permissions}
+}
+
+// moderatorRole 把细粒度权限映射成服务层沿用的角色：
+// 只有拥有 post.review 的管理员才按“管理员”处理，超级管理员也走这里。
+func (p *PostController) moderatorRole(c *gin.Context) int {
+	if hasAnyPermission(c, p.permissions, authz.PostReview) {
+		return model.RoleAdmin
+	}
+	return model.RoleNormal
 }
 
 func (p *PostController) ListPosts(c *gin.Context) (any, error) {
@@ -63,11 +75,13 @@ func (p *PostController) CreatePost(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	userID, role, err := requireCurrentUser(c)
+	userID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := p.postSrv.CreatePost(c.Request.Context(), toCreatePostParams(req), userID, role)
+	resp, err := p.postSrv.CreatePost(
+		c.Request.Context(), toCreatePostParams(req), userID, p.moderatorRole(c),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -79,9 +93,9 @@ func (p *PostController) GetPost(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	roleVal, _ := c.Get("role")
-	role, _ := roleVal.(int)
-	resp, err := p.postSrv.GetPost(c.Request.Context(), id, optionalCurrentUserID(c), role)
+	resp, err := p.postSrv.GetPost(
+		c.Request.Context(), id, optionalCurrentUserID(c), p.moderatorRole(c),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -97,11 +111,13 @@ func (p *PostController) UpdatePost(c *gin.Context) (any, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	userID, role, err := requireCurrentUser(c)
+	userID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
-	return nil, p.postSrv.UpdatePost(c.Request.Context(), id, toUpdatePostParams(req), userID, role)
+	return nil, p.postSrv.UpdatePost(
+		c.Request.Context(), id, toUpdatePostParams(req), userID, p.moderatorRole(c),
+	)
 }
 
 func (p *PostController) DeletePost(c *gin.Context) (any, error) {
@@ -109,11 +125,11 @@ func (p *PostController) DeletePost(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	userID, role, err := requireCurrentUser(c)
+	userID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
-	return nil, p.postSrv.DeletePost(c.Request.Context(), id, userID, role)
+	return nil, p.postSrv.DeletePost(c.Request.Context(), id, userID, p.moderatorRole(c))
 }
 
 func (p *PostController) ToggleLike(c *gin.Context) (any, error) {
@@ -125,7 +141,7 @@ func (p *PostController) ToggleLike(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := p.postSrv.ToggleLike(c.Request.Context(), id, userID)
+	resp, err := p.postSrv.ToggleLike(c.Request.Context(), id, userID, p.moderatorRole(c))
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +155,9 @@ func (p *PostController) ListComments(c *gin.Context) (any, error) {
 	}
 	v, _ := c.Get("userID") // 可选：登录了才知道 isLiked
 	uid, _ := v.(int64)
-	resp, err := p.postSrv.ListComments(c.Request.Context(), id, uid)
+	resp, err := p.postSrv.ListComments(
+		c.Request.Context(), id, uid, p.moderatorRole(c),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +174,7 @@ func (p *PostController) ToggleCommentLike(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := p.postSrv.ToggleCommentLike(c.Request.Context(), cid, userID)
+	resp, err := p.postSrv.ToggleCommentLike(c.Request.Context(), cid, userID, p.moderatorRole(c))
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +194,9 @@ func (p *PostController) CreateComment(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, p.postSrv.CreateComment(c.Request.Context(), id, userID, toCreateCommentParams(req))
+	return nil, p.postSrv.CreateComment(
+		c.Request.Context(), id, userID, toCreateCommentParams(req), p.moderatorRole(c),
+	)
 }
 
 func (p *PostController) DeleteComment(c *gin.Context) (any, error) {
@@ -184,11 +204,11 @@ func (p *PostController) DeleteComment(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	userID, role, err := requireCurrentUser(c)
+	userID, _, err := requireCurrentUser(c)
 	if err != nil {
 		return nil, err
 	}
-	return nil, p.postSrv.DeleteComment(c.Request.Context(), id, userID, role)
+	return nil, p.postSrv.DeleteComment(c.Request.Context(), id, userID, p.moderatorRole(c))
 }
 
 func parseInt64Param(c *gin.Context, name string) (int64, error) {

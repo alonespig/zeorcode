@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/dto"
 	"github.com/alonespig/zeorcode/backend/internal/http/response"
 	"github.com/alonespig/zeorcode/backend/internal/service"
@@ -27,11 +28,12 @@ func (p *ProblemController) regenTestInfo(dir string) {
 }
 
 type ProblemController struct {
-	problemSrv *service.ProblemService
+	problemSrv  *service.ProblemService
+	permissions *service.PermissionService
 }
 
-func NewProblemController(srv *service.ProblemService) *ProblemController {
-	return &ProblemController{problemSrv: srv}
+func NewProblemController(srv *service.ProblemService, permissions *service.PermissionService) *ProblemController {
+	return &ProblemController{problemSrv: srv, permissions: permissions}
 }
 
 // DownloadProblemArchive streams every problem and its local test data as a
@@ -132,9 +134,7 @@ func (p *ProblemController) List(c *gin.Context) (any, error) {
 
 	userIDStr, _ := c.Get("userID")
 	userID, _ := userIDStr.(int64)
-	roleVal, _ := c.Get("role")
-	role, _ := roleVal.(int)
-	isAdmin := role == 1
+	isAdmin := hasAnyPermission(c, p.permissions, authz.ProblemRead)
 
 	resp, err := p.problemSrv.List(c.Request.Context(), toProblemListParams(req), &userID, isAdmin)
 	if err != nil {
@@ -148,9 +148,7 @@ func (p *ProblemController) GetProblemDetail(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	roleVal, _ := c.Get("role")
-	role, _ := roleVal.(int)
-	isAdmin := role == 1
+	isAdmin := hasAnyPermission(c, p.permissions, authz.ProblemRead)
 	resp, err := p.problemSrv.GetByID(c.Request.Context(), pk, isAdmin)
 	if err != nil {
 		return nil, err

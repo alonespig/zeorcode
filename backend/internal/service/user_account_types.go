@@ -23,15 +23,18 @@ type UpdateProfileParams struct {
 
 // AuthenticatedUser 登录态中的用户信息。
 type AuthenticatedUser struct {
-	ID       int64
-	Username string
-	Role     int
+	// InternalID 是内部主键，仅服务端使用，不序列化给前端。
+	InternalID int64
+	ID         int64
+	Username   string
+	Role       int
 }
 
 // LoginResult 登录 / 会话结果。
 type LoginResult struct {
-	User   AuthenticatedUser
-	Avatar string
+	User        AuthenticatedUser
+	Avatar      string
+	Permissions []string
 }
 
 // CaptchaChallenge 登录验证码。

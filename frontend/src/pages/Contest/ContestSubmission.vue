@@ -1,7 +1,7 @@
 <template>
   <div class="f-panel overflow-hidden">
     <!-- 管理员：全场筛选栏 -->
-    <div v-if="isAdmin" class="flex flex-wrap items-center gap-3 border-b border-gray-100 px-4 py-3">
+    <div v-if="canViewAll" class="flex flex-wrap items-center gap-3 border-b border-gray-100 px-4 py-3">
       <el-input v-model="filters.username" placeholder="用户名" clearable style="width: 150px"
         @keyup.enter="applyFilter">
         <template #prefix>
@@ -26,7 +26,7 @@
       </div>
     </div>
 
-    <SubmissionStatus v-if="tableData.length" :tableData="tableData" :hide-user="!isAdmin" :show-rejudge="isAdmin"
+    <SubmissionStatus v-if="tableData.length" :tableData="tableData" :hide-user="!canViewAll" :show-rejudge="canRejudge"
       @click-id="goDetail" @click-problem-id="goProblem" @click-user="goUser" @rejudge="handleRejudge" />
     <el-empty v-else description="还没有提交记录" />
   </div>
@@ -49,7 +49,8 @@ import {
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-const isAdmin = computed(() => userStore.isAdmin)
+const canViewAll = computed(() => userStore.can('submission.read'))
+const canRejudge = computed(() => userStore.can('contest.rejudge'))
 
 const tableData = ref([])
 const problems = ref([])
@@ -76,7 +77,7 @@ const goProblem = (pid) => {
 }
 
 const fetchData = async () => {
-  const params = isAdmin.value
+  const params = canViewAll.value
     ? {
       username: filters.username || undefined,
       problemID: filters.problemID || undefined,

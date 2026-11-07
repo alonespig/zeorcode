@@ -37,7 +37,7 @@ const emit = defineEmits(["search", "toggleMine", "changeVisibility", "create"])
         <el-icon><UserFilled /></el-icon>
         {{ mine ? "查看全部团队" : "我的团队" }}
       </button>
-      <el-button v-permission="['admin']" type="primary" :icon="Plus" @click="emit('create')">创建团队</el-button>
+      <el-button v-permission="'team.manage'" type="primary" :icon="Plus" @click="emit('create')">创建团队</el-button>
       <span class="filter-total">共 {{ total }} 个团队</span>
     </div>
 

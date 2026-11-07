@@ -30,3 +30,28 @@ func RateLimit(c *cache.Cache, scope string, limit int, window time.Duration) gi
 		ctx.Next()
 	}
 }
+
+// RateLimitUserResource 按“用户 + 路径参数”限流，用于邀请码这类可被撞库的入口。
+// 例如团队加入按 userID + 团队对外 ID 计数，避免短邀请码被同一账号反复尝试。
+func RateLimitUserResource(c *cache.Cache, scope string, limit int, window time.Duration, param string) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		v, _ := ctx.Get("userID")
+		userID, _ := v.(int64)
+		if userID <= 0 {
+			ctx.Next()
+			return
+		}
+		key := fmt.Sprintf("ratelimit:%s:%d:%s", scope, userID, ctx.Param(param))
+		n, err := c.RateLimitIncr(ctx.Request.Context(), key, window)
+		if err != nil {
+			ctx.Next()
+			return
+		}
+		if limit > 0 && n > int64(limit) {
+			response.Fail(ctx, errcode.ErrTooManyRequests.WithMsg("尝试次数过多，请稍后再试"))
+			ctx.Abort()
+			return
+		}
+		ctx.Next()
+	}
+}

@@ -3,6 +3,7 @@ package router
 import (
 	"time"
 
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/middleware"
 	"github.com/alonespig/zeorcode/backend/internal/http/response"
 
@@ -31,9 +32,9 @@ func (h *HttpServer) initSubmissionRouter(r *gin.Engine) {
 
 	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
-		// 重判（超管）：单条 / 整场 / 某比赛某题
-		admin.POST("/submission/:id/rejudge", response.Wrap(h.submissionController.Rejudge))
-		admin.POST("/contest/:id/rejudge", response.Wrap(h.submissionController.RejudgeContest))
-		admin.POST("/contest/:id/problem/:pid/rejudge", response.Wrap(h.submissionController.RejudgeContestProblem))
+		// 重判：单条用提交权限，整场/某题用比赛重判权限
+		admin.POST("/submission/:id/rejudge", middleware.RequirePermission(h.permissions, authz.SubmissionRejudge), response.Wrap(h.submissionController.Rejudge))
+		admin.POST("/contest/:id/rejudge", middleware.RequirePermission(h.permissions, authz.ContestRejudge), response.Wrap(h.submissionController.RejudgeContest))
+		admin.POST("/contest/:id/problem/:pid/rejudge", middleware.RequirePermission(h.permissions, authz.ContestRejudge), response.Wrap(h.submissionController.RejudgeContestProblem))
 	}
 }

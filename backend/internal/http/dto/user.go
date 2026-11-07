@@ -1,5 +1,7 @@
 package dto
 
+import "github.com/alonespig/zeorcode/backend/internal/authz"
+
 type CreateUserReq struct {
 	Username  string `json:"username" binding:"required,min=2,max=20"`
 	StudentNo string `json:"studentNo" binding:"omitempty,max=32"`
@@ -63,10 +65,11 @@ type UserInfo struct {
 	PassCount     int64  `json:"count,omitempty"`
 	ACSubmitCount int64  `json:"acSubmitCount,omitempty"`
 	SubmitCount   int64  `json:"submitCount,omitempty"`
-	Signature   string `json:"signature,omitempty"`
-	Role        int    `json:"role,omitempty"`
-	Rating      int    `json:"rating"`
-	MaxRating   int    `json:"maxRating,omitempty"`
+	Signature   string   `json:"signature,omitempty"`
+	Role        int      `json:"role,omitempty"`
+	Permissions []string `json:"permissions,omitempty"`
+	Rating      int      `json:"rating"`
+	MaxRating   int      `json:"maxRating,omitempty"`
 }
 
 type LoginResp struct {
@@ -80,6 +83,7 @@ type SessionResp struct {
 	Authenticated bool      `json:"authenticated"`
 	User          *UserInfo `json:"user,omitempty"`
 	Avatar        string    `json:"avatar,omitempty"`
+	Permissions   []string  `json:"permissions,omitempty"`
 }
 
 type UserRank struct {
@@ -165,9 +169,25 @@ type SetUserStatusReq struct {
 	Status int `json:"status" binding:"oneof=0 1"`
 }
 
-// SetUserRoleReq 管理员修改用户角色（0 普通用户 / 1 管理员）
+// SetUserRoleReq 管理员修改用户角色（0 普通用户 / 1 管理员 / 2 超级管理员）
 type SetUserRoleReq struct {
-	Role int `json:"role" binding:"oneof=0 1"`
+	Role int `json:"role" binding:"oneof=0 1 2"`
+}
+
+// PermissionCatalogResp 权限点分组目录。
+type PermissionCatalogResp struct {
+	Groups []authz.Group `json:"groups"`
+}
+
+// UserPermissionsResp 某个管理员的角色与已授权限。
+type UserPermissionsResp struct {
+	Role        int      `json:"role"`
+	Permissions []string `json:"permissions"`
+}
+
+// SetUserPermissionsReq 保存某个管理员的权限集合。
+type SetUserPermissionsReq struct {
+	Permissions []string `json:"permissions" binding:"max=100"`
 }
 
 type AdminUserListResp struct {
@@ -178,7 +198,7 @@ type AdminUserListResp struct {
 type AdminUserListReq struct {
 	PageForm
 	Keyword string `form:"q" binding:"max=64"`
-	Role    *int   `form:"role" binding:"omitempty,oneof=0 1"`
+	Role    *int   `form:"role" binding:"omitempty,oneof=0 1 2"`
 	Status  *int   `form:"status" binding:"omitempty,oneof=0 1"`
 }
 

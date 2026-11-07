@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/alonespig/zeorcode/backend/cmd"
 	"github.com/alonespig/zeorcode/backend/internal/config"
 	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
@@ -14,5 +16,7 @@ func main() {
 	defer logger.Sync()
 
 	// Redis / MySQL 等资源由各子命令(http / judge)在自己的组合根里创建并注入
-	cmd.RootCmd.Execute()
+	if err := cmd.RootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

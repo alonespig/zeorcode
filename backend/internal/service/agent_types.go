@@ -7,6 +7,13 @@ import (
 
 // ===== 查询 / 命令输入 =====
 
+// AgentCapabilities 是 Agent 工作流可用的站点级能力：
+// 创建题单需要 problemset.write；跨团队布置作业需要 team.manage。
+type AgentCapabilities struct {
+	ManageProblemSets bool
+	ManageTeams       bool
+}
+
 type AgentConversationListParams struct {
 	Page     int
 	PageSize int

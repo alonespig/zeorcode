@@ -19,4 +19,5 @@ var RepoSet = wire.NewSet(
 	NewLanguageRepo,
 	NewDashboardRepo,
 	NewAuditRepo,
+	NewAdminPermissionRepo,
 )

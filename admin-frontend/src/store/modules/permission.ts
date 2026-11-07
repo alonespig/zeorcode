@@ -9,6 +9,22 @@ import {
   formatFlatteningRoutes
 } from "../utils";
 import { useMultiTagsStoreHook } from "./multiTags";
+import { useUserStoreHook } from "./user";
+
+/** 按当前用户权限过滤菜单：叶子无权限则隐藏，父级子项全空则整组隐藏。 */
+function filterByPermission(menus: any[]): any[] {
+  const userStore = useUserStoreHook();
+  return menus.filter(menu => {
+    if (menu.meta?.permission && !userStore.can(menu.meta.permission)) {
+      return false;
+    }
+    if (Array.isArray(menu.children) && menu.children.length > 0) {
+      menu.children = filterByPermission(menu.children);
+      return menu.children.length > 0;
+    }
+    return true;
+  });
+}
 
 export const usePermissionStore = defineStore("pure-permission", {
   state: () => ({
@@ -24,8 +40,8 @@ export const usePermissionStore = defineStore("pure-permission", {
   actions: {
     /** 根据本地静态路由生成菜单。 */
     handleWholeMenus(routes: any[] = []) {
-      this.wholeMenus = filterTree(
-        ascending(this.constantMenus.concat(routes))
+      this.wholeMenus = filterByPermission(
+        filterTree(ascending(this.constantMenus.concat(routes)))
       );
       this.flatteningRoutes = formatFlatteningRoutes(
         this.constantMenus.concat(routes) as any

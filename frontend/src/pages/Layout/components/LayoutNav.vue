@@ -124,6 +124,8 @@ const navItems = computed(() => {
       label: 'AI 助手',
       elementIcon: MagicStick,
     })
+  }
+  if (userStore.hasAdminAccess) {
     items.push({
       to: adminFrontendUrl,
       label: '后台',

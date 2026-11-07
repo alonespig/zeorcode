@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/dto"
 	"github.com/alonespig/zeorcode/backend/internal/model"
 	"github.com/alonespig/zeorcode/backend/internal/service"
@@ -13,11 +14,12 @@ import (
 )
 
 type ContestController struct {
-	contestSrv *service.ContestService
+	contestSrv  *service.ContestService
+	permissions *service.PermissionService
 }
 
-func NewContestController(contestSrv *service.ContestService) *ContestController {
-	return &ContestController{contestSrv: contestSrv}
+func NewContestController(contestSrv *service.ContestService, permissions *service.PermissionService) *ContestController {
+	return &ContestController{contestSrv: contestSrv, permissions: permissions}
 }
 
 func (c *ContestController) Create(ctx *gin.Context) (any, error) {
@@ -160,9 +162,10 @@ func (c *ContestController) GetContestProblemList(ctx *gin.Context) (any, error)
 	}
 	userIDVal, _ := ctx.Get("userID")
 	userID, _ := userIDVal.(int64)
-	roleVal, _ := ctx.Get("role")
-	role, _ := roleVal.(int)
-	resp, err := c.contestSrv.GetContestProblemList(ctx.Request.Context(), contestID, userID, role == 1)
+	resp, err := c.contestSrv.GetContestProblemList(
+		ctx.Request.Context(), contestID, userID,
+		hasAnyPermission(ctx, c.permissions, authz.ContestRead),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -176,10 +179,9 @@ func (c *ContestController) GetContestProblem(ctx *gin.Context) (any, error) {
 	}
 	userIDVal, _ := ctx.Get("userID")
 	userID, _ := userIDVal.(int64)
-	roleVal, _ := ctx.Get("role")
-	role, _ := roleVal.(int)
 	resp, err := c.contestSrv.GetContestProblemDetail(
-		ctx.Request.Context(), contestID, ctx.Param("problemID"), userID, role == 1,
+		ctx.Request.Context(), contestID, ctx.Param("problemID"), userID,
+		hasAnyPermission(ctx, c.permissions, authz.ContestRead),
 	)
 	if err != nil {
 		return nil, err
@@ -222,9 +224,10 @@ func (c *ContestController) GetContestSubmitInfo(ctx *gin.Context) (any, error) 
 	if !ok {
 		return nil, errcode.ErrInvalidParams.WithMsg("用户ID类型错误")
 	}
-	roleVal, _ := ctx.Get("role")
-	role, _ := roleVal.(int)
-	resp, err := c.contestSrv.GetContestSubmitInfo(ctx.Request.Context(), contestID, userID, role == 1)
+	resp, err := c.contestSrv.GetContestSubmitInfo(
+		ctx.Request.Context(), contestID, userID,
+		hasAnyPermission(ctx, c.permissions, authz.SubmissionRead),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -241,12 +244,14 @@ func (c *ContestController) GetContestSubmissions(ctx *gin.Context) (any, error)
 	if err != nil {
 		return nil, err
 	}
-	roleVal, _ := ctx.Get("role")
-	role, _ := roleVal.(int)
 	var q dto.ContestSubmissionQuery
 	_ = ctx.ShouldBindQuery(&q)
 	params := toContestSubmissionQueryParams(q)
-	resp, err := c.contestSrv.GetContestSubmissions(ctx.Request.Context(), contestID, userID, role == 1, &params)
+	resp, err := c.contestSrv.GetContestSubmissions(
+		ctx.Request.Context(), contestID, userID,
+		hasAnyPermission(ctx, c.permissions, authz.SubmissionRead),
+		&params,
+	)
 	if err != nil {
 		return nil, err
 	}
