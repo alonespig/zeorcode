@@ -99,6 +99,10 @@ watch(() => route.params.id, fetchTeam, { immediate: true });
 </template>
 
 <style scoped>
+.page-container {
+  max-width: 1360px;
+}
+
 .team-heading {
   min-height: 104px;
   padding: 16px 28px;

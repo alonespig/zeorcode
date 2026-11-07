@@ -67,3 +67,9 @@ const fetchHomework = async () => {
 
 watch(() => route.params.hid, fetchHomework, { immediate: true });
 </script>
+
+<style scoped>
+.page-container {
+  max-width: 1360px;
+}
+</style>
