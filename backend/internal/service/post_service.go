@@ -228,13 +228,20 @@ func (s *PostService) DeletePost(ctx context.Context, id int64, userID int64, ro
 	return nil
 }
 
+// canViewPost 未过审的帖子仅作者本人或管理员可见。
+func canViewPost(post *model.Post, userID int64, role int) bool {
+	return post.ReviewStatus == model.PostReviewApproved ||
+		post.UserID == userID ||
+		role == model.RoleAdmin
+}
+
 func (s *PostService) GetPost(ctx context.Context, id int64, userID int64, role int) (*PostDetail, error) {
 	post, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, postLookupError(err)
 	}
 	// 未过审的帖子仅作者本人或管理员可见（对外一律当作不存在）
-	if post.ReviewStatus != model.PostReviewApproved && post.UserID != userID && role != 1 {
+	if !canViewPost(post, userID, role) {
 		return nil, errcode.ErrPostNotFound
 	}
 	// 只有已通过的帖子才计浏览量（作者预览待审稿不刷数）
@@ -264,10 +271,13 @@ func (s *PostService) GetPost(ctx context.Context, id int64, userID int64, role 
 	return resp, nil
 }
 
-func (s *PostService) ToggleLike(ctx context.Context, postID, userID int64) (*ToggleLikeResult, error) {
+func (s *PostService) ToggleLike(ctx context.Context, postID, userID int64, role int) (*ToggleLikeResult, error) {
 	post, err := s.repo.GetByID(ctx, postID)
 	if err != nil {
 		return nil, postLookupError(err)
+	}
+	if !canViewPost(post, userID, role) {
+		return nil, errcode.ErrPostNotFound
 	}
 	liked, err := s.repo.ToggleLike(ctx, postID, userID)
 	if err != nil {
@@ -280,10 +290,17 @@ func (s *PostService) ToggleLike(ctx context.Context, postID, userID int64) (*To
 }
 
 // ToggleCommentLike 点赞/取消点赞评论；点赞时通知评论作者。
-func (s *PostService) ToggleCommentLike(ctx context.Context, commentID, userID int64) (*ToggleLikeResult, error) {
+func (s *PostService) ToggleCommentLike(ctx context.Context, commentID, userID int64, role int) (*ToggleLikeResult, error) {
 	comment, err := s.repo.GetComment(ctx, commentID)
 	if err != nil {
 		return nil, commentLookupError(err)
+	}
+	post, err := s.repo.GetByID(ctx, comment.PostID)
+	if err != nil {
+		return nil, postLookupError(err)
+	}
+	if !canViewPost(post, userID, role) {
+		return nil, errcode.ErrPostNotFound
 	}
 	liked, err := s.repo.ToggleCommentLike(ctx, commentID, userID)
 	if err != nil {
@@ -299,9 +316,13 @@ func (s *PostService) ToggleCommentLike(ctx context.Context, commentID, userID i
 // ListComments 返回单层楼中楼：顶层评论按时间序，每条顶层评论挂它的全部回复。
 // 回复若回复的是另一条回复（而非直接回复楼主），ReplyTo 填被回复者，前端显示 @某人。
 // Total 为评论总数（顶层 + 回复）。
-func (s *PostService) ListComments(ctx context.Context, postID, userID int64) (*PostCommentList, error) {
-	if _, err := s.repo.GetByID(ctx, postID); err != nil {
+func (s *PostService) ListComments(ctx context.Context, postID, userID int64, role int) (*PostCommentList, error) {
+	post, err := s.repo.GetByID(ctx, postID)
+	if err != nil {
 		return nil, postLookupError(err)
+	}
+	if !canViewPost(post, userID, role) {
+		return nil, errcode.ErrPostNotFound
 	}
 	comments, err := s.repo.ListComments(ctx, postID)
 	if err != nil {
@@ -318,7 +339,7 @@ func (s *PostService) ListComments(ctx context.Context, postID, userID int64) (*
 	}, nil
 }
 
-func (s *PostService) CreateComment(ctx context.Context, postID, userID int64, req CreateCommentParams) error {
+func (s *PostService) CreateComment(ctx context.Context, postID, userID int64, req CreateCommentParams, role int) error {
 	content := strings.TrimSpace(req.Content)
 	if content == "" {
 		return errcode.ErrInvalidParams.WithMsg("评论内容不能为空")
@@ -326,6 +347,9 @@ func (s *PostService) CreateComment(ctx context.Context, postID, userID int64, r
 	post, err := s.repo.GetByID(ctx, postID)
 	if err != nil {
 		return postLookupError(err)
+	}
+	if !canViewPost(post, userID, role) {
+		return errcode.ErrPostNotFound
 	}
 	// 由「被回复的评论」推出 root_id 和 reply_user_id：
 	//   回复一级评论(楼主) → root=该评论, 不@(reply_user_id=0)

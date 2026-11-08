@@ -67,8 +67,8 @@ func (d *problemSetDraft) syncSelection(selection *homeworkDraft) {
 	d.SelectedProblems = append(d.SelectedProblems[:0], selection.SelectedProblems...)
 }
 
-func (s *AgentService) startProblemSetWorkflow(state *agentConversationState, isSiteAdmin bool) (agentReply, error) {
-	if !isSiteAdmin {
+func (s *AgentService) startProblemSetWorkflow(state *agentConversationState, caps AgentCapabilities) (agentReply, error) {
+	if !caps.ManageProblemSets {
 		return agentReply{Content: "创建题单需要管理员权限。你仍然可以让我帮助规划题单内容。"}, nil
 	}
 	state.ActiveWorkflow = agentWorkflowProblemSet
@@ -78,8 +78,8 @@ func (s *AgentService) startProblemSetWorkflow(state *agentConversationState, is
 }
 
 func (s *AgentService) resumeProblemSetInteraction(ctx context.Context, conversation *model.AgentConversation,
-	run *model.AgentRun, state *agentConversationState, isSiteAdmin bool, req *AgentTurnParams) (agentReply, error) {
-	if !isSiteAdmin || state.ProblemSet == nil {
+	run *model.AgentRun, state *agentConversationState, caps AgentCapabilities, req *AgentTurnParams) (agentReply, error) {
+	if !caps.ManageProblemSets || state.ProblemSet == nil {
 		return agentReply{}, errcode.ErrPermissionDenied.WithMsg("创建题单需要管理员权限")
 	}
 	draft := state.ProblemSet
@@ -410,8 +410,8 @@ func (s *AgentService) buildProblemSetPreview(ctx context.Context, conversation 
 }
 
 func (s *AgentService) approveProblemSetAction(ctx context.Context, conversation *model.AgentConversation,
-	state *agentConversationState, userID int64, isSiteAdmin bool, req *AgentTurnParams) (agentReply, error) {
-	if !isSiteAdmin || state.Step != agentStepConfirm || state.ProblemSet == nil || req.ActionID == 0 ||
+	state *agentConversationState, userID int64, caps AgentCapabilities, req *AgentTurnParams) (agentReply, error) {
+	if !caps.ManageProblemSets || state.Step != agentStepConfirm || state.ProblemSet == nil || req.ActionID == 0 ||
 		req.ActionID != state.ProblemSet.ActionPublicID || req.DraftVersion != state.ProblemSet.Version {
 		return agentReply{}, errcode.ErrAgentActionConflict
 	}

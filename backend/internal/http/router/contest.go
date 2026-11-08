@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/middleware"
 	"github.com/alonespig/zeorcode/backend/internal/http/response"
 
@@ -35,16 +36,16 @@ func (h *HttpServer) initContestRouter(r *gin.Engine) {
 	// 管理员接口
 	contestAdmin := r.Group("/api/contest", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
-		contestAdmin.POST("", response.Wrap(h.contestController.Create))
-		contestAdmin.GET("/:id/info", response.Wrap(h.contestController.EditContest))
-		contestAdmin.PUT("/:id", response.Wrap(h.contestController.Update))
+		contestAdmin.POST("", middleware.RequirePermission(h.permissions, authz.ContestWrite), response.Wrap(h.contestController.Create))
+		contestAdmin.GET("/:id/info", middleware.RequirePermission(h.permissions, authz.ContestRead), response.Wrap(h.contestController.EditContest))
+		contestAdmin.PUT("/:id", middleware.RequirePermission(h.permissions, authz.ContestWrite), response.Wrap(h.contestController.Update))
 	}
 
 	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
-		admin.GET("/contests", response.Wrap(h.contestController.AdminList))
-		admin.PUT("/contest/:id/archive", response.Wrap(h.contestController.SetArchived))
+		admin.GET("/contests", middleware.RequirePermission(h.permissions, authz.ContestRead), response.Wrap(h.contestController.AdminList))
+		admin.PUT("/contest/:id/archive", middleware.RequirePermission(h.permissions, authz.ContestWrite), response.Wrap(h.contestController.SetArchived))
 		// 比赛榜从 submissions 明细整场重算（榜单漂移时手动重建；路①下重判已不需要它）
-		admin.POST("/contest/:id/recompute", response.Wrap(h.contestController.RecomputeContest))
+		admin.POST("/contest/:id/recompute", middleware.RequirePermission(h.permissions, authz.ContestRejudge), response.Wrap(h.contestController.RecomputeContest))
 	}
 }

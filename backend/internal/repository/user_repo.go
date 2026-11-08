@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 	"time"
@@ -9,7 +10,11 @@ import (
 	"github.com/alonespig/zeorcode/backend/internal/model"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
+
+// ErrLastSuperAdmin 表示这次角色变更会把系统里最后一个超级管理员降级。
+var ErrLastSuperAdmin = errors.New("不能降级最后一个超级管理员")
 
 // RatingHistoryRow rating 历史一行（join 比赛名）
 type RatingHistoryRow struct {
@@ -199,6 +204,78 @@ func (r *UserRepo) GetUserNameByID(ctx context.Context, id int64) (string, error
 
 func (r *UserRepo) UpdateUser(ctx context.Context, user *model.User) error {
 	return r.db.WithContext(ctx).Save(user).Error
+}
+
+// UpdateProfileFields 只更新个人资料字段，避免整条保存覆盖并发变更的角色/状态。
+func (r *UserRepo) UpdateProfileFields(
+	ctx context.Context,
+	userID int64,
+	signature, school string,
+	gender int,
+	avatar string,
+) error {
+	return r.db.WithContext(ctx).Model(&model.User{}).
+		Where("id = ?", userID).
+		Updates(map[string]any{
+			"signature": signature,
+			"school":    school,
+			"gender":    gender,
+			"avatar":    avatar,
+		}).Error
+}
+
+// UpdateStatus 只更新封禁状态，避免覆盖角色或资料。
+func (r *UserRepo) UpdateStatus(ctx context.Context, userID int64, status int) error {
+	return r.db.WithContext(ctx).Model(&model.User{}).
+		Where("id = ?", userID).
+		Update("status", status).Error
+}
+
+// UpdateEmail 只更新邮箱字段，避免整条保存覆盖并发变更的角色/状态/资料。
+func (r *UserRepo) UpdateEmail(ctx context.Context, userID int64, email *string) error {
+	return r.db.WithContext(ctx).Model(&model.User{}).
+		Where("id = ?", userID).
+		Update("email", email).Error
+}
+
+// CountByRole 统计某个角色的用户数，用于初始化超级管理员时防重复。
+func (r *UserRepo) CountByRole(ctx context.Context, role int) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&model.User{}).
+		Where("role = ?", role).
+		Count(&count).Error
+	return count, err
+}
+
+// UpdateRole 只更新角色，避免覆盖状态或资料。
+func (r *UserRepo) UpdateRole(ctx context.Context, userID int64, role int) error {
+	return r.db.WithContext(ctx).Model(&model.User{}).
+		Where("id = ?", userID).
+		Update("role", role).Error
+}
+
+// UpdateRoleGuarded 在事务里锁定超级管理员集合后再改角色，
+// 防止两个超管并发互降导致系统失去全部超管。
+func (r *UserRepo) UpdateRoleGuarded(ctx context.Context, targetID int64, newRole int) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var superIDs []int64
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Model(&model.User{}).
+			Where("role = ?", model.RoleSuperAdmin).
+			Pluck("id", &superIDs).Error; err != nil {
+			return err
+		}
+		if newRole != model.RoleSuperAdmin && len(superIDs) <= 1 {
+			for _, id := range superIDs {
+				if id == targetID {
+					return ErrLastSuperAdmin
+				}
+			}
+		}
+		return tx.Model(&model.User{}).
+			Where("id = ?", targetID).
+			Update("role", newRole).Error
+	})
 }
 
 // UpdatePassword 只更新密码字段，避免用 Save 覆盖并发修改的其他资料。

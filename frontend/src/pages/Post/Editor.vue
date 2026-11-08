@@ -62,9 +62,9 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-// 公告只有管理员能发：非管理员的类型选项里去掉"公告"
+// 公告只有拥有帖子审核权限的管理员能发
 const availableCategories = computed(() =>
-  userStore.isAdmin ? categoryList : categoryList.filter((c) => c.id !== 'announcement')
+  userStore.can('post.review') ? categoryList : categoryList.filter((c) => c.id !== 'announcement')
 )
 
 const form = reactive({

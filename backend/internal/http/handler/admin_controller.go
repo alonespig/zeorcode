@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/dto"
 	"github.com/alonespig/zeorcode/backend/internal/http/response"
 	"github.com/alonespig/zeorcode/backend/internal/service"
@@ -19,15 +20,29 @@ type AdminController struct {
 	userSrv      *service.UserService
 	dashboardSrv *service.DashboardService
 	auditSrv     *service.AuditService
+	permSrv      *service.PermissionService
 }
 
-func NewAdminController(userSrv *service.UserService, dashboardSrv *service.DashboardService, auditSrv *service.AuditService) *AdminController {
-	return &AdminController{userSrv: userSrv, dashboardSrv: dashboardSrv, auditSrv: auditSrv}
+func NewAdminController(
+	userSrv *service.UserService,
+	dashboardSrv *service.DashboardService,
+	auditSrv *service.AuditService,
+	permSrv *service.PermissionService,
+) *AdminController {
+	return &AdminController{
+		userSrv:      userSrv,
+		dashboardSrv: dashboardSrv,
+		auditSrv:     auditSrv,
+		permSrv:      permSrv,
+	}
 }
 
 // Dashboard GET /api/admin/dashboard 后台工作台聚合数据。
 func (a *AdminController) Dashboard(c *gin.Context) (*dto.DashboardOverviewResp, error) {
-	result, err := a.dashboardSrv.Overview(c.Request.Context())
+	result, err := a.dashboardSrv.Overview(
+		c.Request.Context(),
+		hasAnyPermission(c, a.permSrv, authz.SubmissionRead),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +135,11 @@ func (a *AdminController) SetUserStatus(c *gin.Context) (gin.H, error) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	if err := a.userSrv.SetUserStatus(c.Request.Context(), uid, req.Status); err != nil {
+	actorID, actorRole, err := requireCurrentUser(c)
+	if err != nil {
+		return nil, err
+	}
+	if err := a.userSrv.SetUserStatus(c.Request.Context(), actorID, actorRole, uid, req.Status); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -141,6 +160,40 @@ func (a *AdminController) SetUserRole(c *gin.Context) (gin.H, error) {
 		return nil, err
 	}
 	if err := a.userSrv.SetUserRole(c.Request.Context(), actorID, uid, req.Role); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+// PermissionCatalog GET /api/admin/permissions/catalog 返回权限点分组目录。
+func (a *AdminController) PermissionCatalog(c *gin.Context) (*dto.PermissionCatalogResp, error) {
+	return &dto.PermissionCatalogResp{Groups: authz.Catalog}, nil
+}
+
+// GetUserPermissions GET /api/admin/users/:id/permissions 查询某个管理员的权限。
+func (a *AdminController) GetUserPermissions(c *gin.Context) (*dto.UserPermissionsResp, error) {
+	uid, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return nil, errcode.ErrInvalidParams.WithMsg("非法用户号")
+	}
+	permissions, role, err := a.permSrv.GetByUID(c.Request.Context(), uid)
+	if err != nil {
+		return nil, err
+	}
+	return &dto.UserPermissionsResp{Role: role, Permissions: permissions}, nil
+}
+
+// SetUserPermissions PUT /api/admin/users/:id/permissions 保存某个管理员的权限。
+func (a *AdminController) SetUserPermissions(c *gin.Context) (gin.H, error) {
+	uid, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return nil, errcode.ErrInvalidParams.WithMsg("非法用户号")
+	}
+	var req dto.SetUserPermissionsReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		return nil, errcode.ErrInvalidParams.Wrap(err)
+	}
+	if err := a.permSrv.SetByUID(c.Request.Context(), uid, req.Permissions); err != nil {
 		return nil, err
 	}
 	return nil, nil

@@ -11,7 +11,6 @@ import { useRouter } from "vue-router";
 import { useResizeObserver } from "@vueuse/core";
 import echarts from "@/plugins/echarts";
 import {
-  Bell,
   Collection,
   DataAnalysis,
   DocumentChecked,
@@ -83,30 +82,6 @@ const summaryCards = computed(() => {
     }
   ];
 });
-
-const quickActions = [
-  {
-    title: "新建题目",
-    description: "录入题面与测试数据",
-    icon: Collection,
-    tone: "blue",
-    path: "/content/problems/create"
-  },
-  {
-    title: "创建比赛",
-    description: "配置赛制和比赛题目",
-    icon: DocumentChecked,
-    tone: "purple",
-    path: "/content/contests/create"
-  },
-  {
-    title: "发布通知",
-    description: "向全部用户发送系统消息",
-    icon: Bell,
-    tone: "orange",
-    path: "/notifications"
-  }
-];
 
 const onlineJudgeCount = computed(
   () => judgeNodes.value.filter(node => node.online).length
@@ -254,32 +229,6 @@ onBeforeUnmount(() => {
         role="img"
         aria-label="近七天提交数量折线图"
       />
-    </section>
-
-    <section class="panel quick-panel">
-      <header>
-        <div>
-          <h3>快捷入口</h3>
-          <p>常用后台操作</p>
-        </div>
-      </header>
-      <div class="quick-list">
-        <button
-          v-for="action in quickActions"
-          :key="action.path"
-          type="button"
-          @click="router.push(action.path)"
-        >
-          <span :class="['quick-icon', action.tone]">
-            <el-icon><component :is="action.icon" /></el-icon>
-          </span>
-          <span class="quick-content">
-            <strong>{{ action.title }}</strong>
-            <small>{{ action.description }}</small>
-          </span>
-          <span class="quick-arrow">›</span>
-        </button>
-      </div>
     </section>
 
     <section class="panel judge-panel">
@@ -458,75 +407,6 @@ onBeforeUnmount(() => {
 .trend-chart {
   height: 270px;
   width: 100%;
-}
-.quick-panel {
-  margin-top: 14px;
-}
-.quick-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  padding: 14px 18px 18px;
-}
-.quick-list button {
-  min-width: 0;
-  min-height: 76px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--el-border-color-lighter);
-  background: #fff;
-  text-align: left;
-  transition: 0.16s ease;
-}
-.quick-list button:hover {
-  border-color: var(--el-color-primary-light-6);
-  background: var(--el-color-primary-light-9);
-  box-shadow: 0 4px 14px rgb(31 45 61 / 6%);
-  transform: translateY(-1px);
-}
-.quick-icon {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  flex: 0 0 40px;
-  place-items: center;
-  font-size: 19px;
-}
-.quick-icon.blue {
-  color: #2563eb;
-  background: #eff6ff;
-}
-.quick-icon.purple {
-  color: #7c3aed;
-  background: #f5f3ff;
-}
-.quick-icon.orange {
-  color: #ea580c;
-  background: #fff7ed;
-}
-.quick-content {
-  min-width: 0;
-  flex: 1;
-}
-.quick-content strong,
-.quick-content small {
-  display: block;
-}
-.quick-content strong {
-  color: var(--el-text-color-primary);
-  font-size: 13px;
-}
-.quick-content small {
-  margin-top: 5px;
-  color: var(--el-text-color-secondary);
-  font-size: 11px;
-  line-height: 1.55;
-}
-.quick-arrow {
-  color: var(--el-text-color-placeholder);
-  font-size: 21px;
 }
 .judge-panel {
   margin-top: 14px;

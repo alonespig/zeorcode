@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/middleware"
 	"github.com/alonespig/zeorcode/backend/internal/http/response"
 
@@ -19,7 +20,7 @@ func (h *HttpServer) initNotificationRouter(r *gin.Engine) {
 
 	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
-		admin.GET("/notifications", response.Wrap(h.notificationController.BroadcastHistory))
-		admin.POST("/notifications", response.Wrap(h.notificationController.Broadcast))
+		admin.GET("/notifications", middleware.RequirePermission(h.permissions, authz.NotificationSend), response.Wrap(h.notificationController.BroadcastHistory))
+		admin.POST("/notifications", middleware.RequirePermission(h.permissions, authz.NotificationSend), response.Wrap(h.notificationController.Broadcast))
 	}
 }

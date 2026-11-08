@@ -13,6 +13,7 @@ import {
   type AdminUserItem
 } from "@/api/admin/users";
 import UserImportDialog from "./components/UserImportDialog.vue";
+import PermissionDialog from "./components/PermissionDialog.vue";
 
 defineOptions({ name: "AdminUsers" });
 
@@ -25,7 +26,8 @@ type UserRow = AdminUserItem & {
 /** 角色选项集中映射（对应后端 dto.AdminUserItem.Role） */
 const ROLE_OPTIONS = [
   { value: 0, label: "普通用户" },
-  { value: 1, label: "管理员" }
+  { value: 1, label: "管理员" },
+  { value: 2, label: "超级管理员" }
 ];
 
 /** 状态集中映射（对应后端 dto.AdminUserItem.Status） */
@@ -42,6 +44,8 @@ const currentUserId = computed(() => userStore.user?.id);
 const dataList = ref<UserRow[]>([]);
 const loading = ref(false);
 const importVisible = ref(false);
+const permissionVisible = ref(false);
+const permissionTarget = ref<{ id: number; username: string } | null>(null);
 const keyword = ref("");
 const role = ref<number>();
 const status = ref<number>();
@@ -156,13 +160,12 @@ async function toggleBan(row: UserRow) {
 
 async function changeRole(row: UserRow, newRole: number) {
   if (row.id === currentUserId.value) return;
-  const toAdmin = newRole === 1;
+  const roleLabel =
+    ROLE_OPTIONS.find(option => option.value === newRole)?.label ?? "该角色";
   try {
     await ElMessageBox.confirm(
-      `确认将用户「${row.username}」${
-        toAdmin ? "设为管理员" : "降为普通用户"
-      }？该用户会被立即踢下线，需重新登录后新权限才生效。`,
-      toAdmin ? "设为管理员" : "取消管理员",
+      `确认将用户「${row.username}」设为${roleLabel}？该用户会被立即踢下线，需重新登录后新权限才生效。`,
+      "修改角色",
       { type: "warning" }
     );
   } catch {
@@ -172,13 +175,18 @@ async function changeRole(row: UserRow, newRole: number) {
   row._roleBusy = true;
   try {
     await setUserRole(row.id, { role: newRole });
-    message(toAdmin ? "已设为管理员" : "已降为普通用户", { type: "success" });
+    message(`已设为${roleLabel}`, { type: "success" });
     onSearch();
   } catch {
     // 错误信息已由 http 拦截器统一提示
   } finally {
     row._roleBusy = false;
   }
+}
+
+function openPermissionDialog(row: UserRow) {
+  permissionTarget.value = { id: row.id, username: row.username };
+  permissionVisible.value = true;
 }
 
 function handleImported() {
@@ -270,7 +278,11 @@ onMounted(onSearch);
                   :model-value="row.role"
                   size="small"
                   style="width: 110px"
-                  :disabled="row._roleBusy || row.id === currentUserId"
+                  :disabled="
+                    row._roleBusy ||
+                    row.id === currentUserId ||
+                    !userStore.isSuperAdmin
+                  "
                   @change="changeRole(row, $event)"
                 >
                   <el-option
@@ -293,7 +305,16 @@ onMounted(onSearch);
           }}</template>
           <template #operation="{ row }">
             <el-button
-              v-if="row.role !== 1"
+              v-if="row.role === 1 && userStore.isSuperAdmin"
+              link
+              type="primary"
+              size="small"
+              @click="openPermissionDialog(row)"
+            >
+              权限配置
+            </el-button>
+            <el-button
+              v-else-if="row.role === 0"
               link
               size="small"
               :type="row.status === 1 ? 'success' : 'danger'"
@@ -309,5 +330,11 @@ onMounted(onSearch);
     </PureTableBar>
 
     <UserImportDialog v-model="importVisible" @imported="handleImported" />
+    <PermissionDialog
+      v-model="permissionVisible"
+      :user-id="permissionTarget?.id ?? ''"
+      :username="permissionTarget?.username ?? ''"
+      @saved="onSearch"
+    />
   </div>
 </template>

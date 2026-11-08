@@ -215,6 +215,14 @@ INSERT INTO `languages` (`id`, `name`, `status`, `sort`, `default_code`, `create
   (1, 'c++', 1, 1, CONCAT('#include <bits/stdc++.h>', CHAR(10), 'using namespace std;', CHAR(10), CHAR(10), 'int main() {', CHAR(10), '    ios::sync_with_stdio(false);', CHAR(10), '    cin.tie(nullptr);', CHAR(10), CHAR(10), '    return 0;', CHAR(10), '}', CHAR(10)), NOW(3), NOW(3)),
   (2, 'java', 1, 2, CONCAT('import java.io.*;', CHAR(10), 'import java.util.*;', CHAR(10), CHAR(10), 'public class Main {', CHAR(10), '    public static void main(String[] args) throws Exception {', CHAR(10), CHAR(10), '    }', CHAR(10), '}', CHAR(10)), NOW(3), NOW(3)),
   (3, 'python', 1, 3, CONCAT('import sys', CHAR(10), CHAR(10), 'def solve():', CHAR(10), '    pass', CHAR(10), CHAR(10), 'if __name__ == "__main__":', CHAR(10), '    solve()', CHAR(10)), NOW(3), NOW(3));
+DROP TABLE IF EXISTS `admin_permissions`;
+CREATE TABLE `admin_permissions` (
+  `user_id` bigint NOT NULL,
+  `permission` varchar(64) NOT NULL,
+  `created_at` datetime(3) NOT NULL,
+  PRIMARY KEY (`user_id`,`permission`),
+  KEY `idx_admin_permissions_permission` (`permission`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 DROP TABLE IF EXISTS `system_broadcasts`;
 DROP TABLE IF EXISTS `admin_audit_logs`;
 CREATE TABLE `admin_audit_logs` (
@@ -643,10 +651,7 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- ============================================================
--- 初始管理员账号（role=1）。用户名 admin / 密码 admin123（bcrypt cost=10）。
--- ⚠️ 上线前请登录后立刻改密码，或改掉这里的哈希。
--- ============================================================
-INSERT INTO `users` (`username`, `real_name`, `password`, `role`, `uid`, `email`, `gender`, `avatar`, `signature`, `school`, `rating`, `max_rating`, `created_at`, `updated_at`)
-VALUES ('admin', '系统管理员', '$2a$10$sqWhT5iFfUS7nNHrryfmJuRAZdi9McTVceqCYCrkeaCFbZrv0Rarm', 1, 10000000, 'admin@example.com', 1, '', '', '', 0, 0, NOW(3), NOW(3));
+-- 数据库结构不包含任何预置账号。首次部署后请执行
+-- `zeorcode admin init --username admin` 创建超级管理员，
+-- 密码通过环境变量 ZEORCODE_INITIAL_ADMIN_PASSWORD 或交互输入提供。
 

@@ -36,11 +36,11 @@
             <span class="iconfont icon-nantijiejue1"></span>
             题解
           </li>
-          <li v-permission="['admin']" @click="goFile(problem?.id)">
+          <li v-permission="'problem.write'" @click="goFile(problem?.id)">
             <span class="iconfont icon-24gf-folderOpen"></span>
             文件
           </li>
-          <li v-permission="['admin']" @click="goEdit(problem?.id)">
+          <li v-permission="'problem.write'" @click="goEdit(problem?.id)">
             <span class="iconfont icon-edit"></span>
             编辑
           </li>

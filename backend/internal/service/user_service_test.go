@@ -149,10 +149,16 @@ func TestChangeRolePolicy(t *testing.T) {
 			newRole:  model.RoleNormal,
 		},
 		{
+			name:     "可以提升为超级管理员",
+			actorID:  1,
+			targetID: 2,
+			newRole:  model.RoleSuperAdmin,
+		},
+		{
 			name:     "非法角色值被拒绝",
 			actorID:  1,
 			targetID: 2,
-			newRole:  2,
+			newRole:  3,
 			wantCode: errcode.InvalidParams,
 		},
 	}

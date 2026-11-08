@@ -57,7 +57,7 @@
           active-class="border-blue-500! text-blue-500! font-medium">
           <span class="iconfont" :class="t.icon"></span>{{ t.name }}
         </router-link>
-        <el-button v-if="userStore.isAdmin" size="small" class="ml-auto" @click="goEdit">编辑</el-button>
+        <el-button v-if="userStore.can('contest.write')" size="small" class="ml-auto" @click="goEdit">编辑</el-button>
       </div>
     </div>
 
@@ -139,15 +139,15 @@ const fmtTooltip = (val) => {
 
 // 管理员始终可看全部；进行中的比赛需已报名；已结束的公开赛对所有人开放。
 const allowAll = computed(() =>
-  userStore.isAdmin ||
+  userStore.can('contest.read') ||
   ((status.value === CONTEST_STATUS.RUNNING || status.value === CONTEST_STATUS.ENDED) &&
     contestData.value?.isRegistered) ||
   (status.value === CONTEST_STATUS.ENDED && !contestData.value?.needInviteCode)
 );
 
-// 未报名且比赛未结束（非管理员）→ 简介页顶部给报名提示
+// 未报名且比赛未结束（无查看权限）→ 简介页顶部给报名提示
 const showCta = computed(() =>
-  !userStore.isAdmin &&
+  !userStore.can('contest.read') &&
   !contestData.value?.isRegistered &&
   status.value !== CONTEST_STATUS.ENDED
 );
@@ -157,12 +157,12 @@ const tabs = computed(() => {
   const items = [
     { name: "简介", to: `${base}/description`, icon: "icon-home1", always: true },
     { name: "题目", to: `${base}/problem`, icon: "icon-tijiaojilu" },
-    // 管理员看全场提交，普通用户只看自己
-    { name: userStore.isAdmin ? "提交" : "我的提交", to: `${base}/submission`, icon: "icon-shalou" },
+    // 有提交查看权限时看全场提交，普通用户只看自己
+    { name: userStore.can('submission.read') ? "提交" : "我的提交", to: `${base}/submission`, icon: "icon-shalou" },
     { name: "排名", to: `${base}/rank`, icon: "icon-paihangbang" },
   ];
-  // 重判：仅管理员可见
-  if (userStore.isAdmin) {
+  // 重判：仅拥有比赛重判权限的管理员可见
+  if (userStore.can('contest.rejudge')) {
     items.push({ name: "重判", to: `${base}/rejudge`, icon: "icon-fuwuqi", always: true });
   }
   return allowAll.value ? items : items.filter((it) => it.always);

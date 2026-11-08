@@ -31,8 +31,10 @@ func toAuthenticatedUser(u service.AuthenticatedUser) dto.UserInfo {
 }
 
 func toLoginResp(r *service.LoginResult) *dto.LoginResp {
+	user := toAuthenticatedUser(r.User)
+	user.Permissions = r.Permissions
 	return &dto.LoginResp{
-		User:   toAuthenticatedUser(r.User),
+		User:   user,
 		Avatar: r.Avatar,
 	}
 }

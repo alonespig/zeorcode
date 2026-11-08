@@ -125,6 +125,14 @@ docker compose up -d --build
 docker compose ps
 ```
 
+首次启动后创建超级管理员（数据库不再预置账号）：
+
+```bash
+docker compose run --rm -e ZEORCODE_INITIAL_ADMIN_PASSWORD='设置至少 8 位的密码' backend-http admin init --username admin
+```
+
+也可以去掉 `-e`，在交互式终端里按提示输入密码。
+
 默认访问地址：
 
 - 主站：`http://localhost:8080`
@@ -162,7 +170,7 @@ cd zeorcode
 
 ### 2. 初始化 MySQL
 
-创建数据库并导入完整结构。后端不会自动执行 `AutoMigrate`。
+创建数据库并导入完整结构。后端不会自动执行 `AutoMigrate`，schema 也不包含任何预置账号。
 
 ```bash
 mysql -uroot -p -e "CREATE DATABASE oj_db CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
@@ -196,6 +204,17 @@ Copy-Item config.yaml.example config.yaml
 `config.yaml` 已被 Git 忽略，不要提交真实密码、Cookie 或 API Key。
 
 所有标量配置也支持通过 `ZEORCODE_` 前缀的环境变量覆盖，层级中的 `.` 转换为 `_`。例如 `db.host`、`db.pool.max_open_conns` 分别对应 `ZEORCODE_DB_HOST`、`ZEORCODE_DB_POOL_MAX_OPEN_CONNS`；环境变量的优先级高于 `config.yaml`。
+
+#### 创建初始超级管理员
+
+数据库不预置任何账号，首次部署后需要创建超级管理员：
+
+```bash
+cd backend
+go run . admin init --username admin
+```
+
+按提示输入至少 8 位密码；也可以设置 `ZEORCODE_INITIAL_ADMIN_PASSWORD` 环境变量后执行。系统中已有超级管理员时该命令会拒绝重复初始化。
 
 ### 4. 启动后端 API
 

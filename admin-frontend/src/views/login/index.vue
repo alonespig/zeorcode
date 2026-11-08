@@ -67,11 +67,12 @@ async function submit() {
 
   loading.value = true;
   try {
-    await useUserStoreHook().login({ ...form });
+    const userStore = useUserStoreHook();
+    await userStore.login({ ...form });
     const redirect =
       typeof route.query.redirect === "string"
         ? route.query.redirect
-        : "/dashboard";
+        : userStore.defaultPath;
     await router.replace(redirect);
     message("登录成功", { type: "success" });
   } catch (error) {

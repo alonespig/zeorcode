@@ -14,7 +14,7 @@
             class="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[11px] text-white">{{
               selectedTags.length }}</span>
         </el-button>
-        <el-button v-if="userStore.isAdmin" type="primary" :icon="Plus" @click="goCreateProblemSet">
+        <el-button v-if="userStore.can('problemset.write')" type="primary" :icon="Plus" @click="goCreateProblemSet">
           创建题单
         </el-button>
         <el-button v-if="q || selectedTags.length" type="info" plain :icon="Refresh" @click="handleReset">重置</el-button>

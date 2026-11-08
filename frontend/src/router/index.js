@@ -132,13 +132,17 @@ router.beforeEach((to, from, next) => {
   }
   if (
     !userStore.isLogin &&
-    (!userStore.postLogoutAccess || to.meta.requiresAuth || to.meta.requiresAdmin)
+    (!userStore.postLogoutAccess || to.meta.requiresAuth || to.meta.requiresAdmin || to.meta.permission)
   ) {
     next({ path: '/login', query: { redirect: to.fullPath } })
     return
   }
   if (to.meta.requiresAdmin && !userStore.isAdmin) {
     next('/')
+    return
+  }
+  if (to.meta.permission && !userStore.can(to.meta.permission)) {
+    next('/404')
     return
   }
   next()

@@ -3,6 +3,7 @@ package router
 import (
 	"time"
 
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/middleware"
 	"github.com/alonespig/zeorcode/backend/internal/http/response"
 
@@ -20,14 +21,16 @@ func (h *HttpServer) initTeamRouter(r *gin.Engine) {
 		pub.GET("/team/:id/member", middleware.JWTAuthOptional(h.auth), response.Wrap(h.teamController.ListMembers))
 	}
 
-	// 写操作一律要登录；创建团队额外要求站点管理员，其他操作仍由 service 层
+	// 写操作一律要登录；创建团队要求 team.manage，其他操作仍由 service 层
 	// 按团队角色判定，不能统一使用全站 AdminRequired。
 	auth := r.Group("/api", middleware.JWTAuth(h.auth))
 	{
-		auth.POST("/team", middleware.AdminRequired(), response.Wrap(h.teamController.Create))
+		auth.POST("/team", middleware.RequirePermission(h.permissions, authz.TeamManage), response.Wrap(h.teamController.Create))
 		auth.PUT("/team/:id", response.Wrap(h.teamController.Update))
 		auth.DELETE("/team/:id", response.Wrap(h.teamController.Delete))
-		auth.POST("/team/:id/join", response.Wrap(h.teamController.Join))
+		auth.POST("/team/:id/join",
+			middleware.RateLimitUserResource(h.cache, "team-join", 10, time.Hour, "id"),
+			response.Wrap(h.teamController.Join))
 		auth.POST("/team/:id/quit", response.Wrap(h.teamController.Quit))
 		auth.GET("/team/:id/member/import/template", h.teamController.DownloadStudentImportTemplate)
 		auth.POST("/team/:id/member/import",

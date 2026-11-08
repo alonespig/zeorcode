@@ -11,7 +11,7 @@ export const teamRoutes = {
     {
       path: "create",
       name: "TeamCreate",
-      meta: { title: "创建团队", requiresAdmin: true },
+      meta: { title: "创建团队", permission: "team.manage" },
       component: () => import("@/pages/Team/Create.vue"),
     },
     {

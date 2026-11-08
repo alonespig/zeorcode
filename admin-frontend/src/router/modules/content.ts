@@ -15,7 +15,7 @@ export default {
       path: "/content/problems",
       name: "AdminProblems",
       component: () => import("@/views/content/problems/index.vue"),
-      meta: { title: "题目管理" }
+      meta: { title: "题目管理", permission: "problem.read" }
     },
     {
       path: "/content/problems/create",
@@ -23,6 +23,7 @@ export default {
       component: () => import("@/views/content/problems/create.vue"),
       meta: {
         title: "新建题目",
+        permission: "problem.write",
         showLink: false,
         activePath: "/content/problems"
       }
@@ -33,6 +34,7 @@ export default {
       component: () => import("@/views/content/problems/edit.vue"),
       meta: {
         title: "编辑题目",
+        permission: "problem.write",
         showLink: false,
         activePath: "/content/problems"
       }
@@ -43,6 +45,7 @@ export default {
       component: () => import("@/views/content/problems/testdata.vue"),
       meta: {
         title: "测试数据",
+        permission: "problem.write",
         showLink: false,
         activePath: "/content/problems"
       }
@@ -51,7 +54,7 @@ export default {
       path: "/content/problemsets",
       name: "AdminProblemSets",
       component: () => import("@/views/content/problemsets/index.vue"),
-      meta: { title: "题单管理" }
+      meta: { title: "题单管理", permission: "problemset.read" }
     },
     {
       path: "/content/problemsets/create",
@@ -59,6 +62,7 @@ export default {
       component: () => import("@/views/content/problemsets/create.vue"),
       meta: {
         title: "新建题单",
+        permission: "problemset.write",
         showLink: false,
         activePath: "/content/problemsets"
       }
@@ -69,6 +73,7 @@ export default {
       component: () => import("@/views/content/problemsets/edit.vue"),
       meta: {
         title: "编辑题单",
+        permission: "problemset.write",
         showLink: false,
         activePath: "/content/problemsets"
       }
@@ -77,7 +82,7 @@ export default {
       path: "/content/contests",
       name: "AdminContests",
       component: () => import("@/views/content/contests/index.vue"),
-      meta: { title: "比赛管理" }
+      meta: { title: "比赛管理", permission: "contest.read" }
     },
     {
       path: "/content/contests/create",
@@ -85,6 +90,7 @@ export default {
       component: () => import("@/views/content/contests/create.vue"),
       meta: {
         title: "新建比赛",
+        permission: "contest.write",
         showLink: false,
         activePath: "/content/contests"
       }
@@ -95,6 +101,7 @@ export default {
       component: () => import("@/views/content/contests/edit.vue"),
       meta: {
         title: "编辑比赛",
+        permission: "contest.write",
         showLink: false,
         activePath: "/content/contests"
       }
@@ -103,7 +110,7 @@ export default {
       path: "/content/post-review",
       name: "AdminPostReview",
       component: () => import("@/views/content/post-review/index.vue"),
-      meta: { title: "帖子审核" }
+      meta: { title: "帖子审核", permission: "post.review" }
     },
     {
       path: "/content/post-review/:id",
@@ -111,6 +118,7 @@ export default {
       component: () => import("@/views/content/post-review/detail.vue"),
       meta: {
         title: "帖子详情",
+        permission: "post.review",
         showLink: false,
         activePath: "/content/post-review"
       }
@@ -119,7 +127,7 @@ export default {
       path: "/content/tags",
       name: "AdminTags",
       component: () => import("@/views/content/tags/index.vue"),
-      meta: { title: "算法标签" }
+      meta: { title: "算法标签", permission: "tag.read" }
     }
   ]
 } satisfies RouteConfigsTable;

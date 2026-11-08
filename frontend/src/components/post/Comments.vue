@@ -183,7 +183,7 @@ const sendReply = async (parentId) => {
 }
 
 const canDelete = (c) =>
-  userStore.isAdmin || (userStore.user && c.user?.id === userStore.user.id)
+  userStore.can('post.review') || (userStore.user && c.user?.id === userStore.user.id)
 
 const removeComment = (id) => {
   ElMessageBox.confirm('确定删除这条评论？', '提示', { type: 'warning' })

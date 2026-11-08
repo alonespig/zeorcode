@@ -3,6 +3,7 @@ package router
 import (
 	"time"
 
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/middleware"
 	"github.com/alonespig/zeorcode/backend/internal/http/response"
 
@@ -27,9 +28,9 @@ func (h *HttpServer) initProblemSetRouter(r *gin.Engine) {
 	// 后台：仅管理员，列表含草稿
 	admin := r.Group("/api/admin", middleware.JWTAuth(h.auth), middleware.AdminRequired(), middleware.AdminAudit(h.audit))
 	{
-		admin.GET("/problemset", response.Wrap(h.problemSetController.AdminList))
-		admin.POST("/problemset", response.Wrap(h.problemSetController.AdminCreate))
-		admin.PUT("/problemset/:id", response.Wrap(h.problemSetController.AdminUpdate))
-		admin.DELETE("/problemset/:id", response.Wrap(h.problemSetController.AdminDelete))
+		admin.GET("/problemset", middleware.RequirePermission(h.permissions, authz.ProblemSetRead), response.Wrap(h.problemSetController.AdminList))
+		admin.POST("/problemset", middleware.RequirePermission(h.permissions, authz.ProblemSetWrite), response.Wrap(h.problemSetController.AdminCreate))
+		admin.PUT("/problemset/:id", middleware.RequirePermission(h.permissions, authz.ProblemSetWrite), response.Wrap(h.problemSetController.AdminUpdate))
+		admin.DELETE("/problemset/:id", middleware.RequirePermission(h.permissions, authz.ProblemSetDelete), response.Wrap(h.problemSetController.AdminDelete))
 	}
 }

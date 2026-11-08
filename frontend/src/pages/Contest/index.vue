@@ -19,7 +19,7 @@
         <el-option label="已结束" :value="2" />
       </el-select>
       <el-button type="primary" class="max-md:ml-0! max-md:w-full!" @click="handleSearch">搜索</el-button>
-      <el-button v-if="userStore.isAdmin" class="max-md:ml-0! max-md:w-full!" @click="handleCreateContest">创建比赛</el-button>
+      <el-button v-if="userStore.can('contest.write')" class="max-md:ml-0! max-md:w-full!" @click="handleCreateContest">创建比赛</el-button>
     </div>
 
     <div class="flex flex-col">

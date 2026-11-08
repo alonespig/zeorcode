@@ -319,6 +319,11 @@ func (s *ContestService) JoinContest(ctx context.Context, userID, contestID int6
 	if !time.Now().Before(contestEndTime(*contest)) {
 		return errcode.ErrContestFinished
 	}
+	// 邀请码撞库防护：同一账号在同一比赛每小时最多 10 次报名尝试。
+	limitKey := fmt.Sprintf("ratelimit:contest-join:%d:%d", userID, contest.ID)
+	if n, limitErr := s.cache.RateLimitIncr(ctx, limitKey, time.Hour); limitErr == nil && n > 10 {
+		return errcode.ErrTooManyRequests.WithMsg("尝试次数过多，请稍后再试")
+	}
 	// 邀请码比赛：必须提供且匹配
 	if contest.InviteCode != "" && strings.TrimSpace(inviteCode) != contest.InviteCode {
 		return errcode.ErrContestInviteCodeInvalid

@@ -11,7 +11,7 @@ export const problemSetRoutes = {
     {
       path: "create",
       name: "ProblemSetCreate",
-      meta: { title: "创建题单", requiresAdmin: true },
+      meta: { title: "创建题单", permission: "problemset.write" },
       component: () => import("@/pages/ProblemSet/Create.vue"),
     },
     {

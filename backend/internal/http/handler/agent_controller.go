@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/dto"
 	"github.com/alonespig/zeorcode/backend/internal/service"
 	"github.com/alonespig/zeorcode/backend/pkg/errcode"
@@ -14,11 +15,12 @@ import (
 )
 
 type AgentController struct {
-	service *service.AgentService
+	service     *service.AgentService
+	permissions *service.PermissionService
 }
 
-func NewAgentController(agentService *service.AgentService) *AgentController {
-	return &AgentController{service: agentService}
+func NewAgentController(agentService *service.AgentService, permissions *service.PermissionService) *AgentController {
+	return &AgentController{service: agentService, permissions: permissions}
 }
 
 func (h *AgentController) ListConversations(c *gin.Context) (*dto.AgentConversationListResp, error) {
@@ -99,10 +101,14 @@ func (h *AgentController) Turn(c *gin.Context) {
 		writeAgentJSONError(c, errcode.ErrInvalidParams.Wrap(err))
 		return
 	}
-	userID, role, err := requireCurrentUser(c)
+	userID, _, err := requireCurrentUser(c)
 	if err != nil {
 		writeAgentJSONError(c, err)
 		return
+	}
+	caps := service.AgentCapabilities{
+		ManageProblemSets: hasAnyPermission(c, h.permissions, authz.ProblemSetWrite),
+		ManageTeams:       isSiteTeamManager(c, h.permissions),
 	}
 
 	c.Header("Content-Type", "text/event-stream; charset=utf-8")
@@ -126,7 +132,7 @@ func (h *AgentController) Turn(c *gin.Context) {
 	}
 
 	params := toAgentTurnParams(req)
-	if err := h.service.StreamTurn(c.Request.Context(), conversationID, userID, role == 1, &params, emit); err != nil {
+	if err := h.service.StreamTurn(c.Request.Context(), conversationID, userID, caps, &params, emit); err != nil {
 		code, message := agentPublicError(err)
 		_ = emit(service.AgentEvent{Type: "run.failed", Data: map[string]any{"code": code, "message": message}})
 	}

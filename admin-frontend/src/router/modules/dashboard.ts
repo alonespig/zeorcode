@@ -16,7 +16,8 @@ export default {
       name: "AdminDashboard",
       component: () => import("@/views/dashboard/index.vue"),
       meta: {
-        title: "工作台"
+        title: "工作台",
+        permission: "dashboard.read"
       }
     }
   ]

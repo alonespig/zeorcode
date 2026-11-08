@@ -7,10 +7,12 @@ import (
 
 	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
 	"github.com/alonespig/zeorcode/backend/internal/infra/session"
+	"github.com/alonespig/zeorcode/backend/internal/model"
 	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/spf13/viper"
+	"gorm.io/gorm"
 )
 
 // Claims 认证后的用户身份信息。
@@ -21,17 +23,24 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+// userIdentityReader 提供当前用户身份，用于每次请求校验实时角色与封禁状态。
+type userIdentityReader interface {
+	GetUserByID(ctx context.Context, id int64) (*model.User, error)
+}
+
 // TokenService 鉴权组件：JWT 签发/校验 + 登录态存储（session）。
-// 通过 DI 注入 *session.Session，不再依赖全局 Redis 客户端。
+// 通过 DI 注入 *session.Session 与用户仓储。
 type TokenService struct {
 	session *session.Session
+	users   userIdentityReader
 	secret  []byte
 	expire  time.Duration
 }
 
-func NewTokenService(s *session.Session) *TokenService {
+func NewTokenService(s *session.Session, users userIdentityReader) *TokenService {
 	return &TokenService{
 		session: s,
+		users:   users,
 		secret:  []byte(viper.GetString("jwt.secret")),
 		expire:  time.Duration(viper.GetInt("jwt.expire")) * time.Hour,
 	}
@@ -93,6 +102,23 @@ func (t *TokenService) VerifyToken(tokenString string) (*Claims, error) {
 		return nil, errcode.ErrTokenExpired
 	}
 	return claims, nil
+}
+
+// CurrentRole 返回数据库里的实时角色。
+// JWT 中的 role 只作为签发时的快照，权限判断一律以这里为准，
+// 这样降权或封禁即使撤销会话失败，旧 token 也会立即失去管理员身份。
+func (t *TokenService) CurrentRole(ctx context.Context, userID int64) (int, error) {
+	user, err := t.users.GetUserByID(ctx, userID)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return 0, errcode.ErrUserNotFound
+	}
+	if err != nil {
+		return 0, errcode.ErrDatabase.Wrap(err)
+	}
+	if user.Status == model.UserStatusBanned {
+		return 0, errcode.ErrUserDisabled
+	}
+	return user.Role, nil
 }
 
 // Revoke 使某用户的登录态失效（登出）。

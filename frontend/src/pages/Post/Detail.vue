@@ -130,7 +130,7 @@ const scrollElement = document.documentElement
 const postID = computed(() => Number(route.params.id))
 const canManagePost = computed(() => {
   const current = userStore.user
-  return Boolean(current && post.value && (current.id === post.value.user?.id || userStore.isAdmin))
+  return Boolean(current && post.value && (current.id === post.value.user?.id || userStore.can('post.review')))
 })
 
 const fetchPost = async () => {

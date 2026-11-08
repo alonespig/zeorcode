@@ -94,9 +94,10 @@ func avatarOr(a string) string {
 func loginResponse(user *model.User) *LoginResult {
 	return &LoginResult{
 		User: AuthenticatedUser{
-			ID:       user.UID,
-			Username: user.Username,
-			Role:     user.Role,
+			InternalID: user.ID,
+			ID:         user.UID,
+			Username:   user.Username,
+			Role:       user.Role,
 		},
 		Avatar: avatarOr(user.Avatar),
 	}
@@ -109,6 +110,7 @@ type UserService struct {
 	cache       *cache.Cache
 	auth        *TokenService
 	verify      *VerifyService
+	permissions *PermissionService
 }
 
 func NewUserService(repo *repository.UserRepo,
@@ -116,7 +118,8 @@ func NewUserService(repo *repository.UserRepo,
 	problemRepo *repository.ProblemRepo,
 	cache *cache.Cache,
 	auth *TokenService,
-	verify *VerifyService) *UserService {
+	verify *VerifyService,
+	permissions *PermissionService) *UserService {
 	return &UserService{
 		repo:        repo,
 		subRepo:     subRepo,
@@ -124,6 +127,7 @@ func NewUserService(repo *repository.UserRepo,
 		cache:       cache,
 		auth:        auth,
 		verify:      verify,
+		permissions: permissions,
 	}
 }
 
@@ -249,12 +253,11 @@ func (u *UserService) BindEmail(ctx context.Context, userID int64, email, code s
 	} else if exists {
 		return errcode.ErrEmailExists.WithMsg("该邮箱已被占用")
 	}
-	user, err := u.repo.GetUserByID(ctx, userID)
-	if err != nil {
+	if _, err := u.repo.GetUserByID(ctx, userID); err != nil {
 		return errcode.ErrUserNotFound
 	}
-	user.Email = emailPtr(email)
-	if err := u.repo.UpdateUser(ctx, user); err != nil {
+	// 只写邮箱字段，避免把并发发生的降权/封禁用整条 Save 覆盖回旧值。
+	if err := u.repo.UpdateEmail(ctx, userID, emailPtr(email)); err != nil {
 		return errcode.ErrDatabase.Wrap(err)
 	}
 	return nil
@@ -444,18 +447,30 @@ func (u *UserService) UserInfo(ctx context.Context, id int64) (*UserInfo, error)
 	nameOf := make(map[int64]string, len(problems))
 	displayOf := make(map[int64]string, len(problems)) // 主键 → 对外题号
 	for _, p := range problems {
+		// 公开个人主页不泄露隐藏题的题号与题名
+		if p.Hidden {
+			continue
+		}
 		nameOf[p.ID] = p.Name
 		displayOf[p.ID] = p.DisplayID
 	}
 	for _, pid := range acIds {
+		displayID, ok := displayOf[pid]
+		if !ok {
+			continue
+		}
 		resp.SolveItem = append(resp.SolveItem, UserProblem{
-			ID:   displayOf[pid], // 对外题号，链接跳 /problem/{题号}
+			ID:   displayID, // 对外题号，链接跳 /problem/{题号}
 			Name: nameOf[pid],
 		})
 	}
 	for _, pid := range unacIds {
+		displayID, ok := displayOf[pid]
+		if !ok {
+			continue
+		}
 		resp.UnsolveItem = append(resp.UnsolveItem, UserProblem{
-			ID:   displayOf[pid],
+			ID:   displayID,
 			Name: nameOf[pid],
 		})
 	}
@@ -507,6 +522,9 @@ func (u *UserService) Profile(ctx context.Context, id int64) (*Profile, error) {
 	}
 
 	for _, p := range acProblemList {
+		if p.Hidden {
+			continue
+		}
 		resp.SolveItem = append(resp.SolveItem, UserProblem{
 			ID:   p.DisplayID, // 对外题号
 			Name: p.Name,
@@ -514,6 +532,9 @@ func (u *UserService) Profile(ctx context.Context, id int64) (*Profile, error) {
 	}
 
 	for _, p := range unacProblemList {
+		if p.Hidden {
+			continue
+		}
 		resp.UnsolveItem = append(resp.UnsolveItem, UserProblem{
 			ID:   p.DisplayID,
 			Name: p.Name,
@@ -528,16 +549,10 @@ func (u *UserService) Profile(ctx context.Context, id int64) (*Profile, error) {
 
 // UpdateProfile 更新当前用户可编辑资料（签名、学校、性别、头像）；邮箱换绑走独立验证流程。
 func (u *UserService) UpdateProfile(ctx context.Context, userID int64, req UpdateProfileParams) error {
-	user, err := u.repo.GetUserByID(ctx, userID)
-	if err != nil {
-		return errcode.ErrUserNotFound
-	}
-	user.Signature = req.Signature
-	user.School = req.School
-	user.Gender = req.Gender
-	user.Avatar = req.Avatar
-	// 邮箱不在这里改：换绑走 BindEmail（需邮箱验证码），避免绕过验证
-	if err := u.repo.UpdateUser(ctx, user); err != nil {
+	// 只写个人字段，避免整条 Save 把并发发生的降权/封禁覆盖回旧值。
+	if err := u.repo.UpdateProfileFields(
+		ctx, userID, req.Signature, req.School, req.Gender, req.Avatar,
+	); err != nil {
 		return errcode.ErrDatabase.Wrap(err)
 	}
 	return nil
@@ -555,11 +570,17 @@ func (u *UserService) Login(ctx context.Context, name, password string) (*LoginR
 	if user.Status == model.UserStatusBanned {
 		return nil, "", errcode.ErrUserDisabled
 	}
+	permissions, err := u.permissions.PermissionsFor(ctx, user.ID, user.Role)
+	if err != nil {
+		return nil, "", err
+	}
 	token, err := u.auth.GenerateToken(user.ID, user.Username, user.Role)
 	if err != nil {
 		return nil, "", errcode.ErrInternal.Wrap(err)
 	}
-	return loginResponse(user), token, nil
+	result := loginResponse(user)
+	result.Permissions = permissions
+	return result, token, nil
 }
 
 // Session 根据已通过 JWTAuthOptional 验证的内部用户主键返回当前会话用户。
@@ -575,7 +596,13 @@ func (u *UserService) Session(ctx context.Context, userID int64) (*LoginResult, 
 	if user.Status == model.UserStatusBanned {
 		return nil, errcode.ErrUserDisabled
 	}
-	return loginResponse(user), nil
+	permissions, err := u.permissions.PermissionsFor(ctx, user.ID, user.Role)
+	if err != nil {
+		return nil, err
+	}
+	result := loginResponse(user)
+	result.Permissions = permissions
+	return result, nil
 }
 
 // ListAllUsers 管理员视角的用户分页列表
@@ -605,21 +632,28 @@ func (u *UserService) ListAllUsers(ctx context.Context, params AdminUserListPara
 }
 
 // SetUserStatus 管理员封禁/解封用户（uid 为对外用户号）。
-// 防呆：不能封禁管理员（含自己）。封禁时撤销其登录态，立即踢下线。
-func (u *UserService) SetUserStatus(ctx context.Context, uid int64, status int) error {
+// 权限边界：不能封禁自己；超级管理员不可被封禁；管理员只能由超级管理员封禁/解封。
+func (u *UserService) SetUserStatus(ctx context.Context, actorID int64, actorRole int, uid int64, status int) error {
 	id, err := u.repo.ResolveIDByUID(ctx, uid)
 	if err != nil {
 		return errcode.ErrUserNotFound
+	}
+	if id == actorID {
+		return errcode.ErrOperationDenied.WithMsg("不能封禁自己")
 	}
 	user, err := u.repo.GetUserByID(ctx, id)
 	if err != nil {
 		return errcode.ErrUserNotFound
 	}
-	if user.Role == 1 {
-		return errcode.ErrOperationDenied.WithMsg("不能封禁管理员")
+	switch user.Role {
+	case model.RoleSuperAdmin:
+		return errcode.ErrOperationDenied.WithMsg("不能封禁超级管理员")
+	case model.RoleAdmin:
+		if actorRole != model.RoleSuperAdmin {
+			return errcode.ErrOperationDenied.WithMsg("只有超级管理员能封禁或解封管理员")
+		}
 	}
-	user.Status = status
-	if err := u.repo.UpdateUser(ctx, user); err != nil {
+	if err := u.repo.UpdateStatus(ctx, id, status); err != nil {
 		return errcode.ErrDatabase.Wrap(err)
 	}
 	// 封禁：撤销其 session，现有 token 下次请求即失效（立即踢下线）
@@ -635,8 +669,8 @@ func changeRolePolicy(actorID, targetID int64, newRole int) error {
 	if actorID == targetID {
 		return errcode.ErrOperationDenied.WithMsg("不能修改自己的角色")
 	}
-	// 兜底：DTO 的 binding:"oneof=0 1" 已挡过一层，这里防止其他调用方绕过
-	if newRole != model.RoleNormal && newRole != model.RoleAdmin {
+	// 兜底：DTO 的 binding 已挡过一层，这里防止其他调用方绕过
+	if newRole != model.RoleNormal && newRole != model.RoleAdmin && newRole != model.RoleSuperAdmin {
 		return errcode.ErrInvalidParams.WithMsg("非法角色")
 	}
 	return nil
@@ -650,12 +684,8 @@ func changeRolePolicy(actorID, targetID int64, newRole int) error {
 // 不撤销的话被降级者在 token 过期前仍能访问管理员接口；
 // 升级同理，重新登录才能拿到带 role=1 的新 token。
 //
-// 已知限制（本次不修）：
-//  1. 两个管理员并发互降时，各自都没碰"自己那一行"，校验都会通过，
-//     若系统只有这两个管理员则可能降到零管理员。彻底修需要事务化的
-//     管理员计数加锁校验，成本远高于收益；SetUserStatus 的封禁守卫存在同类竞态。
-//  2. 可以把已封禁用户提升为管理员（封禁守卫只在封禁时查角色，不在改角色时查状态），
-//     属于封禁功能本身的既有不对称。
+// 超级管理员降级在事务里锁定超管集合，最后一个超管不能被降级；
+// 仍可以把已封禁用户提升为管理员（封禁守卫只在封禁时查角色）。
 func (u *UserService) SetUserRole(ctx context.Context, actorID, uid int64, role int) error {
 	id, err := u.repo.ResolveIDByUID(ctx, uid)
 	if err != nil {
@@ -670,11 +700,26 @@ func (u *UserService) SetUserRole(ctx context.Context, actorID, uid int64, role 
 		return errcode.ErrUserNotFound
 	}
 	if user.Role == role {
-		return nil
+		// 幂等重试：上次可能已改角色但清理权限失败，这里补做清理。
+		if role == model.RoleAdmin {
+			return u.permissions.Invalidate(ctx, id)
+		}
+		return u.permissions.ClearForUser(ctx, id)
 	}
 	user.Role = role
-	if err := u.repo.UpdateUser(ctx, user); err != nil {
+	if err := u.repo.UpdateRoleGuarded(ctx, id, role); err != nil {
+		if errors.Is(err, repository.ErrLastSuperAdmin) {
+			return errcode.ErrOperationDenied.WithMsg("不能降级最后一个超级管理员")
+		}
 		return errcode.ErrDatabase.Wrap(err)
+	}
+	// 只有 admin 使用授权表；其它角色必须清空，避免降级后权限残留。
+	if role == model.RoleAdmin {
+		if err := u.permissions.Invalidate(ctx, id); err != nil {
+			return err
+		}
+	} else if err := u.permissions.ClearForUser(ctx, id); err != nil {
+		return err
 	}
 	_ = u.auth.Revoke(ctx, id)
 	return nil

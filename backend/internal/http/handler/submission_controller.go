@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/alonespig/zeorcode/backend/internal/authz"
 	"github.com/alonespig/zeorcode/backend/internal/http/dto"
 	"github.com/alonespig/zeorcode/backend/internal/infra/mq"
 	"github.com/alonespig/zeorcode/backend/internal/service"
@@ -13,14 +14,24 @@ import (
 )
 
 type SubmissionController struct {
-	subSrv     *service.SubmissionService
-	runSrv     *service.CodeRunService
-	contestSrv *service.ContestService
-	mq         *mq.MQ
+	subSrv      *service.SubmissionService
+	runSrv      *service.CodeRunService
+	contestSrv  *service.ContestService
+	mq          *mq.MQ
+	permissions *service.PermissionService
 }
 
-func NewSubmissionController(s *service.SubmissionService, runSrv *service.CodeRunService, contestSrv *service.ContestService, m *mq.MQ) *SubmissionController {
-	return &SubmissionController{subSrv: s, runSrv: runSrv, contestSrv: contestSrv, mq: m}
+func NewSubmissionController(
+	s *service.SubmissionService,
+	runSrv *service.CodeRunService,
+	contestSrv *service.ContestService,
+	m *mq.MQ,
+	permissions *service.PermissionService,
+) *SubmissionController {
+	return &SubmissionController{
+		subSrv: s, runSrv: runSrv, contestSrv: contestSrv, mq: m,
+		permissions: permissions,
+	}
 }
 
 func (s *SubmissionController) Create(c *gin.Context) (gin.H, error) {
@@ -36,9 +47,10 @@ func (s *SubmissionController) Create(c *gin.Context) (gin.H, error) {
 	if !ok {
 		return nil, errcode.ErrInvalidParams.WithMsg("用户ID类型错误")
 	}
-	roleVal, _ := c.Get("role")
-	role, _ := roleVal.(int)
-	subID, err := s.subSrv.CreateSubmission(c.Request.Context(), toSubmitCodeParams(req), userID, role == 1)
+	subID, err := s.subSrv.CreateSubmission(
+		c.Request.Context(), toSubmitCodeParams(req), userID,
+		hasAnyPermission(c, s.permissions, authz.ProblemRead),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -61,10 +73,10 @@ func (s *SubmissionController) Run(c *gin.Context) (*dto.RunCodeResp, error) {
 	if !ok {
 		return nil, errcode.ErrInvalidParams.WithMsg("用户ID类型错误")
 	}
-	roleValue, _ := c.Get("role")
-	role, _ := roleValue.(int)
-
-	result, err := s.runSrv.Run(c.Request.Context(), toCodeRunParams(req), userID, role == 1)
+	result, err := s.runSrv.Run(
+		c.Request.Context(), toCodeRunParams(req), userID,
+		hasAnyPermission(c, s.permissions, authz.ProblemRead),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -76,10 +88,12 @@ func (s *SubmissionController) GetSubmissionList(c *gin.Context) (*dto.SubmitLis
 	if err := c.ShouldBindQuery(&req); err != nil {
 		return nil, errcode.ErrInvalidParams.Wrap(err)
 	}
-	// 经 JWTAuthOptional 注入 role：管理员才能在提交列表看到隐藏题的提交
-	roleVal, _ := c.Get("role")
-	role, _ := roleVal.(int)
-	resp, err := s.subSrv.List(c.Request.Context(), req.Page, req.PageSize, req.Status, req.Username, req.UserID, req.ProblemID, role == 1)
+	// 经 JWTAuthOptional 注入：只有拥有提交查看权限的管理员才能看隐藏题的提交
+	resp, err := s.subSrv.List(
+		c.Request.Context(), req.Page, req.PageSize, req.Status, req.Username,
+		req.UserID, req.ProblemID,
+		hasAnyPermission(c, s.permissions, authz.SubmissionRead),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -91,12 +105,13 @@ func (s *SubmissionController) GetSubmissionByID(c *gin.Context) (*dto.Submissio
 	if err != nil {
 		return nil, err
 	}
-	// 经 JWTAuthOptional 注入：未登录时取不到，requesterID=0、isAdmin=false
+	// 经 JWTAuthOptional 注入：未登录时取不到，requesterID=0、无权查看他人提交
 	uidVal, _ := c.Get("userID")
 	requesterID, _ := uidVal.(int64)
-	roleVal, _ := c.Get("role")
-	role, _ := roleVal.(int)
-	resp, err := s.subSrv.GetSubmissionByPublicID(c.Request.Context(), publicID, requesterID, role == 1)
+	resp, err := s.subSrv.GetSubmissionByPublicID(
+		c.Request.Context(), publicID, requesterID,
+		hasAnyPermission(c, s.permissions, authz.SubmissionRead),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -163,9 +178,10 @@ func (s *SubmissionController) GetSubmissionStream(c *gin.Context) {
 	}
 	requesterVal, _ := c.Get("userID")
 	requesterID, _ := requesterVal.(int64)
-	roleVal, _ := c.Get("role")
-	role, _ := roleVal.(int)
-	if _, err := s.subSrv.GetSubmissionByPublicID(c.Request.Context(), publicID, requesterID, role == 1); err != nil {
+	if _, err := s.subSrv.GetSubmissionByPublicID(
+		c.Request.Context(), publicID, requesterID,
+		hasAnyPermission(c, s.permissions, authz.SubmissionRead),
+	); err != nil {
 		c.Status(http.StatusNotFound)
 		return
 	}

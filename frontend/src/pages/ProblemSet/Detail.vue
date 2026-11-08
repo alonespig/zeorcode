@@ -86,7 +86,7 @@ watch(
               <span>更新于 {{ detail.updatedAt }}</span>
             </div>
           </div>
-          <el-button v-if="userStore.isAdmin" type="primary" :icon="EditPen" @click="openEdit">编辑</el-button>
+          <el-button v-if="userStore.can('problemset.write')" type="primary" :icon="EditPen" @click="openEdit">编辑</el-button>
         </div>
 
         <nav class="flex items-center gap-6 border-t border-gray-100 px-5" aria-label="题单导航">
