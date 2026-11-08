@@ -10,7 +10,6 @@ const (
 
 	ProblemRead    = "problem.read"
 	ProblemWrite   = "problem.write"
-	ProblemDelete  = "problem.delete"
 	ProblemArchive = "problem.archive"
 
 	ProblemSetRead   = "problemset.read"
@@ -19,7 +18,6 @@ const (
 
 	ContestRead    = "contest.read"
 	ContestWrite   = "contest.write"
-	ContestDelete  = "contest.delete"
 	ContestRejudge = "contest.rejudge"
 
 	TagRead  = "tag.read"
@@ -69,7 +67,6 @@ var Catalog = []Group{
 	{Key: "problem", Label: "题目管理", Permissions: []Permission{
 		{Key: ProblemRead, Label: "查看题目"},
 		{Key: ProblemWrite, Label: "编辑题目"},
-		{Key: ProblemDelete, Label: "删除题目"},
 		{Key: ProblemArchive, Label: "归档导入导出"},
 	}},
 	{Key: "problemset", Label: "题单管理", Permissions: []Permission{
@@ -80,7 +77,6 @@ var Catalog = []Group{
 	{Key: "contest", Label: "比赛管理", Permissions: []Permission{
 		{Key: ContestRead, Label: "查看比赛"},
 		{Key: ContestWrite, Label: "编辑比赛"},
-		{Key: ContestDelete, Label: "删除比赛"},
 		{Key: ContestRejudge, Label: "重新评测"},
 	}},
 	{Key: "tag", Label: "标签管理", Permissions: []Permission{

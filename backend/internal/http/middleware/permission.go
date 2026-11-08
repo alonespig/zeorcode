@@ -23,7 +23,7 @@ func RequireSuperAdmin() gin.HandlerFunc {
 }
 
 // RequirePermission 校验当前用户是否拥有任意一个给定权限。
-// 超级管理员直接放行；普通用户直接拒绝；admin 查询授权表。
+// 超级管理员拥有目录中的全部权限；普通用户直接拒绝；admin 查询授权表。
 func RequirePermission(ps *service.PermissionService, permissions ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userIDValue, _ := c.Get("userID")

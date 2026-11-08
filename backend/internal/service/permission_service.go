@@ -24,12 +24,25 @@ func permissionCacheKey(userID int64, generation string) string {
 	return fmt.Sprintf("authz:user:%d:%s", userID, generation)
 }
 
+type permissionStore interface {
+	List(ctx context.Context, userID int64) ([]string, error)
+	Replace(ctx context.Context, userID int64, permissions []string) error
+	DeleteByUser(ctx context.Context, userID int64) error
+}
+
+type permissionCache interface {
+	GetString(ctx context.Context, key string) (string, error)
+	GetJSON(ctx context.Context, key string, dest any) (bool, error)
+	SetJSON(ctx context.Context, key string, value any, ttl time.Duration) error
+	Incr(ctx context.Context, key string) (int64, error)
+}
+
 // PermissionService 负责管理员权限的读取、校验与分配。
-// 超级管理员不写权限表，判断时直接放行。
+// 超级管理员拥有目录中的全部权限，无需查询授权表。
 type PermissionService struct {
-	repo  *repository.AdminPermissionRepo
+	repo  permissionStore
 	users *repository.UserRepo
-	cache *cache.Cache
+	cache permissionCache
 }
 
 func NewPermissionService(
@@ -42,23 +55,33 @@ func NewPermissionService(
 
 // List 返回某个内部用户 ID 被授予的权限集合。
 func (s *PermissionService) List(ctx context.Context, userID int64) ([]string, error) {
-	// 缓存键带版本号：权限变更时 INCR 版本，旧缓存自然失效，避免删除失败或
-	// 并发回填导致收回的权限在 TTL 内继续生效。
-	generation, _ := s.cache.GetString(ctx, permissionCacheGenKey(userID))
-	key := permissionCacheKey(userID, generation)
-
-	var cached []string
-	if ok, err := s.cache.GetJSON(ctx, key, &cached); err == nil && ok {
-		return cached, nil
+	// 只使用版本明确的缓存。版本缺失或读取失败时直接回源，避免命中旧的无版本缓存。
+	generation, genErr := s.cache.GetString(ctx, permissionCacheGenKey(userID))
+	var key string
+	if genErr == nil && generation != "" {
+		key = permissionCacheKey(userID, generation)
+		var cached []string
+		if ok, err := s.cache.GetJSON(ctx, key, &cached); err == nil && ok {
+			return activePermissions(cached), nil
+		}
 	}
 
 	permissions, err := s.repo.List(ctx, userID)
 	if err != nil {
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
-	permissions = ensureDashboard(permissions)
-	_ = s.cache.SetJSON(ctx, key, permissions, permissionCacheTTL)
+	permissions = activePermissions(permissions)
+	if key != "" {
+		_ = s.cache.SetJSON(ctx, key, permissions, permissionCacheTTL)
+	}
 	return permissions, nil
+}
+
+// activePermissions 忽略已从目录移除的旧授权，避免旧记录进入鉴权或权限编辑表单。
+func activePermissions(permissions []string) []string {
+	return ensureDashboard(slices.DeleteFunc(permissions, func(permission string) bool {
+		return !authz.IsValid(permission)
+	}))
 }
 
 // ensureDashboard 保证管理员至少拥有工作台权限：
@@ -83,28 +106,23 @@ func (s *PermissionService) PermissionsFor(ctx context.Context, userID int64, ro
 	}
 }
 
-// HasAny 判断用户是否拥有任意一个给定权限。
+// HasAny 判断用户是否拥有任意一个给定权限。未指定权限时拒绝访问。
 func (s *PermissionService) HasAny(ctx context.Context, userID int64, role int, permissions ...string) (bool, error) {
+	if len(permissions) == 0 {
+		return false, nil
+	}
 	if role == model.RoleSuperAdmin {
-		return true, nil
+		return slices.ContainsFunc(permissions, authz.IsValid), nil
 	}
 	if role != model.RoleAdmin {
 		return false, nil
 	}
-	if len(permissions) == 0 {
-		return true, nil
-	}
-
 	granted, err := s.List(ctx, userID)
 	if err != nil {
 		return false, err
 	}
-	set := make(map[string]struct{}, len(granted))
-	for _, permission := range granted {
-		set[permission] = struct{}{}
-	}
 	for _, permission := range permissions {
-		if _, ok := set[permission]; ok {
+		if slices.Contains(granted, permission) {
 			return true, nil
 		}
 	}
