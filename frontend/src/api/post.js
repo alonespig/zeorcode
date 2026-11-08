@@ -74,22 +74,3 @@ export const toggleCommentLike = (id) => {
     method: 'post',
   })
 }
-
-// ===== 帖子审核（超管） =====
-// 待审核队列
-export const getPendingPosts = (params) => {
-  return request({
-    url: '/admin/posts/pending',
-    method: 'get',
-    params,
-  })
-}
-
-// 审核帖子：status 1 通过 / 2 拒绝，拒绝可带 reason
-export const reviewPost = (id, status, reason = '') => {
-  return request({
-    url: `/admin/posts/${id}/review`,
-    method: 'put',
-    data: { status, reason },
-  })
-}

@@ -9,6 +9,7 @@
         :disabled="running"
         placeholder="描述你想查询或完成的事情…"
         @input="resizeComposer"
+        @paste="handlePaste"
         @keydown.enter.exact.prevent="submit"
       ></textarea>
       <button class="send-button" type="button" :disabled="!canSend" aria-label="发送" @click="submit">
@@ -22,7 +23,34 @@
 
 <script setup>
 import { computed, nextTick, ref, useTemplateRef } from 'vue'
+import { ElMessage } from 'element-plus'
 import { Promotion } from '@element-plus/icons-vue'
+import TurndownService from 'turndown'
+import { gfm } from 'turndown-plugin-gfm'
+
+const MAX_LENGTH = 4000
+
+// 粘贴时优先把剪贴板里的 HTML 转成 Markdown，保留标题、列表、代码块等结构
+const turndown = new TurndownService({
+  headingStyle: 'atx',
+  bulletListMarker: '-',
+  codeBlockStyle: 'fenced',
+  emDelimiter: '*',
+  strongDelimiter: '**',
+  hr: '---',
+})
+turndown.use(gfm)
+turndown.addRule('dropImages', { filter: 'img', replacement: () => '' })
+turndown.addRule('dropTags', { filter: ['script', 'style'], replacement: () => '' })
+turndown.addRule('fencedCode', {
+  filter: (node) => node.nodeName === 'PRE' && node.firstChild?.nodeName === 'CODE',
+  replacement: (_, node) => {
+    const code = node.firstChild
+    const lang = (code.getAttribute('class') || '').match(/language-([\w-]+)/)?.[1] || ''
+    const body = code.textContent.replace(/\n$/, '')
+    return '\n\n```' + lang + '\n' + body + '\n```\n\n'
+  },
+})
 
 const props = defineProps({ running: Boolean })
 const emit = defineEmits(['send'])
@@ -34,6 +62,45 @@ const resizeComposer = () => {
   if (!textarea.value) return
   textarea.value.style.height = 'auto'
   textarea.value.style.height = `${Math.min(textarea.value.scrollHeight, 160)}px`
+}
+
+const insertText = (text) => {
+  const el = textarea.value
+  if (!el) return
+  const start = el.selectionStart ?? content.value.length
+  const end = el.selectionEnd ?? start
+  const value = content.value
+  let next = value.slice(0, start) + text + value.slice(end)
+  if (next.length > MAX_LENGTH) {
+    next = next.slice(0, MAX_LENGTH)
+    ElMessage.warning(`消息不能超过 ${MAX_LENGTH} 个字符，已截断`)
+  }
+  const caret = Math.min(start + text.length, MAX_LENGTH)
+  content.value = next
+  nextTick(() => {
+    el.focus()
+    el.setSelectionRange(caret, caret)
+    resizeComposer()
+  })
+}
+
+const handlePaste = (event) => {
+  const el = textarea.value
+  const clipboard = event.clipboardData
+  if (!el || !clipboard) return
+  const html = clipboard.getData('text/html')
+  if (!html) return
+
+  let markdown = ''
+  try {
+    markdown = turndown.turndown(html).trim()
+  } catch {
+    markdown = ''
+  }
+  if (!markdown) return
+
+  event.preventDefault()
+  insertText(markdown)
 }
 
 const submit = async () => {

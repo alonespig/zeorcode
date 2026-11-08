@@ -10,7 +10,6 @@ import { problemRoutes } from "./modules/problem"
 import { problemSetRoutes } from "./modules/problemset"
 import { teamRoutes } from "./modules/team"
 import { submissionRoutes } from "./modules/submission"
-import { adminRoutes } from "./modules/admin"
 import { postRoutes } from "./modules/post"
 
 const routes = [
@@ -81,7 +80,6 @@ const routes = [
           },
         ],
       },
-      adminRoutes,
     ],
   },
   {
@@ -111,6 +109,10 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+  // 新页面（含翻转页码）回到顶部；浏览器前进/后退恢复原位置
+  scrollBehavior(to, from, savedPosition) {
+    return savedPosition || { top: 0 }
+  },
 });
 
 const SITE_TITLE = 'ZeorCode'

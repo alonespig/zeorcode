@@ -70,6 +70,7 @@ export const RuntimeErrorCode = 4;
 export const WrongAnswerCode = 5;
 export const CompileErrorCode = 6;
 export const UnknownErrorCode = 7;
+export const PresentationErrorCode = 8;
 
 // export const formatTime = (time) => {
 //   if (time == null || isNaN(time)) return "-";

@@ -34,6 +34,13 @@
               </template>
             </el-input>
           </li>
+          <li class="max-md:col-span-2">
+            <button type="button" class="mine-toggle" :class="{ 'mine-toggle--active': onlyMine }"
+              :disabled="!userStore.isLogin" :aria-pressed="onlyMine" @click="onlyMine = !onlyMine">
+              <el-icon :size="15"><UserFilled /></el-icon>
+              我的提交
+            </button>
+          </li>
           <li>
             <el-button type="info" plain class="max-md:ml-0! max-md:w-full!" @click="handleReset">
               <el-icon>
@@ -117,7 +124,8 @@ import { ref, reactive, watch, computed, onBeforeUnmount } from 'vue'
 import { getSubmit, rejudgeSubmission, getSubmitDetail } from '@/api/user'
 import {
   PendingCode, AcceptedCode, MemoryLimitExceededCode, TimeLimitExceededCode,
-  RuntimeErrorCode, WrongAnswerCode, CompileErrorCode, UnknownErrorCode, JUDGE_STATUS_TEXT,
+  RuntimeErrorCode, WrongAnswerCode, CompileErrorCode, UnknownErrorCode,
+  PresentationErrorCode, JUDGE_STATUS_TEXT,
   JUDGE_STATUS_CLASS
 } from '@/constants/index'
 import { useRoute, useRouter } from 'vue-router'
@@ -126,7 +134,7 @@ import { formatTime, formatMemory } from '@/utils/format'
 import FTag from "@/components/FTag.vue";
 import UserName from "@/components/UserName.vue";
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, User, Check } from '@element-plus/icons-vue'
+import { Search, Refresh, User, UserFilled, Check } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -146,10 +154,11 @@ const filters = reactive({
 
 const statusList = [
   AcceptedCode,
-  MemoryLimitExceededCode,
-  TimeLimitExceededCode,
-  RuntimeErrorCode,
+  PresentationErrorCode,
   WrongAnswerCode,
+  TimeLimitExceededCode,
+  MemoryLimitExceededCode,
+  RuntimeErrorCode,
   CompileErrorCode,
   UnknownErrorCode,
 ].map(id => ({ id, name: JUDGE_STATUS_TEXT[id] }));
@@ -159,6 +168,22 @@ const statusClass = (id) => JUDGE_STATUS_CLASS[id] || 'unknown'
 // 从路由中读取参数
 const page = computed(() => Number(route.query.page || 1))
 const pageSize = computed(() => Number(route.query.pageSize || 15))
+
+// 我的提交：开启时清空提交者输入，避免两个条件互相干扰
+const onlyMine = computed({
+  get: () => route.query.userID != null && String(route.query.userID) === String(userStore.user?.id),
+  set: (val) => {
+    const query = { ...route.query, page: 1, pageSize: pageSize.value }
+    if (val && userStore.user?.id != null) {
+      query.userID = userStore.user.id
+      delete query.username
+      filters.username = ''
+    } else {
+      delete query.userID
+    }
+    router.push({ query })
+  },
+})
 
 const handleClickId = (id) => {
   router.push({
@@ -183,6 +208,7 @@ const getList = async () => {
     pageSize: pageSize.value,
     status: route.query.status != null ? Number(route.query.status) : undefined,
     username: route.query.username || undefined,
+    userID: route.query.userID != null ? Number(route.query.userID) : undefined,
   })
   tableData.value = res.data.list
   total.value = res.data.total
@@ -193,6 +219,7 @@ const handleSearch = () => {
   const query = { page: 1, pageSize: pageSize.value }
   if (filters.status != null) query.status = filters.status
   if (filters.username) query.username = filters.username
+  else if (route.query.userID != null) query.userID = route.query.userID
   router.push({ query })
 }
 
@@ -285,6 +312,43 @@ watch(
 
 .submission-table :deep(.el-table__cell) {
   text-align: center;
+}
+
+.mine-toggle {
+  height: 32px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d8e0ea;
+  border-radius: 4px;
+  color: #5b6675;
+  background: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
+}
+
+.mine-toggle:hover:not(:disabled) {
+  border-color: #aebdce;
+  color: #344256;
+}
+
+.mine-toggle--active {
+  border-color: #409eff;
+  color: #409eff;
+  background: #ecf5ff;
+  font-weight: 500;
+}
+
+.mine-toggle--active:hover:not(:disabled) {
+  border-color: #409eff;
+  color: #409eff;
+}
+
+.mine-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .status-option {

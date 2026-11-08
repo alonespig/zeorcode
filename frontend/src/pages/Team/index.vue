@@ -2,10 +2,9 @@
 import { onMounted, ref, shallowRef } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { createTeam, getTeamList, joinTeam } from "@/api/team";
+import { getTeamList, joinTeam } from "@/api/team";
 import TeamCard from "@/pages/Team/components/TeamCard.vue";
 import TeamFilterPanel from "@/pages/Team/components/TeamFilterPanel.vue";
-import SquareImageCropper from "@/components/upload/SquareImageCropper.vue";
 import { useUserStore } from "@/stores/user";
 
 const router = useRouter();
@@ -19,17 +18,10 @@ const q = ref("");
 const mine = ref(false);
 const visibility = shallowRef(null);
 
-const createVisible = ref(false);
-const creating = ref(false);
-const createForm = ref(blankTeam());
 const joinVisible = ref(false);
 const joining = ref(false);
 const joinTarget = ref(null);
 const inviteCode = ref("");
-
-function blankTeam() {
-  return { name: "", coverUrl: "", description: "", visibility: 0, inviteCode: "" };
-}
 
 const toggleMine = () => {
   if (!userStore.isLogin) return;
@@ -116,34 +108,7 @@ const submitJoin = async () => {
 };
 
 const openCreate = () => {
-  createForm.value = blankTeam();
-  createVisible.value = true;
-};
-
-const submitCreate = async () => {
-  if (!createForm.value.name.trim()) {
-    ElMessage.warning("请填写团队名称");
-    return;
-  }
-  if (createForm.value.visibility === 1 && !createForm.value.inviteCode.trim()) {
-    ElMessage.warning("非公开团队必须设置邀请码");
-    return;
-  }
-  creating.value = true;
-  try {
-    const res = await createTeam({
-      ...createForm.value,
-      name: createForm.value.name.trim(),
-      inviteCode: createForm.value.inviteCode.trim(),
-    });
-    ElMessage.success("创建成功");
-    createVisible.value = false;
-    router.push(`/team/${res.data.id}`);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    creating.value = false;
-  }
+  router.push({ name: "TeamCreate" });
 };
 
 onMounted(loadList);
@@ -182,42 +147,6 @@ onMounted(loadList);
       <AppPagination v-model:current-page="page" :page-size="pageSize" :total="total"
         @current-change="loadList" />
     </div>
-
-    <!-- 创建团队 -->
-    <el-dialog v-model="createVisible" title="创建团队" width="min(920px, calc(100vw - 32px))"
-      :close-on-click-modal="false">
-      <el-form :model="createForm" label-width="80px">
-        <el-form-item label="团队名称" required>
-          <el-input v-model="createForm.name" maxlength="60" show-word-limit placeholder="团队名称" />
-        </el-form-item>
-        <el-form-item label="团队封面">
-          <SquareImageCropper
-            v-model="createForm.coverUrl"
-            title="裁剪团队封面"
-            remove-text="移除封面"
-            success-message="团队封面已上传"
-            file-prefix="team-cover"
-            preview-alt="团队封面预览"
-          />
-        </el-form-item>
-        <el-form-item label="团队简介">
-          <MdEditor v-model="createForm.description" height="160px" editor-id="team-create-editor" />
-        </el-form-item>
-        <el-form-item label="公开度">
-          <el-radio-group v-model="createForm.visibility">
-            <el-radio :value="0">公开（任何人可加入）</el-radio>
-            <el-radio :value="1">非公开（需邀请码）</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item v-if="createForm.visibility === 1" label="邀请码">
-          <el-input v-model="createForm.inviteCode" maxlength="32" placeholder="非公开团队必填" class="w-52!" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="createVisible = false">取消</el-button>
-        <el-button type="primary" :loading="creating" @click="submitCreate">创建</el-button>
-      </template>
-    </el-dialog>
 
     <!-- 加入非公开团队 -->
     <el-dialog v-model="joinVisible" title="加入团队" width="420px">

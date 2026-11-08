@@ -2,17 +2,12 @@
   <div class="create-problemset-page page-container">
     <section class="editor-panel f-panel">
       <header class="page-header">
-        <div class="page-title">
-          <el-button :icon="ArrowLeft" text aria-label="返回题单列表" @click="cancel" />
-          <div>
-            <h1>创建题单</h1>
-          </div>
-        </div>
+        <el-button :icon="ArrowLeft" @click="cancel">返回</el-button>
+        <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
       </header>
 
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
         <section class="form-section">
-          <h2>基本信息</h2>
           <div class="basic-grid">
             <el-form-item label="题单名称" prop="title">
               <el-input v-model="form.title" maxlength="100" show-word-limit placeholder="请输入题单名称" />
@@ -24,30 +19,42 @@
               </el-select>
             </el-form-item>
           </div>
+        </section>
 
-          <el-form-item label="访问方式">
-            <div class="access-setting">
+        <section class="form-section">
+          <div class="setting-grid">
+            <el-form-item label="访问方式">
               <el-radio-group v-model="form.visibility">
                 <el-radio :value="0">公开</el-radio>
                 <el-radio :value="1">邀请码可见</el-radio>
               </el-radio-group>
-              <el-input v-if="form.visibility === 1" v-model="form.inviteCode" maxlength="32"
-                placeholder="请输入邀请码" class="invite-input" />
-            </div>
+            </el-form-item>
+            <el-form-item label="发布状态">
+              <el-radio-group v-model="form.published">
+                <el-radio :value="1">已发布</el-radio>
+                <el-radio :value="0">草稿</el-radio>
+              </el-radio-group>
+              <span class="field-hint publish-hint">草稿仅管理员可见</span>
+            </el-form-item>
+          </div>
+          <el-form-item v-if="form.visibility === 1" label="邀请码" class="invite-item">
+            <el-input v-model="form.inviteCode" maxlength="32" placeholder="请输入邀请码" />
           </el-form-item>
         </section>
 
         <section class="form-section">
-          <div class="section-header">
-            <div>
-              <h2>题目配置</h2>
-              <p>题目将按照列表顺序展示，可拖动调整顺序</p>
+          <div class="section-head">
+            <div class="section-title-row">
+              <h2 class="section-title">题目列表</h2>
+              <span class="problem-count">{{ problemList.length }} 道</span>
             </div>
-            <div class="problem-actions">
-              <el-input v-model="queryPid" placeholder="输入题号，如 L101" clearable @keyup.enter="addProblem" />
-              <el-button :icon="Plus" @click="addProblem">添加</el-button>
-              <el-button type="primary" plain :icon="Search" @click="pickerVisible = true">从题库选择</el-button>
-            </div>
+            <span class="field-hint">拖动行可调整顺序</span>
+          </div>
+          <div class="problem-toolbar">
+            <el-input v-model="queryPid" placeholder="输入题号，如 L101" clearable @keyup.enter="addProblem"
+              class="pid-input" />
+            <el-button :icon="Plus" @click="addProblem">添加</el-button>
+            <el-button type="primary" plain :icon="Search" @click="pickerVisible = true">从题库选择</el-button>
           </div>
 
           <div v-if="problemList.length" class="problem-table-wrap">
@@ -90,16 +97,16 @@
         </section>
 
         <section class="form-section">
-          <h2>题单说明</h2>
-          <MdEditor v-model="form.description" height="260px" editor-id="problemset-create-editor" />
+          <el-form-item label="题单说明">
+            <MdEditor v-model="form.description" height="260px" editor-id="problemset-create-editor" />
+          </el-form-item>
         </section>
-
-        <footer class="form-actions">
-          <el-button @click="cancel">取消</el-button>
-          <el-button :loading="submitting" @click="submit(0)">保存草稿</el-button>
-          <el-button type="primary" :loading="submitting" @click="submit(1)">创建并发布</el-button>
-        </footer>
       </el-form>
+
+      <div class="form-actions">
+        <el-button @click="cancel">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
+      </div>
     </section>
 
     <ProblemPickerDialog v-model="pickerVisible" :existing-problem-ids="existingProblemIds"
@@ -132,6 +139,7 @@ const form = ref({
   visibility: 0,
   inviteCode: "",
   tagIds: [],
+  published: 1,
 });
 
 const rules = {
@@ -144,6 +152,7 @@ const hasChanges = computed(() => Boolean(
   || form.value.description.trim()
   || form.value.tagIds.length
   || form.value.visibility === 1
+  || form.value.published !== 1
   || problemList.value.length
 ));
 
@@ -190,7 +199,7 @@ const onDrop = (index) => {
   onDragEnd();
 };
 
-const submit = async (published) => {
+const submit = async () => {
   try {
     await formRef.value.validate();
   } catch {
@@ -206,15 +215,15 @@ const submit = async (published) => {
     const res = await createProblemSet({
       title: form.value.title.trim(),
       description: form.value.description,
-      published,
+      published: form.value.published,
       visibility: form.value.visibility,
       inviteCode: form.value.inviteCode.trim(),
       tagIds: form.value.tagIds,
       problems: problemList.value.map((problem) => String(problem.id)),
     });
     leavingAfterSave.value = true;
-    ElMessage.success(published === 1 ? "题单已创建并发布" : "题单已保存为草稿");
-    if (published === 1) {
+    ElMessage.success(form.value.published === 1 ? "题单已创建并发布" : "题单已保存为草稿");
+    if (form.value.published === 1) {
       await router.push({ name: "ProblemSetIntro", params: { id: res.data.id } });
     } else {
       await router.push({ name: "ProblemSetList" });
@@ -260,90 +269,109 @@ onMounted(async () => {
 
 .editor-panel {
   overflow: hidden;
+  padding: 24px 28px 28px;
 }
 
 .page-header {
-  padding: 18px 24px;
-  border-bottom: 1px solid var(--color-border-soft);
-}
-
-.page-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-
-  h1 {
-    margin: 0;
-    color: var(--el-text-color-primary);
-    font-size: 21px;
-    font-weight: 600;
-  }
-
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
-.form-section {
-  padding: 22px 24px;
-  border-bottom: 1px solid var(--color-border-soft);
+.form-section + .form-section {
+  margin-top: 36px;
+}
 
-  h2 {
-    margin: 0 0 16px;
-    color: var(--el-text-color-primary);
-    font-size: 16px;
-    font-weight: 600;
-  }
+.section-title {
+  margin: 0;
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.problem-count {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: 4px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  font-size: 12px;
 }
 
 .basic-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
+  gap: 24px;
+}
+
+.basic-grid :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+.setting-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 20px;
+}
+
+.setting-grid :deep(.el-form-item) {
+  margin-bottom: 18px;
+}
+
+.invite-item {
+  margin-bottom: 0;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 2px;
+  color: var(--el-text-color-secondary);
+  font-size: 12.5px;
+}
+
+.publish-hint {
+  width: 100%;
 }
 
 .w-full {
   width: 100%;
 }
 
-.access-setting {
+.problem-toolbar {
   display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.invite-input {
-  width: 260px;
-}
-
-.section-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 14px;
-
-  h2 {
-    margin-bottom: 4px;
-  }
-
-  p {
-    margin: 0;
-    color: var(--el-text-color-secondary);
-    font-size: 13px;
-  }
-}
-
-.problem-actions {
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  margin-bottom: 12px;
+}
 
-  .el-input {
-    width: 210px;
-  }
+.pid-input {
+  width: 220px;
 }
 
 .problem-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--table-border);
+  border-radius: var(--radius-base);
 }
 
 .problem-table {
@@ -382,7 +410,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 18px 24px;
+  margin-top: 24px;
 
   :deep(.el-button + .el-button) {
     margin-left: 0;
@@ -390,20 +418,26 @@ onMounted(async () => {
 }
 
 @media (max-width: 820px) {
-  .basic-grid {
-    grid-template-columns: 1fr;
+  .editor-panel {
+    padding: 20px 16px;
+  }
+
+  .basic-grid,
+  .setting-grid {
+    grid-template-columns: minmax(0, 1fr);
     gap: 0;
   }
 
-  .section-header,
-  .problem-actions,
-  .access-setting {
+  .setting-grid :deep(.el-form-item) {
+    margin-bottom: 18px;
+  }
+
+  .problem-toolbar {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .problem-actions .el-input,
-  .invite-input {
+  .pid-input {
     width: 100%;
   }
 }

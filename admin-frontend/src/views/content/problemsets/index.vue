@@ -12,6 +12,7 @@ import {
   getAdminProblemSetList,
   type ProblemSetItem
 } from "@/api/admin/problemsets";
+import ProblemSetDrawer from "./components/ProblemSetDrawer.vue";
 
 defineOptions({ name: "AdminProblemSets" });
 
@@ -35,6 +36,9 @@ const router = useRouter();
 const dataList = ref<ProblemSetRow[]>([]);
 const loading = ref(false);
 const tagOptions = ref<TagItem[]>([]);
+const drawerVisible = ref(false);
+const drawerKey = ref(0);
+const editingProblemSetId = ref<number | undefined>(undefined);
 
 const pagination = reactive<PaginationProps>({
   pageSize: 20,
@@ -131,7 +135,9 @@ function goCreate() {
 }
 
 function goEdit(row: ProblemSetRow) {
-  router.push(`/content/problemsets/${row.id}/edit`);
+  editingProblemSetId.value = row.id;
+  drawerKey.value += 1;
+  drawerVisible.value = true;
 }
 
 async function remove(row: ProblemSetRow) {
@@ -275,5 +281,8 @@ onMounted(() => {
         </PureTable>
       </template>
     </PureTableBar>
+
+    <ProblemSetDrawer :key="drawerKey" v-model="drawerVisible" :problem-set-id="editingProblemSetId"
+      @saved="onSearch" />
   </div>
 </template>

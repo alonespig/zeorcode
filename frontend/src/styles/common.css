@@ -82,8 +82,9 @@
   }
 
   /* 弹窗自带可滚动遮罩层。打开弹窗时关闭页面滚动并取消根节点的预留槽，
-     右侧只显示弹窗自身的一条滚动条。Element Plus 会补偿原页面宽度。 */
-  html:has(> body.el-popup-parent--hidden) {
+     右侧只显示弹窗自身的一条滚动条。Element Plus 会补偿原页面宽度。
+     不同组件加的类名不同（popup / message-box / image-viewer / tour），统一匹配。 */
+  html:has(> body[class*="-parent--hidden"]) {
     overflow: hidden;
     scrollbar-gutter: auto;
   }
@@ -197,7 +198,7 @@
   justify-content: center;
   align-items: center;
   background-color: var(--color-surface);
-  min-height: 60px;
+  min-height: 76px;
   border-top: 1px solid var(--table-row-border);
 }
 
