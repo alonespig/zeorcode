@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/alonespig/zeorcode/backend/internal/infra/credential"
 	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
@@ -165,7 +166,7 @@ func encryptSecret(plain string) (string, error) {
 	}
 	enc, err := credential.Encrypt(plain)
 	if err != nil {
-		return "", errcode.ErrInternal.WithMsg("凭证加密失败").Wrap(err)
+		return "", errcode.ErrInternal.Wrap(fmt.Errorf("encrypt remote OJ credentials: %w", err))
 	}
 	return enc, nil
 }

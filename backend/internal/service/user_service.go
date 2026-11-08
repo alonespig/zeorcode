@@ -75,7 +75,7 @@ func genUniqueUID(ctx context.Context, repo *repository.UserRepo) (int64, error)
 			return uid, nil
 		}
 	}
-	return 0, errcode.ErrInternal.WithMsg("生成用户号失败，请重试")
+	return 0, errcode.ErrUserIDAllocationFailed.Wrap(errors.New("could not allocate a unique user ID"))
 }
 
 // defaultAvatar 用户未设置头像时的占位图
@@ -553,7 +553,7 @@ func (u *UserService) Login(ctx context.Context, name, password string) (*LoginR
 		return nil, "", errcode.ErrWrongPassword
 	}
 	if user.Status == model.UserStatusBanned {
-		return nil, "", errcode.ErrUserDisabled.WithMsg("账号已被封禁")
+		return nil, "", errcode.ErrUserDisabled
 	}
 	token, err := u.auth.GenerateToken(user.ID, user.Username, user.Role)
 	if err != nil {
@@ -573,7 +573,7 @@ func (u *UserService) Session(ctx context.Context, userID int64) (*LoginResult, 
 		return nil, errcode.ErrDatabase.Wrap(err)
 	}
 	if user.Status == model.UserStatusBanned {
-		return nil, errcode.ErrUserDisabled.WithMsg("账号已被封禁")
+		return nil, errcode.ErrUserDisabled
 	}
 	return loginResponse(user), nil
 }

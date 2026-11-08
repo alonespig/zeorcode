@@ -2,9 +2,7 @@ package handler
 
 import (
 	"net/http"
-	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/alonespig/zeorcode/backend/internal/http/dto"
 	"github.com/alonespig/zeorcode/backend/internal/http/response"
@@ -15,8 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
-
-const maxAdminUserImportFileSize = 5 << 20
 
 // AdminController 后台管理接口
 type AdminController struct {
@@ -90,20 +86,9 @@ func (a *AdminController) DownloadUserImportTemplate(c *gin.Context) {
 
 // ImportUsers POST /api/admin/users/import，multipart 字段名为 file。
 func (a *AdminController) ImportUsers(c *gin.Context) (*dto.BatchCreateUsersResp, error) {
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxAdminUserImportFileSize+(1<<20))
-	fh, err := c.FormFile("file")
+	file, err := openExcelImport(c)
 	if err != nil {
-		return nil, errcode.ErrInvalidParams.WithMsg("请选择要导入的 Excel 文件").Wrap(err)
-	}
-	if fh.Size <= 0 || fh.Size > maxAdminUserImportFileSize {
-		return nil, errcode.ErrInvalidParams.WithMsg("Excel 文件大小不能超过 5MB")
-	}
-	if strings.ToLower(filepath.Ext(fh.Filename)) != ".xlsx" {
-		return nil, errcode.ErrInvalidParams.WithMsg("仅支持 .xlsx 格式的 Excel 文件")
-	}
-	file, err := fh.Open()
-	if err != nil {
-		return nil, errcode.ErrFileUpload.WithMsg("无法读取 Excel 文件").Wrap(err)
+		return nil, err
 	}
 	defer file.Close()
 

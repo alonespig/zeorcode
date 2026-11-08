@@ -1,11 +1,7 @@
 package response
 
 import (
-	"errors"
 	"reflect"
-
-	"github.com/alonespig/zeorcode/backend/internal/infra/logger"
-	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,7 +18,6 @@ func Wrap[T any](h HandlerFunc[T]) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		data, err := h(c)
 		if err != nil {
-			logAPIError(c, err)
 			Fail(c, err)
 			return
 		}
@@ -46,29 +41,4 @@ func isNilData(data any) bool {
 	default:
 		return false
 	}
-}
-
-// logAPIError 按错误类型选日志级别
-//   - AppErr 是预期的业务错误：Warn 级别
-//   - 非 AppErr 是没归类的内部错误：Error 级别
-func logAPIError(c *gin.Context, err error) {
-	var appErr *errcode.AppErr
-	path := c.FullPath()
-	if path == "" {
-		path = c.Request.URL.Path
-	}
-
-	if errors.As(err, &appErr) {
-		logger.Warnw("api fail",
-			"path", path,
-			"code", appErr.Code,
-			"msg", appErr.Msg,
-			"cause", appErr.Cause(),
-		)
-		return
-	}
-	logger.Errorw("api error",
-		"path", path,
-		"err", err,
-	)
 }

@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 	"github.com/alonespig/zeorcode/backend/internal/model"
+	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 )
 
 // ProblemTestDataReader is defined by the application services that need to
@@ -21,7 +22,7 @@ func problemTestDataReady(ctx context.Context, reader ProblemTestDataReader, pro
 	}
 	ready, err := reader.HasTestData(ctx, problem.ID)
 	if err != nil {
-		return false, errcode.ErrInternal.WithMsg("检查题目测试数据失败").Wrap(err)
+		return false, errcode.ErrInternal.Wrap(fmt.Errorf("check test data for problem %d: %w", problem.ID, err))
 	}
 	return ready, nil
 }

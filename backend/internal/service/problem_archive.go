@@ -543,11 +543,11 @@ func (s *ProblemService) ImportProblemArchive(ctx context.Context, zr *zip.Reade
 
 	dataDir := archiveDataDir()
 	if err := os.MkdirAll(dataDir, 0o750); err != nil {
-		return nil, errcode.ErrInternal.WithMsg("创建题目数据目录失败").Wrap(err)
+		return nil, errcode.ErrProblemImportSetupFailed.Wrap(fmt.Errorf("create problem test data directory: %w", err))
 	}
 	stagingDir, err := os.MkdirTemp(dataDir, ".archive-import-*")
 	if err != nil {
-		return nil, errcode.ErrInternal.WithMsg("创建导入临时目录失败").Wrap(err)
+		return nil, errcode.ErrProblemImportSetupFailed.Wrap(fmt.Errorf("create problem import staging directory: %w", err))
 	}
 	defer os.RemoveAll(stagingDir)
 	for _, index := range pending {
@@ -556,7 +556,7 @@ func (s *ProblemService) ImportProblemArchive(ctx context.Context, zr *zip.Reade
 		}
 		problemDir := filepath.Join(stagingDir, fmt.Sprintf("%06d", index+1))
 		if err := os.Mkdir(problemDir, 0o750); err != nil {
-			return nil, errcode.ErrInternal.Wrap(err)
+			return nil, errcode.ErrProblemImportSetupFailed.Wrap(fmt.Errorf("create staging directory for archived problem %d: %w", index+1, err))
 		}
 		if err := extractArchivedTestData(parsed, index, problemDir); err != nil {
 			return nil, err
@@ -613,11 +613,15 @@ func (s *ProblemService) ImportProblemArchive(ctx context.Context, zr *zip.Reade
 
 			sourceDir := filepath.Join(stagingDir, fmt.Sprintf("%06d", index+1))
 			finalDir := filepath.Join(dataDir, strconv.FormatInt(problem.ID, 10))
-			if _, err := os.Stat(finalDir); err == nil || !errors.Is(err, os.ErrNotExist) {
-				return errcode.ErrInternal.WithMsg("导入题目的测试数据目录已存在")
+			_, err := os.Stat(finalDir)
+			switch {
+			case err == nil:
+				return errcode.ErrProblemImportSetupFailed.Wrap(fmt.Errorf("test data path for imported problem %d: %w", problem.ID, os.ErrExist))
+			case !errors.Is(err, os.ErrNotExist):
+				return errcode.ErrProblemImportSetupFailed.Wrap(fmt.Errorf("check test data path for imported problem %d: %w", problem.ID, err))
 			}
 			if err := os.Rename(sourceDir, finalDir); err != nil {
-				return errcode.ErrInternal.WithMsg("移动导入的测试数据失败").Wrap(err)
+				return errcode.ErrProblemImportSetupFailed.Wrap(fmt.Errorf("move test data for imported problem %d: %w", problem.ID, err))
 			}
 			finalDirs = append(finalDirs, finalDir)
 			importedIDs = append(importedIDs, problem.DisplayID)

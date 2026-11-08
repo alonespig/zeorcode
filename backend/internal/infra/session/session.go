@@ -28,9 +28,13 @@ func (s *Session) Save(ctx context.Context, userID int64, token string, ttl time
 	return s.rdb.Set(ctx, tokenKey(userID), token, ttl).Err()
 }
 
-// Get 取用户当前有效 token。
+// Get 取用户当前有效 token。会话不存在时返回空字符串和 nil。
 func (s *Session) Get(ctx context.Context, userID int64) (string, error) {
-	return s.rdb.Get(ctx, tokenKey(userID)).Result()
+	token, err := s.rdb.Get(ctx, tokenKey(userID)).Result()
+	if err == goredis.Nil {
+		return "", nil
+	}
+	return token, err
 }
 
 // Delete 删除用户 token（登出）。

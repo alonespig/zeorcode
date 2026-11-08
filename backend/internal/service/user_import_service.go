@@ -39,7 +39,7 @@ type adminUserImportRow struct {
 func (u *UserService) UserImportTemplate() ([]byte, error) {
 	data, err := buildAdminUserImportTemplate()
 	if err != nil {
-		return nil, errcode.ErrInternal.WithMsg("生成导入模板失败").Wrap(err)
+		return nil, errcode.ErrInternal.Wrap(fmt.Errorf("build user import template: %w", err))
 	}
 	return data, nil
 }
@@ -66,26 +66,9 @@ func (u *UserService) ImportUsers(ctx context.Context, reader io.Reader) (*Batch
 }
 
 func parseAdminUserImport(reader io.Reader) ([]adminUserImportRow, error) {
-	f, err := excelize.OpenReader(reader, excelize.Options{
-		UnzipSizeLimit:    64 << 20,
-		UnzipXMLSizeLimit: 16 << 20,
-	})
+	rows, err := readExcelImportRows(reader, adminUserImportSheet, adminUserImportHeaders)
 	if err != nil {
-		return nil, errcode.ErrInvalidParams.WithMsg("Excel 文件无法解析，请重新下载模板填写").Wrap(err)
-	}
-	defer f.Close()
-
-	rows, err := f.GetRows(adminUserImportSheet)
-	if err != nil {
-		return nil, errcode.ErrInvalidParams.WithMsg("Excel 中缺少“用户名单”工作表").Wrap(err)
-	}
-	if len(rows) == 0 {
-		return nil, errcode.ErrInvalidParams.WithMsg("Excel 中缺少表头")
-	}
-	for i, want := range adminUserImportHeaders {
-		if strings.TrimSpace(cellValue(rows[0], i)) != want {
-			return nil, errcode.ErrInvalidParams.WithMsg("Excel 表头不匹配，请使用最新模板")
-		}
+		return nil, err
 	}
 
 	result := make([]adminUserImportRow, 0, len(rows)-1)

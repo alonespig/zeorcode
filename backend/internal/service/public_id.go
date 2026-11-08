@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 	"github.com/alonespig/zeorcode/backend/pkg/publicid"
@@ -15,7 +17,7 @@ func newUniquePublicID(ctx context.Context, exists publicIDExistsFunc) (int64, e
 	for range publicIDGenerateAttempts {
 		id, err := publicid.New()
 		if err != nil {
-			return 0, errcode.ErrInternal.WithMsg("生成公开编号失败，请重试").Wrap(err)
+			return 0, errcode.ErrInternal.Wrap(fmt.Errorf("generate public ID: %w", err))
 		}
 		used, err := exists(ctx, id)
 		if err != nil {
@@ -25,5 +27,5 @@ func newUniquePublicID(ctx context.Context, exists publicIDExistsFunc) (int64, e
 			return id, nil
 		}
 	}
-	return 0, errcode.ErrInternal.WithMsg("生成公开编号失败，请重试")
+	return 0, errcode.ErrInternal.Wrap(errors.New("could not allocate a unique public ID"))
 }

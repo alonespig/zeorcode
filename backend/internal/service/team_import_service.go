@@ -47,7 +47,7 @@ func (s *TeamService) StudentImportTemplate(ctx context.Context, teamID, actorID
 	}
 	data, err := buildStudentImportTemplate()
 	if err != nil {
-		return nil, errcode.ErrInternal.WithMsg("生成导入模板失败").Wrap(err)
+		return nil, errcode.ErrInternal.Wrap(fmt.Errorf("build student import template: %w", err))
 	}
 	return data, nil
 }
@@ -216,26 +216,9 @@ func (s *TeamService) requireManageAccess(ctx context.Context, teamID, actorID i
 }
 
 func parseStudentImport(reader io.Reader) ([]studentImportRow, error) {
-	f, err := excelize.OpenReader(reader, excelize.Options{
-		UnzipSizeLimit:    64 << 20,
-		UnzipXMLSizeLimit: 16 << 20,
-	})
+	rows, err := readExcelImportRows(reader, studentImportSheet, studentImportHeaders)
 	if err != nil {
-		return nil, errcode.ErrInvalidParams.WithMsg("Excel 文件无法解析，请重新下载模板填写").Wrap(err)
-	}
-	defer f.Close()
-
-	rows, err := f.GetRows(studentImportSheet)
-	if err != nil {
-		return nil, errcode.ErrInvalidParams.WithMsg("Excel 中缺少“学生名单”工作表").Wrap(err)
-	}
-	if len(rows) == 0 {
-		return nil, errcode.ErrInvalidParams.WithMsg("Excel 中缺少表头")
-	}
-	for i, want := range studentImportHeaders {
-		if strings.TrimSpace(cellValue(rows[0], i)) != want {
-			return nil, errcode.ErrInvalidParams.WithMsg("Excel 表头不匹配，请使用最新模板")
-		}
+		return nil, err
 	}
 
 	result := make([]studentImportRow, 0, len(rows)-1)
@@ -376,7 +359,7 @@ func prepareNewStudentAccount(row *studentImportRow) error {
 	}
 	hash, err := hashPassword(row.StudentNo)
 	if err != nil {
-		return errcode.ErrInternal.WithMsg(fmt.Sprintf("第 %d 行密码处理失败", row.Line)).Wrap(err)
+		return errcode.ErrInternal.Wrap(fmt.Errorf("hash password for import row %d: %w", row.Line, err))
 	}
 	row.PasswordHash = hash
 	return nil
@@ -393,7 +376,7 @@ func genUniqueImportUID(ctx context.Context, repo *repository.UserRepo, reserved
 			return uid, nil
 		}
 	}
-	return 0, errcode.ErrInternal.WithMsg("生成用户号失败，请重试")
+	return 0, errcode.ErrUserIDAllocationFailed.Wrap(errors.New("could not allocate a unique user ID during student import"))
 }
 
 func validateNewAccountUniqueness(ctx context.Context, repo *repository.UserRepo, rows []*studentImportRow) error {

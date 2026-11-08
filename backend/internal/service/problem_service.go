@@ -14,6 +14,7 @@ import (
 	"github.com/alonespig/zeorcode/backend/pkg/errcode"
 	"github.com/alonespig/zeorcode/backend/pkg/judge"
 
+	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -88,7 +89,7 @@ func (s *ProblemService) Create(ctx context.Context, req CreateProblemParams) (s
 	}
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&problem).Error; err != nil {
-			return err
+			return problemRowWriteError(err)
 		}
 		if len(req.TagsID) > 0 {
 			pts := make([]model.ProblemTag, 0, len(req.TagsID))
@@ -118,12 +119,34 @@ func (s *ProblemService) Create(ctx context.Context, req CreateProblemParams) (s
 		}
 		return nil
 	})
+	if err != nil {
+		return "", problemTransactionError(err)
+	}
 	if err := os.MkdirAll(fmt.Sprintf(
 		"ojdata/problems/%d", problem.ID), 0755); err != nil {
-		return "", errcode.ErrInternal.WithMsg("创建题目数据目录失败").Wrap(err)
+		return "", errcode.ErrProblemDataSetupFailed.Wrap(fmt.Errorf("create test data directory for problem %d: %w", problem.ID, err))
 	}
 	// 返回对外题号（前端据此跳转 /problem/{题号}/file）
-	return problem.DisplayID, err
+	return problem.DisplayID, nil
+}
+
+func problemRowWriteError(err error) error {
+	// 仅用于写 problems 行。主键自增且不参与更新，唯一的业务约束是题号不能重复。
+	const mysqlDuplicateEntry = 1062
+	var mysqlErr *mysql.MySQLError
+	if errors.Is(err, gorm.ErrDuplicatedKey) ||
+		(errors.As(err, &mysqlErr) && mysqlErr.Number == mysqlDuplicateEntry) {
+		return errcode.ErrProblemDisplayIDExists.Wrap(err)
+	}
+	return err
+}
+
+func problemTransactionError(err error) error {
+	var appErr *errcode.AppErr
+	if errors.As(err, &appErr) {
+		return err
+	}
+	return errcode.ErrDatabase.Wrap(err)
 }
 
 func (s *ProblemService) List(ctx context.Context, form ProblemListParams, userID *int64, isAdmin bool) (*ProblemList, error) {
@@ -427,7 +450,7 @@ func (s *ProblemService) Update(ctx context.Context, req UpdateProblemParams) (s
 	}
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Updates(&problem).Error; err != nil {
-			return err
+			return problemRowWriteError(err)
 		}
 		// Hidden 是 bool，Updates 对零值(false)不写，单独强制更新以支持"取消隐藏"
 		if err := tx.Model(&model.Problem{}).Where("id = ?", problem.ID).
@@ -468,6 +491,9 @@ func (s *ProblemService) Update(ctx context.Context, req UpdateProblemParams) (s
 		}
 		return nil
 	})
+	if err != nil {
+		return "", problemTransactionError(err)
+	}
 	// 返回对外题号（前端据此跳转 /problem/{题号}/file）
-	return problem.DisplayID, err
+	return problem.DisplayID, nil
 }

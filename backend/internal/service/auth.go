@@ -87,10 +87,10 @@ func (t *TokenService) VerifyToken(tokenString string) (*Claims, error) {
 	stored, err := t.session.Get(context.Background(), claims.UserID)
 	if err != nil {
 		logger.Errorw("failed to get token from session", "userID", claims.UserID, "err", err)
-		return nil, errcode.ErrTokenExpired.WithMsg("登录状态已失效")
+		return nil, errcode.ErrTokenExpired
 	}
 	if stored != tokenString {
-		return nil, errcode.ErrTokenExpired.WithMsg("登录状态已失效")
+		return nil, errcode.ErrTokenExpired
 	}
 	return claims, nil
 }

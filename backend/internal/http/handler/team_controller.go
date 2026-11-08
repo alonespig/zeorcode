@@ -3,9 +3,7 @@ package handler
 import (
 	"net/http"
 	"net/url"
-	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/alonespig/zeorcode/backend/internal/http/dto"
 	"github.com/alonespig/zeorcode/backend/internal/http/response"
@@ -159,8 +157,6 @@ func (t *TeamController) ListMembers(c *gin.Context) (*dto.TeamMemberListResp, e
 	return toTeamMemberListResp(resp), nil
 }
 
-const maxStudentImportFileSize = 5 << 20
-
 // DownloadStudentImportTemplate GET /api/team/:id/member/import/template
 func (t *TeamController) DownloadStudentImportTemplate(c *gin.Context) {
 	id, err := t.resolveTeamID(c)
@@ -194,21 +190,9 @@ func (t *TeamController) ImportStudents(c *gin.Context) (*dto.TeamStudentImportR
 		return nil, err
 	}
 
-	// multipart 边界会带来少量额外字节，因此请求体上限略高于文件上限。
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxStudentImportFileSize+(1<<20))
-	fh, err := c.FormFile("file")
+	file, err := openExcelImport(c)
 	if err != nil {
-		return nil, errcode.ErrInvalidParams.WithMsg("请选择要导入的 Excel 文件").Wrap(err)
-	}
-	if fh.Size <= 0 || fh.Size > maxStudentImportFileSize {
-		return nil, errcode.ErrInvalidParams.WithMsg("Excel 文件大小不能超过 5MB")
-	}
-	if strings.ToLower(filepath.Ext(fh.Filename)) != ".xlsx" {
-		return nil, errcode.ErrInvalidParams.WithMsg("仅支持 .xlsx 格式的 Excel 文件")
-	}
-	file, err := fh.Open()
-	if err != nil {
-		return nil, errcode.ErrFileUpload.WithMsg("无法读取 Excel 文件").Wrap(err)
+		return nil, err
 	}
 	defer file.Close()
 

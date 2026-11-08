@@ -25,7 +25,7 @@ func New(code Code, msg string) *AppErr {
 	return &AppErr{Code: code, Msg: msg}
 }
 
-// WithMsg 覆盖 msg，原实例不污染
+// WithMsg 覆盖对外文案。仅用于用户需要的具体提示；内部排查信息通过 Wrap 保留。
 func (e *AppErr) WithMsg(msg string) *AppErr {
 	return &AppErr{Code: e.Code, Msg: msg, cause: e.cause}
 }
@@ -54,7 +54,7 @@ var (
 
 var (
 	ErrUnauthorized = &AppErr{Code: Unauthorized, Msg: "未登录"}
-	ErrTokenExpired = &AppErr{Code: TokenExpired, Msg: "登录已过期"}
+	ErrTokenExpired = &AppErr{Code: TokenExpired, Msg: "登录状态已失效"}
 	ErrInvalidToken = &AppErr{Code: InvalidToken, Msg: "登录凭证无效"}
 )
 
@@ -66,7 +66,7 @@ var (
 	ErrUserNotFound            = &AppErr{Code: UserNotFound, Msg: "用户不存在"}
 	ErrWrongPassword           = &AppErr{Code: WrongPassword, Msg: "密码错误"}
 	ErrUserExists              = &AppErr{Code: UserExists, Msg: "用户已存在"}
-	ErrUserDisabled            = &AppErr{Code: UserDisabled, Msg: "用户被禁用"}
+	ErrUserDisabled            = &AppErr{Code: UserDisabled, Msg: "账号已被封禁"}
 	ErrEmailExists             = &AppErr{Code: EmailExists, Msg: "邮箱已被注册"}
 	ErrVerificationCodeInvalid = &AppErr{Code: VerificationCodeInvalid, Msg: "验证码错误"}
 	ErrVerificationCodeExpired = &AppErr{Code: VerificationCodeExpired, Msg: "验证码已过期，请重新获取"}
@@ -146,6 +146,9 @@ var (
 var (
 	ErrUnknown                   = &AppErr{Code: UnknownError, Msg: "未知错误"}
 	ErrInternal                  = &AppErr{Code: InternalServerError, Msg: "服务器内部错误"}
+	ErrUserIDAllocationFailed    = &AppErr{Code: InternalServerError, Msg: "暂时无法分配用户号，请稍后重试"}
+	ErrProblemDataSetupFailed    = &AppErr{Code: InternalServerError, Msg: "题目已创建，但测试数据初始化失败，请在题目管理中查看"}
+	ErrProblemImportSetupFailed  = &AppErr{Code: InternalServerError, Msg: "暂时无法准备题目导入，请稍后重试"}
 	ErrDatabase                  = &AppErr{Code: DatabaseError, Msg: "数据库错误"}
 	ErrRedis                     = &AppErr{Code: RedisError, Msg: "Redis 错误"}
 	ErrFileUpload                = &AppErr{Code: FileUploadFailed, Msg: "文件上传失败"}
