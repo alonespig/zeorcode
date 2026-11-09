@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { Calendar, Lock, User, UserFilled } from "@element-plus/icons-vue";
+import { useUserStore } from "@/stores/user";
 
 const props = defineProps({
   team: { type: Object, required: true },
@@ -8,6 +9,9 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["enter", "join", "requestJoin"]);
+
+const userStore = useUserStore();
+const canManageTeam = computed(() => userStore.can("team.manage"));
 
 const shortDate = computed(() => props.team.createdAt?.slice(0, 10) || "—");
 const visualTone = computed(() => `team-entry__visual--tone-${(Number(props.team.id) || 0) % 3}`);
@@ -66,7 +70,7 @@ const visualTone = computed(() => `team-entry__visual--tone-${(Number(props.team
             <strong>{{ team.owner || "—" }}</strong>
           </div>
           <button
-            v-if="isLogin && team.myRole != null"
+            v-if="isLogin && (canManageTeam || team.myRole != null)"
             class="team-entry__action team-entry__action--quiet"
             type="button"
             @click="emit('enter', team)"
