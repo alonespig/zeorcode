@@ -119,7 +119,7 @@ watch(
       </template>
     </el-table>
 
-    <div v-if="rank.total > pageSize" class="flex justify-end border-t border-gray-100 px-5 py-3.5">
+    <div v-if="rank.total > pageSize" class="flex justify-center border-t border-gray-100 px-5 py-3.5">
       <AppPagination
         v-model:current-page="page"
         :page-size="pageSize"

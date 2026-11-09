@@ -120,6 +120,7 @@ watch(
 
 <style scoped>
 .problemset-detail {
+  max-width: 1360px;
   min-height: 360px;
   padding-top: 8px;
   padding-bottom: 24px;
