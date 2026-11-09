@@ -80,7 +80,7 @@ func (t *TokenService) GenerateToken(userID int64, username string, role int) (s
 func (t *TokenService) VerifyToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return t.secret, nil
-	})
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
 			return nil, errcode.ErrTokenExpired
