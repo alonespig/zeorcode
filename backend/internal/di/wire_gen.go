@@ -7,6 +7,7 @@
 package di
 
 import (
+	"github.com/alonespig/zeorcode/backend/internal/app"
 	"github.com/alonespig/zeorcode/backend/internal/http/handler"
 	"github.com/alonespig/zeorcode/backend/internal/http/router"
 	"github.com/alonespig/zeorcode/backend/internal/infra/cache"
@@ -19,23 +20,24 @@ import (
 	"github.com/alonespig/zeorcode/backend/internal/infra/session"
 	"github.com/alonespig/zeorcode/backend/internal/repository"
 	"github.com/alonespig/zeorcode/backend/internal/service"
+	"github.com/alonespig/zeorcode/backend/internal/worker/reminder"
 )
 
 // Injectors from wire.go:
 
-func InitHttpServer() (*router.HttpServer, func(), error) {
+func InitHTTPApp() (*app.HTTP, func(), error) {
 	db, cleanup := database.NewMysqlClient()
 	problemRepo := repository.NewProblemRepo(db)
 	submissionRepo := repository.NewSubmissionRepo(db)
 	problemTestDataStore := repository.NewProblemTestDataStore()
 	problemService := service.NewProblemService(problemRepo, submissionRepo, problemTestDataStore, db)
-	contestRepo := repository.NewContestRepo(db)
+	adminPermissionRepo := repository.NewAdminPermissionRepo(db)
 	userRepo := repository.NewUserRepo(db)
 	client, cleanup2 := redis.NewRedisClient()
 	cacheCache := cache.NewCache(client)
-	adminPermissionRepo := repository.NewAdminPermissionRepo(db)
 	permissionService := service.NewPermissionService(adminPermissionRepo, userRepo, cacheCache)
 	problemController := handler.NewProblemController(problemService, permissionService)
+	contestRepo := repository.NewContestRepo(db)
 	mqMQ := mq.New(client)
 	notificationRepo := repository.NewNotificationRepo(db)
 	notificationService := service.NewNotificationService(notificationRepo, userRepo)
@@ -53,7 +55,7 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 	sessionSession := session.New(client)
 	tokenService := service.NewTokenService(sessionSession, userRepo)
 	mailer := mail.NewMailer()
-	 verifyService := service.NewVerifyService(cacheCache, mailer, userRepo)
+	verifyService := service.NewVerifyService(cacheCache, mailer, userRepo)
 	userService := service.NewUserService(userRepo, submissionRepo, problemRepo, cacheCache, tokenService, verifyService, permissionService)
 	captchaService := service.NewCaptchaService(cacheCache)
 	userController := handler.NewUserController(userService, submissionService, verifyService, captchaService, tokenService)
@@ -82,7 +84,10 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 	agentController := handler.NewAgentController(agentService, permissionService)
 	languageController := handler.NewLanguageController(languageService)
 	httpServer := router.NewHttpServer(problemController, contestController, submissionController, postController, userController, uploadController, adminController, remoteController, notificationController, problemSetController, teamController, homeworkController, agentController, languageController, tokenService, cacheCache, auditService, permissionService)
-	return httpServer, func() {
+	homeworkDeadlineReminderRepo := repository.NewHomeworkDeadlineReminderRepo(db)
+	homeworkDeadlineWorker := reminder.NewHomeworkDeadlineWorker(homeworkDeadlineReminderRepo)
+	http := app.NewHTTP(httpServer, homeworkDeadlineWorker)
+	return http, func() {
 		cleanup3()
 		cleanup2()
 		cleanup()

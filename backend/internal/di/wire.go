@@ -4,6 +4,7 @@
 package di
 
 import (
+	"github.com/alonespig/zeorcode/backend/internal/app"
 	"github.com/alonespig/zeorcode/backend/internal/http/handler"
 	"github.com/alonespig/zeorcode/backend/internal/http/router"
 	"github.com/alonespig/zeorcode/backend/internal/infra/cache"
@@ -16,17 +17,19 @@ import (
 	"github.com/alonespig/zeorcode/backend/internal/infra/session"
 	"github.com/alonespig/zeorcode/backend/internal/repository"
 	"github.com/alonespig/zeorcode/backend/internal/service"
+	"github.com/alonespig/zeorcode/backend/internal/worker/reminder"
 	"github.com/alonespig/zeorcode/backend/pkg/judge"
 
 	"github.com/google/wire"
 )
 
-func InitHttpServer() (*router.HttpServer, func(), error) {
+func InitHTTPApp() (*app.HTTP, func(), error) {
 	wire.Build(
 		database.NewMysqlClient,
 		redis.NewRedisClient,
 		session.New,
 		service.NewTokenService,
+		wire.Bind(new(service.UserIdentityReader), new(*repository.UserRepo)),
 		mq.New,
 		judgepool.New,
 		cache.CacheSet,
@@ -45,6 +48,9 @@ func InitHttpServer() (*router.HttpServer, func(), error) {
 		wire.Bind(new(service.CodeRunPool), new(*judge.Pool)),
 		handler.HandlerSet,
 		router.NewHttpServer,
+		repository.NewHomeworkDeadlineReminderRepo,
+		reminder.NewHomeworkDeadlineWorker,
+		app.NewHTTP,
 	)
 	return nil, nil, nil
 }

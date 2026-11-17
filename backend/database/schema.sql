@@ -268,9 +268,11 @@ CREATE TABLE `notifications` (
   `source_type` varchar(32) DEFAULT NULL,
   `source_id` bigint DEFAULT NULL,
   `created_at` datetime(3) DEFAULT NULL,
+  `dedupe_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_notif_recipient` (`recipient_id`,`is_read`),
-  KEY `idx_notifications_created_at` (`created_at`)
+  KEY `idx_notifications_created_at` (`created_at`),
+  UNIQUE KEY `idx_notifications_dedupe_key` (`dedupe_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `post_comment_likes`;

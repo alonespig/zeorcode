@@ -23,8 +23,8 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// userIdentityReader 提供当前用户身份，用于每次请求校验实时角色与封禁状态。
-type userIdentityReader interface {
+// UserIdentityReader 提供当前用户身份，用于每次请求校验实时角色与封禁状态。
+type UserIdentityReader interface {
 	GetUserByID(ctx context.Context, id int64) (*model.User, error)
 }
 
@@ -32,12 +32,12 @@ type userIdentityReader interface {
 // 通过 DI 注入 *session.Session 与用户仓储。
 type TokenService struct {
 	session *session.Session
-	users   userIdentityReader
+	users   UserIdentityReader
 	secret  []byte
 	expire  time.Duration
 }
 
-func NewTokenService(s *session.Session, users userIdentityReader) *TokenService {
+func NewTokenService(s *session.Session, users UserIdentityReader) *TokenService {
 	return &TokenService{
 		session: s,
 		users:   users,
