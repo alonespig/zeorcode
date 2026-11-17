@@ -3,7 +3,7 @@
     <div class="overflow-hidden rounded border border-gray-200 bg-white">
       <div class="flex items-center justify-between border-b border-gray-100 px-[22px] py-4">
         <h1 class="m-0 text-lg font-semibold text-gray-800">通知</h1>
-        <el-button :icon="CircleCheck" :disabled="!unread.total" @click="markAllRead">
+        <el-button :icon="CircleCheck" :disabled="!unread.total || notificationStore.markingRead" @click="markAllRead">
           全部标记为已读
         </el-button>
       </div>
@@ -55,10 +55,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { CircleCheck } from '@element-plus/icons-vue'
 import UserName from '@/components/UserName.vue'
-import { getNotifications, getUnreadCount, markNotificationRead } from '@/api/notification'
+import { getNotifications } from '@/api/notification'
+import { useNotificationStore } from '@/stores/notification'
 
 const router = useRouter()
 
@@ -74,7 +76,8 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = 15
 const loading = ref(false)
-const unread = ref({ comment: 0, reply: 0, like: 0, system: 0, rating: 0, total: 0 })
+const notificationStore = useNotificationStore()
+const { unread } = storeToRefs(notificationStore)
 
 const actionText = (n) => {
   if (n.type === 'like') return n.sourceType === 'comment' ? ' 赞了你的评论' : ' 赞了你的帖子'
@@ -109,11 +112,6 @@ const fetchList = async () => {
   }
 }
 
-const fetchUnread = async () => {
-  const res = await getUnreadCount().catch(() => null)
-  if (res?.data) unread.value = res.data
-}
-
 const switchTab = (key) => {
   active.value = key
   page.value = 1
@@ -126,21 +124,20 @@ const handlePage = (p) => {
 
 const open = async (n) => {
   if (!n.isRead) {
-    await markNotificationRead({ id: n.id }).catch(() => { })
-    n.isRead = true
-    fetchUnread()
+    if (notificationStore.markingRead) return
+    if (await notificationStore.markRead(n)) n.isRead = true
   }
   if (n.link) router.push(n.link)
 }
 
 const markAllRead = async () => {
-  await markNotificationRead({}).catch(() => { })
-  list.value.forEach((n) => (n.isRead = true))
-  fetchUnread()
+  if (await notificationStore.markRead()) {
+    list.value.forEach((n) => (n.isRead = true))
+  }
 }
 
 onMounted(() => {
   fetchList()
-  fetchUnread()
+  notificationStore.refreshUnread()
 })
 </script>

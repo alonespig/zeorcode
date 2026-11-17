@@ -60,10 +60,10 @@
 </template>
 
 <script setup>
-import { computed, ref, shallowRef, onMounted, onUnmounted, watch } from 'vue'
+import { computed, shallowRef, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { getUnreadCount } from '@/api/notification'
+import { useNotificationStore } from '@/stores/notification'
 import { Close, MagicStick, Menu } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -86,23 +86,15 @@ const handleLogout = async () => {
   }
 }
 
-// 未读通知铃铛：登录后轮询
-const unreadTotal = ref(0)
+// 登录后加载未读数，并轮询新通知。
+const notificationStore = useNotificationStore()
+const unreadTotal = computed(() => notificationStore.unread.total)
 let unreadTimer = null
-const loadUnread = async () => {
-  if (!userStore.isLogin) {
-    unreadTotal.value = 0
-    return
-  }
-  const res = await getUnreadCount().catch(() => null)
-  unreadTotal.value = res?.data?.total || 0
-}
 onMounted(() => {
-  loadUnread()
-  unreadTimer = setInterval(loadUnread, 45000)
+  unreadTimer = setInterval(notificationStore.refreshUnread, 45000)
 })
-onUnmounted(() => unreadTimer && clearInterval(unreadTimer))
-watch(() => userStore.isLogin, loadUnread)
+onUnmounted(() => clearInterval(unreadTimer))
+watch(() => userStore.user?.id, notificationStore.refreshUnread, { immediate: true })
 watch(() => route.fullPath, closeNav)
 
 const navItems = computed(() => {
